@@ -1,0 +1,86 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    z-index: 2;
+}
+
+.navbar__s1 {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 100px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.navbar__s1 img {
+    height: 40px;
+    margin-right: 10px;
+}
+
+.navbar__s1__sub {
+    text-align: center;
+}
+
+.navbar__s1__sub__part1 {
+    color: #1F4E36;
+}
+
+.navbar__s1__sub__part2 {
+    color: #73A13F;
+}
+
+.navbar__s1__sub p {
+    color: #1F4E36;
+    font-weight: bold;
+    padding-right: 5px  ;
+}
+
+.navbar__s2 {
+    display: flex;
+    border-radius: 33px;
+    gap: 40px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.navbar__s2 a {
+    text-decoration: none;
+    font-weight: bold;
+    color: white;
+    font-size: 18px;
+}
+
+.navbar__s3 button {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 15px;
+    border-radius: 33px;
+    border: none;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.navbar__s3 button p {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+
+.navbar__s3 button img {
+    padding-right: 10px;
+    transition: 0.3s;
+}
+
+.navbar__s3 button:hover img {
+    transform: translateX(10px);
+    transition: 0.3s;
+}
+
+.navbar__s1,
+.navbar__s2,
+.navbar__s3 button {
+    height: 60px;
+    padding: 15px;
+}

@@ -1,10 +1,25 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/beforeLogin/landingPage/LandingPage"
+import Dashboard from "./pages/afterLogin/dashboard/dashboard"
 
 function App() {
+  const isLoggedIn = false;
   return (
-    <div>
-      <LandingPage />
-    </div>
+    <>
+      <Router>
+        <Routes>
+          {!isLoggedIn ? (
+            <>
+              <Route path="/" element={<LandingPage />} />
+            </>
+          ) : (
+            <>
+              <Route path="/Dashboard" element={<Dashboard />} />
+            </>
+          )}
+        </Routes> 
+      </Router>
+    </>
   )
 }
 

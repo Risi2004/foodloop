@@ -1,0 +1,8 @@
+.landing__page .navbar{
+    position: relative;
+}
+
+.landing__page .header__image{
+    position: absolute;
+    top: 0px;
+}
