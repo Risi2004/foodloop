@@ -1,0 +1,242 @@
+
+.termsPage {
+  display: flex;
+  flex-direction: column;
+}
+
+.termsPage__backBar {
+  /* Uses: common-back-bar common-back-bar--padded */
+  padding: 3px 218px 3px 218px;
+}
+
+.termsPage__back {
+  /* Uses: common-back-bar */
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+
+.termsPage__card {
+  /* Uses: common-glass-card */
+  padding: 30px;
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.termsPage__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.termsPage__title {
+  color: #0d1b10;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 48px;
+  line-height: 48px;
+  letter-spacing: -1.2px;
+  font-weight: 700;
+  position: relative;
+  width: 1231px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.termsPage__updatedAt {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Inter-Medium", sans-serif;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__intro {
+  color: #ffffff;
+  text-align: center;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 400;
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.termsPage__highlightItem {
+  color: rgba(13, 27, 16, 0.8);
+  text-align: left;
+  font-family: "Inter-SemiBold", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  position: relative;
+  align-self: stretch;
+  height: 19.2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__liabilityPoint {
+  color: rgba(13, 27, 16, 0.8);
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  position: relative;
+  width: 535.74px;
+  height: 19.2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__platformRole {
+  color: rgba(13, 27, 16, 0.8);
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  position: relative;
+  width: 482.75px;
+  height: 19.2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__donorResponsibility {
+  color: rgba(13, 27, 16, 0.8);
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  position: relative;
+  width: 629.61px;
+  height: 19.2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__governingLawText {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 400;
+  position: relative;
+  width: 1190px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.termsPage__obligations {
+  margin: -16px 0 0 0;
+  padding: 10px 0px 10px 0px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.termsPage__obligationText {
+  height: 40px;
+}
+
+.termsPage__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.termsPage__contactLogo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 195px;
+  height: 62px;
+  position: relative;
+}
+
+.termsPage__contactHeading {
+  color: #0d1b10;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 700;
+  position: relative;
+  width: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.termsPage__contactSubtitle {
+  color: rgba(13, 27, 16, 0.7);
+  text-align: center;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  position: relative;
+  width: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.termsPage__contactRow {
+  /* Uses: common-contact-row */
+  height: 46px;
+}
+
+.termsPage__contactEmail {
+  color: #0d1b10;
+  text-align: left;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 700;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+

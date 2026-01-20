@@ -28,6 +28,10 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background: linear-gradient(180deg, #1F4E36 0%, #FFF 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
 }
 
 h1 {
@@ -65,4 +69,309 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* ============================================
+   SHARED UTILITY CLASSES
+   ============================================ */
+
+/* Back Button/Bar Container */
+.common-back-bar {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.common-back-bar--padded {
+  padding: 3px 218px 3px 218px;
+}
+
+.common-back-bar--padded-small {
+  padding: 3px 30px 3px 30px;
+}
+
+.common-back-bar--clickable {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.common-back-bar--clickable:hover {
+  opacity: 0.8;
+}
+
+/* Back Icon */
+.common-back-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  position: relative;
+  object-fit: cover;
+}
+
+/* Back Text */
+.common-back-text {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 20px;
+  line-height: 20px;
+  letter-spacing: 0.7px;
+  font-weight: 700;
+  position: relative;
+  width: 298px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Glass Morphism Card */
+.common-glass-card {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(17, 24, 20, 0.51) 100%
+  );
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.common-glass-card--transparent {
+  background: rgba(0, 0, 0, 0);
+}
+
+.common-glass-card--light {
+  background: rgba(255, 255, 255, 0.31);
+}
+
+/* Content Container */
+.common-content-wrapper {
+  padding: 20px 30px 20px 30px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Section Container */
+.common-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.common-section--compact {
+  gap: 0px;
+}
+
+.common-section--center {
+  align-items: center;
+  justify-content: center;
+}
+
+/* Section Title */
+.common-section-title {
+  color: #1f4e36;
+  text-align: left;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+  position: relative;
+  width: 1231px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.common-section-title--dark {
+  color: #0d1b10;
+}
+
+.common-section-title--center {
+  text-align: center;
+  justify-content: center;
+}
+
+/* Section Text */
+.common-section-text {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 400;
+  position: relative;
+  width: 1203px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.common-section-text--center {
+  text-align: center;
+  justify-content: center;
+}
+
+.common-section-text--stretch {
+  align-self: stretch;
+  width: auto;
+}
+
+.common-section-text--secondary {
+  color: #334d38;
+}
+
+/* Highlight List Container */
+.common-highlight-list {
+  background: rgba(19, 236, 55, 0.14);
+  border-radius: 20px;
+  padding: 10px 15px 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1203px;
+  position: relative;
+  overflow: hidden;
+}
+
+.common-highlight-list--row {
+  flex-direction: row;
+}
+
+/* Icon - Standard 30x30 */
+.common-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  position: relative;
+  object-fit: cover;
+}
+
+/* Flex Row - Common Pattern */
+.common-flex-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.common-flex-row--center {
+  justify-content: center;
+}
+
+.common-flex-row--space-between {
+  justify-content: space-between;
+}
+
+/* Flex Column - Common Pattern */
+.common-flex-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.common-flex-column--center {
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card Item */
+.common-card-item {
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.common-card-item--row {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+/* Card Title */
+.common-card-title {
+  color: #0d1b10;
+  text-align: left;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Card Text */
+.common-card-text {
+  color: #ffffff;
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 400;
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.common-card-text--dark {
+  color: #0d1b10;
+}
+
+.common-card-text--small {
+  font-size: 14px;
+  line-height: 20px;
+  height: 40px;
+}
+
+/* Contact Row */
+.common-contact-row {
+  padding: 16px 0px 16px 0px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.common-contact-row--start {
+  justify-content: flex-start;
 }

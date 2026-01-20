@@ -1,0 +1,197 @@
+
+.navbar {
+  border-radius: 100px;
+  padding: 15px 20px ;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.navbar__brandPanel {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
+  flex-shrink: 0;
+  width: 378px;
+  height: 70px;
+  position: relative;
+  overflow: hidden;
+}
+.navbar__logo {
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  position: absolute;
+  left: 16px;
+  top: 5px;
+  object-fit: cover;
+  aspect-ratio: 1;
+}
+.navbar__brand {
+  width: 260px;
+  height: 42px;
+  position: static;
+}
+.navbar__brandName {
+  text-align: center;
+  font-family: "Inter-ExtraBold", sans-serif;
+  font-size: 32px;
+  line-height: 20px;
+  letter-spacing: 0.26em;
+  font-weight: 800;
+  position: absolute;
+  left: 107px;
+  top: 14px;
+  width: 219px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.navbar__brandNamePrimary {
+  color: #1f4e36;
+}
+.navbar__brandNameSecondary {
+  color: #73a13f;
+}
+.navbar__tagline {
+  color: #1f4e36;
+  text-align: center;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 20px;
+  line-height: 20px;
+  font-weight: 400;
+  position: absolute;
+  left: 87px;
+  top: 45px;
+  width: 260px;
+  height: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.navbar__nav {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 33px;
+  flex-shrink: 0;
+  width: 519px;
+  height: 70px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  overflow: hidden;
+}
+
+.navbar__navLink {
+  text-decoration: none;
+}
+.navbar__navLink--home {
+  color: #ffffff;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 24px;
+  line-height: 20px;
+  font-weight: 700;
+  position: absolute;
+  left: 47px;
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+.navbar__navLink--home:hover {
+  color: #4CAF50;
+}
+.navbar__navLink--about {
+  color: #ffffff;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 24px;
+  line-height: 20px;
+  font-weight: 700;
+  position: absolute;
+  left: calc(50% - 73.5px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+.navbar__navLink--about:hover {
+  color: #4CAF50;
+}
+.navbar__navLink--contact {
+  color: #ffffff;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 24px;
+  line-height: 20px;
+  font-weight: 700;
+  position: absolute;
+  left: 364px;
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+.navbar__navLink--contact:hover {
+  color: #4CAF50;
+}
+.navbar__loginButton {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 33px;
+  flex-shrink: 0;
+  width: 178px;
+  height: 68px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 178/68;
+}
+.navbar__loginText {
+  color: #ffffff;
+  text-align: center;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 24px;
+  line-height: 20px;
+  font-weight: 700;
+  position: absolute;
+  left: calc(50% - 47px);
+  top: 50%;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.navbar__loginText:hover {
+  color: #ffffff;
+}
+.navbar__loginButton:hover .navbar__loginText {
+  color: #ffffff;
+}
+.navbar__loginIcon {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  left: 135px;
+  top: 50%;
+  translate: 0 -50%;
+  overflow: visible;
+  aspect-ratio: 1;
+}
