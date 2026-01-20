@@ -1,8 +1,16 @@
-.landing__page .navbar{
+.landing__page .navbar {
     position: relative;
 }
 
-.landing__page .header__image{
+.landing__page .header__image {
     position: absolute;
     top: 0px;
+}
+
+@media screen and (max-width: 1000px) {
+
+    .landing__page .header__image {
+        top: 100px;
+    }
+
 }
