@@ -3,6 +3,7 @@ import './App.css'
 import Privacy from './component/Privacy/Privacy.jsx'
 import Navbar from './component/Navbar/Navbar.jsx'
 import Therms from './component/Therms/Therms.jsx'
+import About from './component/About/About.jsx'
 
 function App() {
   
@@ -13,6 +14,7 @@ function App() {
       <Therms></Therms>
       <Privacy></Privacy>
       <Notification></Notification>
+      <About></About>
     </>
   )
 }
