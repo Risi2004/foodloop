@@ -8,10 +8,12 @@ body {
     background-repeat: no-repeat;
 }
 
+
 .header__image {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: auto;
+    aspect-ratio: 16/9;
     overflow: hidden;
     z-index: 2;
 }
@@ -61,14 +63,8 @@ body {
 }
 
 @media screen and (max-width: 1000px) {
-    .slide img {
-        height: auto;
-    }
-
     .caption__box {
         width: 70%;
-        bottom: 73%;
-        padding: 20px;
     }
 
     .caption__box p {
