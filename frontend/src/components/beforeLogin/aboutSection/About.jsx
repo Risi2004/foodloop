@@ -1,8 +1,5 @@
 import Mission from '../missionSection/Mission';
 import Vision from '../visionSection/Vision'
-// import icon3 from '../../../assets/icons/about/3.svg'
-// import icon4 from '../../../assets/icons/about/4.svg'
-
 import './About.css'
 
 function About() {

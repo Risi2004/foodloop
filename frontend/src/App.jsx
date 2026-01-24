@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/beforeLogin/landingPage/LandingPage"
-import Dashboard from "./pages/afterLogin/dashboard/dashboard"
+import Dashboard from "./pages/afterLogin/dashboard/Dashboard"
 
 function App() {
   const isLoggedIn = false;
