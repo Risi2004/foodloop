@@ -17,6 +17,10 @@
     margin-top: 20px;
 }
 
+.landing__page .contact{
+    margin: 30px;
+}
+
 @media screen and (max-width: 1000px) {
 
     .landing__page .header__image {

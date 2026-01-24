@@ -8,6 +8,7 @@
     text-align: center;
     position: relative;
     width: 18%;
+    flex-grow: 1;
 }
 
 .transparency__loop__card h1 {
@@ -31,10 +32,27 @@
     margin-bottom: 10px;
     position: absolute;
     top: 60%;
-    left: 25%;
+    left: 10%;
+    width: 80%;
 }
 
-.transparency__loop__card p{
+.transparency__loop__card p {
     position: absolute;
     top: 82%;
+}
+
+@media screen and (max-width: 1280px) {
+
+    .transparency__loop__card {
+        width: 35%;
+        flex-grow: 1;
+    }
+
+    .transparency__loop__card h1{
+        font-size: 25px;
+    }
+
+    .transparency__loop__card h4{
+        font-size: 14px;
+    }
 }
