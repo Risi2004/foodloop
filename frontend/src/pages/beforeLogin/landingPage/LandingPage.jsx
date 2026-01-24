@@ -4,6 +4,7 @@ import StatsCardPage from "../../../components/beforeLogin/statsCardPage/StatsCa
 import About from "../../../components/beforeLogin/aboutSection/About"
 import TransparencyLoopCardSection from "../../../components/beforeLogin/transparencyLoopCardSection/TransparencyLoopCardSection"
 import Contact from "../../../components/beforeLogin/Conatct/Contact"
+import Footer from "../../../components/beforeLogin/footer/Footer"
 import "./LandingPage.css"
 
 function LandingPage() {
@@ -15,6 +16,7 @@ function LandingPage() {
             <About />
             <TransparencyLoopCardSection />
             <Contact />
+            <Footer />
         </div>
     )
 }
