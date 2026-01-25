@@ -48,11 +48,16 @@
         flex-grow: 1;
     }
 
-    .transparency__loop__card h1{
+    .transparency__loop__card h1 {
         font-size: 25px;
     }
 
-    .transparency__loop__card h4{
+    .transparency__loop__card h4 {
         font-size: 14px;
     }
+
+    .transparency__loop__card p {
+        font-size: 12px;
+    }
+
 }
