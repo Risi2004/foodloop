@@ -1,16 +1,23 @@
 import { Link } from "react-router-dom";
 import React, { useState } from 'react';
 import "./DonorNavbar.css"
-import arrow from "../../../../assets/icons/navbar/arrow.svg"
-import menu from "../../../../assets/icons/navbar/menu-bar.svg"
+import notification from "../../../../../assets/icons/afterLogin/navbar/notification.svg"
+import profile from "../../../../../assets/icons/afterLogin/navbar/profile.svg"
+import menu from "../../../../../assets/icons/navbar/menu-bar.svg"
 
-function Navbar({ isLoggedIn }) {
+function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
     };
 
+
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+    const toggleProfile = () => {
+        setIsProfileOpen(!isProfileOpen)
+    }
     return (
         <>
             <div className="navbar">
@@ -26,23 +33,25 @@ function Navbar({ isLoggedIn }) {
                     <Link to="/">Home</Link>
                     <Link to="/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    {isLoggedIn && <Link to="/my-donations" className="active-link">MyDonation</Link>}
+                    <Link to="">My Donation</Link>
                 </div>
 
                 <div className="navbar__s3">
-                    {isLoggedIn ? (
-                        <div className="navbar__logged__in">
-                            <span>User_Name</span>
-                        </div>
-                    ) : (
-                        <Link to="/login">
-                            <button>
-                                <p>Login</p>
-                                <img src={arrow} alt="arrow" />
-                            </button>
-                        </Link>
-                    )}
+                    <img className="navbar__s3__img1" src={notification} alt="notification-icon" />
+                    <div className="navbar__s3__sub" onClick={toggleProfile}>
+                        <h3>User_Name</h3>
+                        <img className="navbar__s3__img2" src={profile} alt="profile-icon" />
+                    </div>
                 </div>
+                {isProfileOpen && (
+                    <div className="navbar__s3__profile__popup">
+                        <p onClick={toggleProfile}>X</p>
+                        <Link to="" onClick={toggleProfile}>View Profile</Link>
+                        <Link to="" onClick={toggleProfile}>
+                            <button>Sign Out</button>
+                        </Link>
+                    </div>
+                )}
             </div>
 
             <div className="responsive__navbar">
@@ -54,6 +63,7 @@ function Navbar({ isLoggedIn }) {
                     <p>Zero Waste. Infinite Impact</p>
                 </div>
                 <div className="responsive__navbar__s3">
+                    <img src={notification} alt="notification-icon" />
                     <img src={menu} alt="menu-bar" onClick={toggleMenu} />
                 </div>
             </div>
@@ -64,15 +74,11 @@ function Navbar({ isLoggedIn }) {
                     <Link to="/" onClick={toggleMenu}>Home</Link>
                     <Link to="/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    {isLoggedIn && <Link to="/my-donations" onClick={toggleMenu}>MyDonation</Link>}
-
-                    {!isLoggedIn ? (
-                        <Link to="/login" onClick={toggleMenu}><button>Login</button></Link>
-                    ) : (
-                        <div className="mobile__user__info">
-                            <span>User_Name</span>
-                        </div>
-                    )}
+                    <Link to="" onClick={toggleMenu}>View Profile</Link>
+                    <Link to="" onClick={toggleMenu}>My Donation</Link>
+                    <Link to="" onClick={toggleMenu}>
+                        <button>Sign Out</button>
+                    </Link>
                 </div>
             )}
         </>

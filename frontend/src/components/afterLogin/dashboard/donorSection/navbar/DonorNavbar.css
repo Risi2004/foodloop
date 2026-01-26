@@ -41,7 +41,9 @@
     display: flex;
     border-radius: 33px;
     gap: 40px;
-    background: rgba(255, 255, 255, 0.5);
+    background-color: transparent;
+    border: 1px solid;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .navbar__s2 a {
@@ -51,123 +53,51 @@
     font-size: 18px;
 }
 
-
-.navbar__s3 a {
-    text-decoration: none;
-}
-
-.navbar__s3 button {
+.navbar__s3 {
     display: flex;
-    gap: 10px;
+    justify-content: center;
     align-items: center;
-    padding: 15px;
-    border-radius: 33px;
-    border: none;
+    gap: 50px;
+}
+
+.navbar__s3__img1 {
+    border: 1px solid;
+    border-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50px;
+    padding: 5px;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.5);
 }
 
-.navbar__s3 button p {
-    font-size: 18px;
-    font-weight: bold;
-    color: white;
+.navbar__s3__sub {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.40);
+    padding: 5px;
+    cursor: pointer;
 }
 
-.navbar__s3 button img {
-    padding-right: 10px;
-    transition: 0.3s;
+.navbar__s3__profile__popup {
+    z-index: 999;
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    width: 16%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
 }
-
-.navbar__s3 button:hover img {
-    transform: translateX(10px);
-    transition: 0.3s;
-}
-
 
 .navbar__s1,
-.navbar__s2,
-.navbar__s3 button,
-.navbar__s3 .user__badge {
+.navbar__s2 {
     height: 60px;
     padding: 15px;
 }
-
-.navbar__logged__in {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.notification__icon {
-    position: relative;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.2);
-    /* Subtle bg */
-    border-radius: 50%;
-}
-
-.notification__icon svg {
-    stroke: #1F4E36;
-    /* Dark Green Stroke */
-}
-
-.notification__dot {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 8px;
-    height: 8px;
-    background-color: #e74c3c;
-    border-radius: 50%;
-}
-
-.user__badge {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 33px;
-    padding: 5px 20px !important;
-    /* Override button padding if needed */
-    cursor: pointer;
-}
-
-.user__badge span {
-    font-size: 18px;
-    font-weight: bold;
-    color: #1F4E36;
-}
-
-.user__avatar__small {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #ccc;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.user__avatar__small img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    padding: 0 !important;
-    /* Remove arrow padding */
-}
-
-.active-link {
-    text-decoration: underline white !important;
-    /* Indicate active */
-    opacity: 1;
-}
-
 
 .responsive__navbar {
     display: none;
@@ -188,7 +118,8 @@
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
 }
 
-.responsive__navbar__popup a {
+.responsive__navbar__popup a,
+.navbar__s3__profile__popup a {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -199,18 +130,20 @@
     text-decoration: none;
 }
 
-.responsive__navbar__popup a button {
+.responsive__navbar__popup a button,
+.navbar__s3__profile__popup a button {
     padding: 15px;
     border-radius: 33px;
-    width: 50%;
+    width: 100%;
     border: none;
     cursor: pointer;
-    background-color: #13EC5B;
+    background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%);
     font-weight: bold;
     font-size: 20px;
 }
 
-.responsive__navbar__popup p {
+.responsive__navbar__popup p,
+.navbar__s3__profile__popup p {
     cursor: pointer;
     text-align: right;
     font-size: 28px;
@@ -218,7 +151,7 @@
     margin-top: 20px;
 }
 
-@media screen and (max-width: 1000px) {
+@media screen and (max-width: 1250px) {
     .navbar {
         display: none;
     }
@@ -261,5 +194,14 @@
 
     .responsive__navbar__s3 img {
         cursor: pointer;
+        width: 30px;
+        height: 30px;
+    }
+
+    .responsive__navbar__s3 {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
     }
 }

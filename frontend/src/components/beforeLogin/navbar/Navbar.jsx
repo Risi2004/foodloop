@@ -25,23 +25,15 @@ function Navbar({ isLoggedIn }) {
                 <div className="navbar__s2">
                     <Link to="/">Home</Link>
                     <Link to="/about">About Us</Link>
-                    <Link to="/contact">Contact Us</Link>
-                    {isLoggedIn && <Link to="/my-donations" className="active-link">MyDonation</Link>}
-                </div>
+                    <Link to="/contact">Contact Us</Link>                </div>
 
                 <div className="navbar__s3">
-                    {isLoggedIn ? (
-                        <div className="navbar__logged__in">
-                            <span>User_Name</span>
-                        </div>
-                    ) : (
-                        <Link to="/login">
-                            <button>
-                                <p>Login</p>
-                                <img src={arrow} alt="arrow" />
-                            </button>
-                        </Link>
-                    )}
+                    <Link to="/login">
+                        <button>
+                            <p>Login</p>
+                            <img src={arrow} alt="arrow" />
+                        </button>
+                    </Link>
                 </div>
             </div>
 
@@ -64,15 +56,6 @@ function Navbar({ isLoggedIn }) {
                     <Link to="/" onClick={toggleMenu}>Home</Link>
                     <Link to="/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    {isLoggedIn && <Link to="/my-donations" onClick={toggleMenu}>MyDonation</Link>}
-
-                    {!isLoggedIn ? (
-                        <Link to="/login" onClick={toggleMenu}><button>Login</button></Link>
-                    ) : (
-                        <div className="mobile__user__info">
-                            <span>User_Name</span>
-                        </div>
-                    )}
                 </div>
             )}
         </>
