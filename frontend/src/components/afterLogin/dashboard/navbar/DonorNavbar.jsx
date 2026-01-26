@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import React, { useState } from 'react';
-import "./Navbar.css"
-import arrow from "../../../assets/icons/navbar/arrow.svg"
-import menu from "../../../assets/icons/navbar/menu-bar.svg"
+import "./DonorNavbar.css"
+import arrow from "../../../../assets/icons/navbar/arrow.svg"
+import menu from "../../../../assets/icons/navbar/menu-bar.svg"
 
 function Navbar({ isLoggedIn }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);

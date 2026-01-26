@@ -1,26 +1,26 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import LandingPage from "./pages/beforeLogin/landingPage/LandingPage"
-import Dashboard from "./pages/afterLogin/dashboard/Dashboard"
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LandingPage from "./pages/beforeLogin/landingPage/LandingPage";
+import DonorDashboard from "./pages/afterLogin/dashboard/donor/DonorDashboard"
+import LoginPage from "./pages/beforeLogin/loginPage/LoginPage";
+import SignupPage from "./pages/beforeLogin/signupPage/Signup";
 
 function App() {
-  const isLoggedIn = false;
+  const isLoggedIn = true;
+
   return (
-    <>
-      <Router>
-        <Routes>
-          {!isLoggedIn ? (
-            <>
-              <Route path="/" element={<LandingPage />} />
-            </>
-          ) : (
-            <>
-              <Route path="/Dashboard" element={<Dashboard />} />
-            </>
-          )}
-        </Routes> 
-      </Router>
-    </>
-  )
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        
+        <Route 
+          path="/donor/dashboard" 
+          element={isLoggedIn ? <DonorDashboard /> : <Navigate to="/login" />} 
+        />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

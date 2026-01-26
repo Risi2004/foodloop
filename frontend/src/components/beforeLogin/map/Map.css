@@ -31,10 +31,9 @@
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
-    /* Removed overflow:hidden from here so the buttons can hang outside if needed, 
-       but we will position them relative to this container */
+    
     padding-right: 50px;
-    /* Space for the zoom buttons */
+    
 }
 
 .map__container {
@@ -46,10 +45,10 @@
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
     z-index: 1;
     border: 4px solid white;
-    /* Optional: adds a nice white frame like the screenshot */
+    
 }
 
-/* External Zoom Controls */
+
 .map__zoom-controls {
     position: absolute;
     top: 20px;
@@ -64,9 +63,9 @@
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    /* Slightly rounded square */
+    
     background-color: #0d4a23;
-    /* Dark green background */
+    
     color: white;
     border: none;
     font-size: 24px;
@@ -90,7 +89,7 @@
     transform: translateY(0);
 }
 
-/* Leaflet specific overrides */
+
 .leaflet-container {
     height: 100%;
     width: 100%;
@@ -98,7 +97,7 @@
     z-index: 1;
 }
 
-/* Custom Legend Styling */
+
 .map__legend {
     position: absolute;
     bottom: 25px;
@@ -150,17 +149,17 @@
 
 .legend__icon.pickup {
     background-color: #2ECC71;
-    /* Green */
+    
     border: 1.5px solid #fff;
 }
 
 .legend__icon.dropoff {
     background-color: #E74C3C;
-    /* Red */
+    
     border: 1.5px solid #fff;
 }
 
-/* Custom Marker CSS classes */
+
 .custom-pin {
     background: transparent;
     border: none;
@@ -198,7 +197,7 @@
     fill: currentColor;
 }
 
-/* Pulse animation */
+
 @keyframes pulse-ring {
     0% {
         transform: scale(0.8);
