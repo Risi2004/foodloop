@@ -29,6 +29,7 @@ function DonorFooter() {
                         <Link to="">Home</Link>
                         <Link to="">About Us</Link>
                         <Link to="">Contact Us</Link>
+                        <Link to="">My Donation</Link>
                     </div>
                     <div className="footer__s4">
                         <h1>Legal</h1>

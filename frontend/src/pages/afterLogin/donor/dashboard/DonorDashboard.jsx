@@ -6,6 +6,7 @@ import Map from "../../../../components/afterLogin/dashboard/donorSection/map/Do
 import Contact from "../../../../components/beforeLogin/Conatct/Contact"
 import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter"
 import "./DonorDashboard.css";
+import StatusBatchCard from "../../../../components/afterLogin/dashboard/common/statusBatchCard/StatusBatchCard";
 
 function DonorDashboard() {
     return (
@@ -15,6 +16,7 @@ function DonorDashboard() {
             <FunctionsSection />
             <Map />
             <Feedback />
+            <StatusBatchCard/>
             <Contact />
             <DonorFooter />
         </div>
