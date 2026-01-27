@@ -1,8 +1,8 @@
 .contact {
-    margin-top: 30px;
     display: flex;
     justify-content: space-around;
     align-items: center;
+    margin: 30px;
 }
 
 .contact__s1 h1 {

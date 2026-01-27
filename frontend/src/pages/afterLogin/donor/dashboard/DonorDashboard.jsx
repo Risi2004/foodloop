@@ -3,7 +3,7 @@ import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSectio
 import FunctionsSection from "../../../../components/afterLogin/dashboard/donorSection/functionsSection/functionsSection";
 import Header from "../../../../components/afterLogin/dashboard/donorSection/header/Header"
 import Map from "../../../../components/afterLogin/dashboard/donorSection/map/DonorMap"
-import Contact from "../../../../components/beforeLogin/Conatct/Contact"
+import Contact from "../../../../components/beforeLogin/Contact/Contact"
 import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter"
 import "./DonorDashboard.css";
 import StatusBatchCard from "../../../../components/afterLogin/dashboard/common/statusBatchCard/StatusBatchCard";

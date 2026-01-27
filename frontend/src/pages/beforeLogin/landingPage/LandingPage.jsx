@@ -5,7 +5,7 @@ import About from "../../../components/beforeLogin/aboutSection/About"
 import TransparencyLoopCardSection from "../../../components/beforeLogin/transparencyLoopCardSection/TransparencyLoopCardSection"
 import Map from "../../../components/beforeLogin/map/Map"
 import ReviewSection from "../../../components/beforeLogin/review/ReviewSection"
-import Contact from "../../../components/beforeLogin/Conatct/Contact"
+import Contact from "../../../components/beforeLogin/Contact/Contact"
 import Footer from "../../../components/beforeLogin/footer/Footer"
 import "./LandingPage.css"
 
