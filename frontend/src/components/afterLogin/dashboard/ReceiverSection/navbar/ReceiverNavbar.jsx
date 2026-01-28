@@ -75,10 +75,9 @@ function Navbar() {
                     <Link to="/" onClick={toggleMenu}>Home</Link>
                     <Link to="/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="" onClick={toggleMenu}>View Profile</Link>
-                    <Link to="" onClick={toggleMenu}>My Donation</Link>
                     <Link to="" onClick={toggleMenu}>Find Food</Link>
                     <Link to="" onClick={toggleMenu}>My Claims</Link>
+                    <Link to="" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>
                     </Link>

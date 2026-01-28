@@ -14,8 +14,8 @@ function DonorDashboard() {
             <DonorNavbar />
             <Header />
             <FunctionsSection />
-            <Map />
             <Feedback />
+            <Map />
             <StatusBatchCard/>
             <Contact />
             <DonorFooter />

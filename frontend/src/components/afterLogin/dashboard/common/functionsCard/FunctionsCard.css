@@ -25,7 +25,22 @@
 }
 
 @media screen and (max-width:750px) {
+
     .functions__card{
         width: 50%;
     }
+
+}
+
+@media screen and (max-width:1300px) {
+
+
+    .functions__card h2{
+        font-size: 18px;
+    }
+
+    .functions__card P{
+        font-size: 12px;
+    }
+
 }

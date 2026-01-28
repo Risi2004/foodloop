@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import React, { useState } from 'react';
-import "./DonorNavbar.css"
+import "./DriverNavbar.css"
 import notification from "../../../../../assets/icons/afterLogin/navbar/notification.svg"
 import profile from "../../../../../assets/icons/afterLogin/navbar/profile.svg"
 import menu from "../../../../../assets/icons/navbar/menu-bar.svg"
@@ -33,7 +33,8 @@ function Navbar() {
                     <Link to="/">Home</Link>
                     <Link to="/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    <Link to="">My Donation</Link>
+                    <Link to="">Delivery</Link>
+                    <Link to="">My Pickups</Link>
                 </div>
 
                 <div className="navbar__s3">
@@ -74,7 +75,8 @@ function Navbar() {
                     <Link to="/" onClick={toggleMenu}>Home</Link>
                     <Link to="/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="" onClick={toggleMenu}>My Donation</Link>
+                    <Link to="">Delivery</Link>
+                    <Link to="">My Pickups</Link>
                     <Link to="" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>

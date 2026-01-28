@@ -4,6 +4,7 @@ import DonorDashboard from "./pages/afterLogin/donor/dashboard/DonorDashboard"
 import LoginPage from "./pages/beforeLogin/loginPage/LoginPage";
 import SignupPage from "./pages/beforeLogin/signupPage/Signup";
 import ReceiverDashboard from "./pages/afterLogin/receiver/dashboard/ReceiverDashboard"
+import DriverDashboard from "./pages/afterLogin/driver/DriverDashboard";
 
 function App() {
   const isLoggedIn = true;
@@ -22,6 +23,10 @@ function App() {
         <Route
           path="/receiver/dashboard"
           element={isLoggedIn ? <ReceiverDashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/driver/dashboard"
+          element={isLoggedIn ? <DriverDashboard /> : <Navigate to="/login" />}
         />
       </Routes>
     </Router>
