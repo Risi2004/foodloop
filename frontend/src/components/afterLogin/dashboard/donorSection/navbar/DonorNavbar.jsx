@@ -30,8 +30,8 @@ function Navbar() {
                 </div>
 
                 <div className="navbar__s2">
-                    <Link to="/">Home</Link>
-                    <Link to="/about">About Us</Link>
+                    <Link to="/donor/dashboard">Home</Link>
+                    <Link to="/donor/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
                     <Link to="">My Donation</Link>
                 </div>
@@ -71,8 +71,8 @@ function Navbar() {
             {isMenuOpen && (
                 <div className="responsive__navbar__popup">
                     <p onClick={toggleMenu}>X</p>
-                    <Link to="/" onClick={toggleMenu}>Home</Link>
-                    <Link to="/about" onClick={toggleMenu}>About Us</Link>
+                    <Link to="/donor/dashboard" onClick={toggleMenu}>Home</Link>
+                    <Link to="/donor/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
                     <Link to="" onClick={toggleMenu}>My Donation</Link>
                     <Link to="" onClick={toggleMenu}>View Profile</Link>

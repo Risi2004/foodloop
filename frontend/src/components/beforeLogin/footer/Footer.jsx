@@ -31,7 +31,7 @@ function Footer() {
                 </div>
                 <div className="footer__s4">
                     <h1>Legal</h1>
-                    <Link to="">Privacy Policy</Link>
+                    <Link to="/privacy-policy">Privacy Policy</Link>
                     <Link to="">Terms & Conditions</Link>
                 </div>
                 <div className="footer__s5">

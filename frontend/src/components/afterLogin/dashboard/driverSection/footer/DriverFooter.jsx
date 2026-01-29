@@ -26,11 +26,11 @@ function DonorFooter() {
                     </div>
                     <div className="footer__s3">
                         <h1>Quick Links</h1>
-                        <Link to="">Home</Link>
-                        <Link to="">About Us</Link>
+                        <Link to="/driver/dashboard">Home</Link>
+                        <Link to="/driver/about">About Us</Link>
                         <Link to="">Contact Us</Link>
-                        <Link to="">Find Food</Link>
-                        <Link to="">My Claims</Link>
+                        <Link to="">Delivery</Link>
+                        <Link to="">My Pickups</Link>
                     </div>
                     <div className="footer__s4">
                         <h1>Legal</h1>
