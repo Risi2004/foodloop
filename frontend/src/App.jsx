@@ -8,9 +8,11 @@ import DriverDashboard from "./pages/afterLogin/driver/dashboard/DriverDashboard
 import DonorAbout from "./pages/afterLogin/donor/about/DonorAbout";
 import ReceiverAbout from "./pages/afterLogin/receiver/about/ReceiverAbout";
 import DriverAbout from "./pages/afterLogin/driver/about/DriverAbout";
-import PrivacyPolicy from "./pages/beforeLogin/privacyPolicy/PrivacyPolicy";
+import LandingPagePrivacyPolicy from "./pages/beforeLogin/privacyPolicy/LandingPagePrivacyPolicy";
 import ScrollToTop from "./components/scrollToTop/ScrollToTop";
-
+import DonorPrivacyPolicy from "./pages/afterLogin/donor/privacyPolicy/DonorPrivacyPolicy";
+import DriverPrivacyPolicy from "./pages/afterLogin/driver/privacyPolicy/DriverPrivacyPolicy";
+import ReceiverPrivacyPolicy from "./pages/afterLogin/receiver/privacyPolicy/ReceiverPrivacyPolicy";
 function App() {
 
 
@@ -23,7 +25,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<LandingPagePrivacyPolicy />} />
 
         {/* After Signin */}
 
@@ -32,6 +34,7 @@ function App() {
         <Route path="/donor">
           <Route path="dashboard" element={<DonorDashboard />} />
           <Route path="about" element={<DonorAbout />} />
+          <Route path="privacy-policy" element={<DonorPrivacyPolicy />} />
         </Route>
 
         {/* Receiver */}
@@ -39,6 +42,7 @@ function App() {
         <Route path="/receiver">
           <Route path="dashboard" element={<ReceiverDashboard />} />
           <Route path="about" element={<ReceiverAbout />} />
+          <Route path="privacy-policy" element={<ReceiverPrivacyPolicy />} />
         </Route>
 
         {/* Driver */}
@@ -46,6 +50,7 @@ function App() {
         <Route path="/driver">
           <Route path="dashboard" element={<DriverDashboard />} />
           <Route path="about" element={<DriverAbout />} />
+          <Route path="privacy-policy" element={<DriverPrivacyPolicy />} />
         </Route>
 
       </Routes>
