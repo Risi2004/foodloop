@@ -4,7 +4,7 @@ const Navbar = () => {
   return (
     <div className="navbar">
       <div className="navbar__brandPanel">
-        <img className="navbar__logo" src="/public/Ellipse 1.svg" alt="FoodLoop Logo" />
+        <img className="navbar__logo" src="/Ellipse 1.svg" alt="FoodLoop Logo" />
         <div className="navbar__brand">
           <div className="navbar__brandName">
             <span>
@@ -22,9 +22,12 @@ const Navbar = () => {
       </div>
       <div className="navbar__loginButton">
         <a href="/login" className="navbar__loginText">Login</a>
-        <img className="navbar__loginIcon" src="/public/Arrow right.svg" alt="Arrow right" />
+        <img className="navbar__loginIcon" src="/Arrow right.svg" alt="Arrow right" />
       </div>
     </div>
   );
 }
 export default Navbar;
+
+
+

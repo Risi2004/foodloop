@@ -71,7 +71,7 @@ const About = () => (
               <div className="metric-icon">
                 <img
                   className="unavailable-cloud"
-                  src="/public/Unavailable Cloud.svg"
+                  src="/Unavailable Cloud.svg"
                   alt="Methane reduction icon"
                 />
               </div>
@@ -79,24 +79,24 @@ const About = () => (
             </div>
             <div className="metric-row">
               <div className="metric-icon">
-                <img className="blur" src="/public/Blur.svg" alt="Water icon" />
+                <img className="blur" src="/Blur.svg" alt="Water icon" />
               </div>
               <div className="metric-label">Water Conservation</div>
             </div>
           </div>
         </div>
         <div className="icon-circle">
-          <img className="leaf" src="/public/Leaf.svg" alt="Leaf illustration" />
+          <img className="leaf" src="/Leaf.svg" alt="Leaf illustration" />
         </div>
-        <img className="feature-image" src="/public/Frame 54.svg" alt="Impact graphic" />
+        <img className="feature-image" src="/Frame 54.svg" alt="Impact graphic" />
       </div>
 
       <div className="journey-row">
-        <img className="feature-image" src="/public/economic.svg" alt="Economic value" />
+        <img className="feature-image" src="/economic.svg" alt="Economic value" />
         <div className="icon-circle">
           <img
             className="positive-dynamic"
-            src="/public/Positive Dynamic.svg"
+            src="/Positive Dynamic.svg"
             alt="Positive dynamic"
           />
         </div>
@@ -111,7 +111,7 @@ const About = () => (
               <div className="metric-icon">
                 <img
                   className="us-dollar-circled"
-                  src="/public/Us Dollar Circled.svg"
+                  src="/Us Dollar Circled.svg"
                   alt="Disposal savings icon"
                 />
               </div>
@@ -119,7 +119,7 @@ const About = () => (
             </div>
             <div className="metric-row">
               <div className="metric-icon">
-                <img className="repeat" src="/public/Repeat.svg" alt="Efficiency" />
+                <img className="repeat" src="/Repeat.svg" alt="Efficiency" />
               </div>
               <div className="metric-label">
                 Supply Chain Efficiency
@@ -140,7 +140,7 @@ const About = () => (
           <div className="metrics-list">
             <div className="metric-row">
               <div className="metric-icon">
-                <img className="trust" src="/public/Trust.svg" alt="Trust icon" />
+                <img className="trust" src="/Trust.svg" alt="Trust icon" />
               </div>
               <div className="metric-label">Vulnerable Communities</div>
             </div>
@@ -148,7 +148,7 @@ const About = () => (
               <div className="metric-icon">
                 <img
                   className="heart-with-pulse"
-                  src="/public/Heart with Pulse.svg"
+                  src="/Heart with Pulse.svg"
                   alt="Heart with pulse"
                 />
               </div>
@@ -159,11 +159,11 @@ const About = () => (
         <div className="icon-circle">
           <img
             className="meeting-room"
-            src="/public/Meeting Room.svg"
+            src="/Meeting Room.svg"
             alt="Meeting room"
           />
         </div>
-        <img className="feature-image" src="/public/commitee.svg" alt="Social impact" />
+        <img className="feature-image" src="/commitee.svg" alt="Social impact" />
       </div>
     </section>
   </section>

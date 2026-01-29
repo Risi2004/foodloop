@@ -12,7 +12,7 @@ const Therms = () => {
         <div className="termsPage__back common-back-bar" onClick={handleBackClick}>
           <img
             className="termsPage__backIcon common-back-icon"
-            src="/public/Left.svg"
+            src="/Left.svg"
             alt="Back"
           />
           <div className="termsPage__backText common-back-text">Back to</div>

@@ -9,7 +9,7 @@ const Privacy = () => {
   return (
     <div className="privacyPolicy">
   <div className="privacy-back common-back-bar common-back-bar--padded-small common-back-bar--clickable" onClick={handleBackClick}>
-    <img className="privacy-back__icon common-back-icon" src="/public/Left.svg" />
+    <img className="privacy-back__icon common-back-icon" src="/Left.svg" />
     <div className="privacy-back__text common-back-text">Back to</div>
   </div>
   <div className="privacy-container common-content-wrapper">
@@ -20,27 +20,27 @@ const Privacy = () => {
       </div>
       <div className="privacy-sidebar__menu">
         <a href="#compliance" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Law.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Law.svg" />
           <div className="privacy-sidebar__item-label">Compliance</div>
         </a>
         <a href="#data-collection" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Cloud Folder.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Cloud Folder.svg" />
           <div className="privacy-sidebar__item-label">Data Collection</div>
         </a>
         <a href="#ai-data-usage" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Mind Map.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Mind Map.svg" />
           <div className="privacy-sidebar__item-label">AI &amp; Data Usage</div>
         </a>
         <a href="#data-sharing" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Share.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Share.svg" />
           <div className="privacy-sidebar__item-label">Data Sharing</div>
         </a>
         <a href="#security" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Security Lock.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Security Lock.svg" />
           <div className="privacy-sidebar__item-label">Security</div>
         </a>
         <a href="#contact-us" className="privacy-sidebar__item">
-          <img className="privacy-sidebar__item-icon common-icon" src="/public/Contact.svg" />
+          <img className="privacy-sidebar__item-icon common-icon" src="/Contact.svg" />
           <div className="privacy-sidebar__item-label">Contact Us</div>
         </a>
       </div>
@@ -160,11 +160,11 @@ const Privacy = () => {
         </div>
         <div className="privacy-section__contact">
           <div className="privacy-section__contact-item common-contact-row common-contact-row--start">
-            <img className="privacy-section__contact-icon common-icon" src="/public/At sign.svg" />
+            <img className="privacy-section__contact-icon common-icon" src="/At sign.svg" />
             <div className="privacy-section__contact-text">foodloop.official@gmail.com</div>
           </div>
           <div className="privacy-section__contact-item common-contact-row common-contact-row--start">
-            <img className="privacy-section__contact-icon common-icon" src="/public/Location.svg" />
+            <img className="privacy-section__contact-icon common-icon" src="/Location.svg" />
             <div className="privacy-section__contact-text privacy-section__contact-text--secondary">Colombo, Sri Lanka</div>
           </div>
         </div>
