@@ -47,7 +47,7 @@ function Navbar() {
                 {isProfileOpen && (
                     <div className="navbar__s3__profile__popup">
                         <p onClick={toggleProfile}>X</p>
-                        <Link to="" onClick={toggleProfile}>View Profile</Link>
+                        <Link to="/driver/profile" onClick={toggleProfile}>View Profile</Link>
                         <Link to="" onClick={toggleProfile}>
                             <button>Sign Out</button>
                         </Link>
@@ -77,7 +77,7 @@ function Navbar() {
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
                     <Link to="/driver/delivery" onClick={toggleMenu}>Delivery</Link>
                     <Link to="">My Pickups</Link>
-                    <Link to="" onClick={toggleMenu}>View Profile</Link>
+                    <Link to="/driver/profile" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>
                     </Link>

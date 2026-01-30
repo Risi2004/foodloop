@@ -22,6 +22,7 @@ import DriverNotifications from "./pages/afterLogin/driver/notifications/DriverN
 import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/ReceiverNotifications";
 import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
 import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
+import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
 function App() {
 
 
@@ -69,6 +70,7 @@ function App() {
           <Route path="terms-&-conditions" element={<DriverTermsAndConditions />} />
           <Route path="notifications" element={<DriverNotifications />} />
           <Route path="delivery" element={<Delivery />} />
+          <Route path="profile" element={<DriverProfile />} />
         </Route>
 
       </Routes>
