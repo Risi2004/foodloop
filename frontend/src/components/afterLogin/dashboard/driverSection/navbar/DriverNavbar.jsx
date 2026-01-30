@@ -34,7 +34,7 @@ function Navbar() {
                     <Link to="/driver/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
                     <Link to="/driver/delivery">Delivery</Link>
-                    <Link to="">My Pickups</Link>
+                    <Link to="/driver/my-pickups">My Pickups</Link>
                 </div>
 
                 <div className="navbar__s3">
@@ -76,7 +76,7 @@ function Navbar() {
                     <Link to="/driver/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
                     <Link to="/driver/delivery" onClick={toggleMenu}>Delivery</Link>
-                    <Link to="">My Pickups</Link>
+                    <Link to="/driver/my-pickups" onClick={toggleMenu}>My Pickups</Link>
                     <Link to="/driver/profile" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>

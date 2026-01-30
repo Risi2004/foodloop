@@ -229,6 +229,97 @@
 }
 
 
+
+.driver__profile__s2__sub1__sub3 {
+    border-radius: 20px;
+    background: white;
+    padding: 20px;
+}
+
+.driver__profile__s2__sub1__sub3__sub1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.driver__profile__s2__sub1__sub3__sub1 h3 {
+    font-size: 18px;
+    color: black;
+    margin: 0;
+    font-weight: 800;
+}
+
+.driver__profile__s2__sub1__sub3__sub1__badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #FFF8E1;
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: 1px solid #FFD54F;
+    color: #FF6F00;
+    font-weight: bold;
+    font-size: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.driver__profile__s2__sub1__sub3__sub1__badge img {
+    width: 15px;
+    height: 15px;
+}
+
+.driver__profile__s2__sub1__sub3__sub2 {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.driver__profile__s2__sub1__sub3__sub2>img {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #FFD700;
+    border-radius: 50%;
+    padding: 5px;
+}
+
+.driver__profile__s2__sub1__sub3__sub2__sub {
+    width: 100%;
+}
+
+.driver__profile__s2__sub1__sub3__sub2__sub__text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.driver__profile__s2__sub1__sub3__sub2__sub__bar {
+    width: 100%;
+    height: 10px;
+    background-color: #E0E0E0;
+    border: 1px solid #CCC;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.driver__profile__s2__sub1__sub3__sub2__sub__bar__fill {
+    height: 100%;
+    background-color: #00FF5B;
+    width: 80%;
+}
+
+.driver__profile__s2__sub1__sub3__p {
+    color: #333;
+    font-size: 13px;
+    text-align: left;
+    font-weight: 500;
+    margin: 0;
+}
+
 @media screen and (max-width: 1000px) {
     .driver__profile__s1 {
         display: block;

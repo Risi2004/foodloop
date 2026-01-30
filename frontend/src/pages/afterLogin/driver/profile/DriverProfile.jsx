@@ -14,6 +14,8 @@ import trendIcon from "../../../../assets/icons/afterLogin/driver/Trend-Up.svg"
 import swapIcon from "../../../../assets/icons/afterLogin/driver/Swap.svg"
 import mealIcon from "../../../../assets/icons/afterLogin/driver/Meal.svg"
 import DeliveredCard from '../../../../components/afterLogin/driver/profile/DeliveredCard';
+import trophyIcon from "../../../../assets/icons/afterLogin/driver/Trophy.svg";
+import starIcon from "../../../../assets/icons/afterLogin/driver/Mandriva.svg";
 import "./DriverProfile.css";
 
 function DriverProfile() {
@@ -89,6 +91,28 @@ function DriverProfile() {
 
                             </div>
                         </div>
+                        <div className='driver__profile__s2__sub1__sub3'>
+                            <div className='driver__profile__s2__sub1__sub3__sub1'>
+                                <h3>Your Impact Progress</h3>
+                                <div className='driver__profile__s2__sub1__sub3__sub1__badge'>
+                                    <img src={trophyIcon} alt="trophy" />
+                                    <p>Community Hero</p>
+                                </div>
+                            </div>
+                            <div className='driver__profile__s2__sub1__sub3__sub2'>
+                                <img src={starIcon} alt="star" />
+                                <div className='driver__profile__s2__sub1__sub3__sub2__sub'>
+                                    <div className='driver__profile__s2__sub1__sub3__sub2__sub__text'>
+                                        <p>12/15 Pickups Completed</p>
+                                        <p>80%</p>
+                                    </div>
+                                    <div className='driver__profile__s2__sub1__sub3__sub2__sub__bar'>
+                                        <div className='driver__profile__s2__sub1__sub3__sub2__sub__bar__fill'></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="driver__profile__s2__sub1__sub3__p">"Just 3 more pickups to earn your next badge!"</p>
+                        </div>
                     </div>
                     <div className='driver__profile__s2__sub2'>
                         <div className='driver__profile__s2__sub2__sub1'>
@@ -105,7 +129,7 @@ function DriverProfile() {
                             </div>
                             <div className='driver__profile__s2__sub2__sub1__sub'>
                                 <div className='driver__profile__s2__sub2__sub1__sub__sub1'>
-                                    <h5>Deliveries Completed</h5>
+                                    <h5>Distance Travelled</h5>
                                     <img src={swapIcon} alt="truck" />
                                 </div>
                                 <h1>124</h1>
@@ -116,7 +140,7 @@ function DriverProfile() {
                             </div>
                             <div className='driver__profile__s2__sub2__sub1__sub'>
                                 <div className='driver__profile__s2__sub2__sub1__sub__sub1'>
-                                    <h5>Deliveries Completed</h5>
+                                    <h5>Meals Saved</h5>
                                     <img src={mealIcon} alt="meal" />
                                 </div>
                                 <h1>124</h1>

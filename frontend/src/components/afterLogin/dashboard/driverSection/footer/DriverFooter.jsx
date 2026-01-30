@@ -30,7 +30,7 @@ function DonorFooter() {
                         <Link to="/driver/about">About Us</Link>
                         <Link to="">Contact Us</Link>
                         <Link to="/driver/delivery">Delivery</Link>
-                        <Link to="">My Pickups</Link>
+                        <Link to="/driver/my-pickups">My Pickups</Link>
                     </div>
                     <div className="footer__s4">
                         <h1>Legal</h1>

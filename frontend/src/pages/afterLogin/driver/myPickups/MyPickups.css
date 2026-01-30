@@ -1,0 +1,47 @@
+.my__pickups {
+    margin: 30px;
+}
+
+.my__pickups__s1 {
+    color: white;
+    border: 1px solid;
+    border-color: rgba(255, 255, 255, 0.3);
+    border-radius: 30px;
+    padding: 20px;
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+
+.my__pickups__s1 h1 {
+    margin-bottom: 20px;
+}
+
+.my__pickups__s1__sub {
+    border-radius: 20px;
+    background: linear-gradient(180deg, #FFF 0%, #1F4E36 100%);
+    padding: 20px;
+    width: 100%;
+}
+
+.my__pickups__s1__sub1 h5,
+.my__pickups__s1__sub h1 {
+    color: #013211;
+}
+
+.my__pickups__s1__sub {
+    margin-bottom: 20px;
+}
+
+.my__pickups__s1__sub1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.my__pickups__s1__sub2 {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
