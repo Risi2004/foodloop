@@ -21,6 +21,7 @@ import DonorNotifications from "./pages/afterLogin/donor/notifications/DonorNoti
 import DriverNotifications from "./pages/afterLogin/driver/notifications/DriverNotifications";
 import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/ReceiverNotifications";
 import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
+import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
 function App() {
 
 
@@ -67,6 +68,7 @@ function App() {
           <Route path="privacy-policy" element={<DriverPrivacyPolicy />} />
           <Route path="terms-&-conditions" element={<DriverTermsAndConditions />} />
           <Route path="notifications" element={<DriverNotifications />} />
+          <Route path="delivery" element={<Delivery />} />
         </Route>
 
       </Routes>

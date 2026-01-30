@@ -33,7 +33,7 @@ function Navbar() {
                     <Link to="/driver/dashboard">Home</Link>
                     <Link to="/driver/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    <Link to="">Delivery</Link>
+                    <Link to="/driver/delivery">Delivery</Link>
                     <Link to="">My Pickups</Link>
                 </div>
 
@@ -75,7 +75,7 @@ function Navbar() {
                     <Link to="/driver/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/driver/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="">Delivery</Link>
+                    <Link to="/driver/delivery" onClick={toggleMenu}>Delivery</Link>
                     <Link to="">My Pickups</Link>
                     <Link to="" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
