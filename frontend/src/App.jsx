@@ -23,6 +23,7 @@ import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/Rec
 import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
 import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
 import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
+import EditProfile from "./pages/afterLogin/driver/editProfile/EditProfile";
 function App() {
 
 
@@ -71,6 +72,7 @@ function App() {
           <Route path="notifications" element={<DriverNotifications />} />
           <Route path="delivery" element={<Delivery />} />
           <Route path="profile" element={<DriverProfile />} />
+          <Route path="edit-profile" element={<EditProfile />} />
         </Route>
 
       </Routes>
