@@ -38,7 +38,7 @@ function Navbar() {
                 </div>
 
                 <div className="navbar__s3">
-                    <img className="navbar__s3__img1" src={notification} alt="notification-icon" />
+                    <Link to="/driver/notifications"><img className="navbar__s3__img1" src={notification} alt="notification-icon" /></Link>
                     <div className="navbar__s3__sub" onClick={toggleProfile}>
                         <h3>User_Name</h3>
                         <img className="navbar__s3__img2" src={profile} alt="profile-icon" />

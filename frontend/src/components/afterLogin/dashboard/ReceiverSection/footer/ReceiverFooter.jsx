@@ -29,13 +29,13 @@ function DonorFooter() {
                     <Link to="/receiver/dashboard">Home</Link>
                     <Link to="/receiver/about">About Us</Link>
                     <Link to="">Contact Us</Link>
-                    <Link to="">Delivery</Link>
-                    <Link to="">My Pickups</Link>
+                    <Link to="">Find Food</Link>
+                    <Link to="">My Claims</Link>
                 </div>
                 <div className="footer__s4">
                     <h1>Legal</h1>
                     <Link to="/receiver/privacy-policy">Privacy Policy</Link>
-                    <Link to="">Terms & Conditions</Link>
+                    <Link to="/receiver/terms-&-conditions">Terms & Conditions</Link>
                 </div>
                 <div className="footer__s5">
                     <h1>Designed & Developed</h1>

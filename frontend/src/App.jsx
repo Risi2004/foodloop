@@ -13,6 +13,14 @@ import ScrollToTop from "./components/scrollToTop/ScrollToTop";
 import DonorPrivacyPolicy from "./pages/afterLogin/donor/privacyPolicy/DonorPrivacyPolicy";
 import DriverPrivacyPolicy from "./pages/afterLogin/driver/privacyPolicy/DriverPrivacyPolicy";
 import ReceiverPrivacyPolicy from "./pages/afterLogin/receiver/privacyPolicy/ReceiverPrivacyPolicy";
+import LandingPageTermsAndConditions from "./pages/beforeLogin/termsAndConditions/LandingPageTermsAndConditions";
+import DonorTermsAndConditions from "./pages/afterLogin/donor/termsAndConditions/DonorTermsAndConditions";
+import ReceiverTermsAndConditions from "./pages/afterLogin/receiver/termsAndConditions/ReceiverTermsAndConditions";
+import DriverTermsAndConditions from "./pages/afterLogin/driver/termsAndConditions/DriverTermsAndConditions";
+import DonorNotifications from "./pages/afterLogin/donor/notifications/DonorNotifications";
+import DriverNotifications from "./pages/afterLogin/driver/notifications/DriverNotifications";
+import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/ReceiverNotifications";
+import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
 function App() {
 
 
@@ -26,6 +34,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/privacy-policy" element={<LandingPagePrivacyPolicy />} />
+        <Route path="/terms-&-conditions" element={<LandingPageTermsAndConditions />} />
 
         {/* After Signin */}
 
@@ -35,6 +44,8 @@ function App() {
           <Route path="dashboard" element={<DonorDashboard />} />
           <Route path="about" element={<DonorAbout />} />
           <Route path="privacy-policy" element={<DonorPrivacyPolicy />} />
+          <Route path="terms-&-conditions" element={<DonorTermsAndConditions />} />
+          <Route path="notifications" element={<DonorNotifications />} />
         </Route>
 
         {/* Receiver */}
@@ -43,6 +54,9 @@ function App() {
           <Route path="dashboard" element={<ReceiverDashboard />} />
           <Route path="about" element={<ReceiverAbout />} />
           <Route path="privacy-policy" element={<ReceiverPrivacyPolicy />} />
+          <Route path="terms-&-conditions" element={<ReceiverTermsAndConditions />} />
+          <Route path="notifications" element={<ReceiverNotifications />} />
+          <Route path="profile" element={<ReceiverProfile />} />
         </Route>
 
         {/* Driver */}
@@ -51,6 +65,8 @@ function App() {
           <Route path="dashboard" element={<DriverDashboard />} />
           <Route path="about" element={<DriverAbout />} />
           <Route path="privacy-policy" element={<DriverPrivacyPolicy />} />
+          <Route path="terms-&-conditions" element={<DriverTermsAndConditions />} />
+          <Route path="notifications" element={<DriverNotifications />} />
         </Route>
 
       </Routes>

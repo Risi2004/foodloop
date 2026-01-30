@@ -35,7 +35,7 @@ function DonorFooter() {
                     <div className="footer__s4">
                         <h1>Legal</h1>
                         <Link to="/driver/privacy-policy">Privacy Policy</Link>
-                        <Link to="">Terms & Conditions</Link>
+                        <Link to="/driver/terms-&-conditions">Terms & Conditions</Link>
                     </div>
                     <div className="footer__s5">
                         <h1>Designed & Developed</h1>
