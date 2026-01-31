@@ -1,0 +1,57 @@
+.delivery__card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    padding-left: 40px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.delivery__card__s1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delivery__card__s1 h4 {
+    font-weight: bolder;
+}
+
+.delivery__card__s1 h5 {
+    color: #4C9A66;
+    border-radius: 50px;
+    background: #F0F9F2;
+    padding: 10px;
+}
+
+.delivery__card p {
+    color: #4C9A66;
+}
+
+.delivery__card__s2 {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px
+}
+
+.delivery__card__s2 p {
+    color: #EF4444;
+}
+
+.delivery__card button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    background: #3B6D4C;
+    width: 90%;
+    cursor: pointer;
+}
+
+.delivery__card button p {
+    color: white;
+    padding: 10px;
+    font-weight: bold;
+}
