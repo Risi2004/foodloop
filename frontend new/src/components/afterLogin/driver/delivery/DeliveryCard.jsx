@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import schedule from "../../../../assets/icons/afterLogin/driver/schedule.svg";
 import transit from "../../../../assets/icons/afterLogin/driver/transit.svg";
 import './DeliveryCard.css';
@@ -23,10 +24,12 @@ function DeliveryCard({ isSelected, onClick }) {
                 <img src={schedule} alt="schedule" />
                 <p>Expires in 15 min</p>
             </div>
-            <button>
-                <p>Confirm Pickup</p>
-                <img src={transit} alt="pickup" />
-            </button>
+            <Link to="/driver/pickup">
+                <button>
+                    <p>Confirm Pickup</p>
+                    <img src={transit} alt="pickup" />
+                </button>
+            </Link>
         </div>
     )
 }

@@ -25,6 +25,7 @@ import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
 import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
 import EditProfile from "./pages/afterLogin/driver/editProfile/EditProfile";
 import MyPickups from "./pages/afterLogin/driver/myPickups/MyPickups";
+import Pickup from "./pages/afterLogin/driver/Pickup/Pickup";
 function App() {
 
 
@@ -75,6 +76,7 @@ function App() {
           <Route path="profile" element={<DriverProfile />} />
           <Route path="edit-profile" element={<EditProfile />} />
           <Route path="my-pickups" element={<MyPickups />} />
+         <Route path="/driver/pickup" element={<Pickup />}></Route>
         </Route>
 
       </Routes>
