@@ -1,17 +1,22 @@
 .my__pickups {
     margin: 30px;
+    display: flex;
+    align-items: flex-start;
+    /* Changed from center to align top */
+    justify-content: center;
+    gap: 30px;
 }
 
 .my__pickups__s1 {
     color: white;
-    border: 1px solid;
-    border-color: rgba(255, 255, 255, 0.3);
-    border-radius: 30px;
-    padding: 20px;
     width: 30%;
     display: flex;
     flex-direction: column;
-    align-items: start;
+    align-items: stretch;
+    /* Forces children to grow full width */
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 20px;
+    border-radius: 30px;
 }
 
 .my__pickups__s1 h1 {
@@ -44,4 +49,94 @@
     display: flex;
     align-items: center;
     gap: 20px;
+}
+
+.my__pickups__s2 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+
+.my__pickups__s2__sub1 {
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 20px;
+    border-radius: 30px;
+}
+
+.my__pickups__s2__sub1__cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.my__pickups__s2__sub1__cards>div {
+    flex: 1 1 300px;
+    /* Grow, shrink, base width 300px - allows side-by-side */
+    min-width: 0;
+    /* Prevents flex items from overflowing */
+}
+
+.my__pickups__s2__sub1 h1 {
+    color: white;
+    margin: 0;
+    margin-bottom: 20px;
+}
+
+.my__pickups__s2__sub2 {
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 20px;
+    border-radius: 30px;
+}
+
+.my__pickups__s2__sub2 h1 {
+    margin-bottom: 20px;
+    color: white;
+    /* Ensure text is visible if it was missing color before */
+}
+
+
+.my__pickups__s2__sub2__sub {
+    display: flex;
+    align-items: stretch;
+    justify-content: start;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.my__pickups__s2__sub2__sub>div {
+    flex: 1 1 300px;
+    min-width: 0;
+}
+
+/* Responsive Media Queries */
+@media screen and (max-width: 1000px) {
+    .my__pickups {
+        flex-direction: column;
+        align-items: stretch;
+        /* Stretch children to full width */
+    }
+
+    .my__pickups__s1 {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .my__pickups__s2 {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 750px) {
+    .my__pickups {
+        margin: 15px;
+        gap: 20px;
+    }
+
+    .my__pickups__s2__sub2__sub {
+        flex-direction: column;
+        /* Stack cards vertically on mobile */
+        width: 100%;
+    }
 }

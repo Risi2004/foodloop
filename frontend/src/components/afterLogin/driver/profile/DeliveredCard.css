@@ -18,7 +18,15 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
-}   
+    border-radius: 20px;
+    padding: 10px;
+    background: #D1FAE5;
+    width: fit-content;
+}
+
+.delivered__card__sub p {
+    color: #047857;
+}
 
 .delivery__card__s1 h4 {
     font-weight: bolder;
