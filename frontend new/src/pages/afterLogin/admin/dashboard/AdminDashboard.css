@@ -1,0 +1,10 @@
+body.admin-mode {
+    background: #102216 !important;
+}
+
+.dashboard {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: #102216;
+}
