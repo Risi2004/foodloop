@@ -5,6 +5,7 @@ import Navbar from './component/Navbar/Navbar.jsx'
 import Therms from './component/Therms/Therms.jsx'
 import About from './component/About/About.jsx'
 import ReceiverProfile from './component/ReceiverProfile/ReceiverProfile.jsx'
+import Receiverprofileedit from './component/receiver-profile-edit/Receiverprofileedit.jsx'
 
 
 function App() {
@@ -12,8 +13,7 @@ function App() {
 
   return (
     <>
-      <Navbar></Navbar>
-     <ReceiverProfile> </ReceiverProfile>
+      <Receiverprofileedit />
 
     </>
   )
