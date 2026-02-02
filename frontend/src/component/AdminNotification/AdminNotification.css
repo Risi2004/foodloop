@@ -1,0 +1,23 @@
+.admin-notification-container {
+  padding: 24px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  max-width: 800px;
+  margin: 32px auto;
+}
+
+.admin-notification-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #1f2933;
+}
+
+.admin-notification-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #616e7c;
+}
+
+

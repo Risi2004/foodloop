@@ -249,10 +249,12 @@ line-height: 20px; /* 62.5% */
 
 .infotop {
     display: flex;
-padding: 10px;
-justify-content: center;
-align-items: center;
-gap: 680px;    
+    padding: 10px 20px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 40px;
+    width: 100%;
+    align-self: stretch;
 }
 
 .donor-information {
