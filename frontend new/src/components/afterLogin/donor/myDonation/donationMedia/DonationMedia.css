@@ -3,10 +3,13 @@
     justify-content: center;
     align-items: center;
     height: 100%;
+    flex: 1;
+    width: 100%;
 }
 
 .mobile-frame {
-    width: 320px;
+    width: 80%;
+    max-width: 800px;
     height: 650px;
     background: #e0e5e0;
     /* Light greenish grey frame */
@@ -21,6 +24,7 @@
     position: relative;
     transform: rotate(-5deg);
     /* Slight tilt as in image */
+    transition: transform 0.3s ease;
 }
 
 /* Screen area */
@@ -90,21 +94,24 @@
 /* Controls */
 .mobile-controls {
     display: flex;
-    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
     padding: 10px 20px 20px 20px;
+    width: 100%;
 }
 
 .media-btn {
-    width: 60px;
-    height: 60px;
-    border-radius: 20px;
+    width: 35px;
+    height: 35px;
+    border-radius: 10px;
     border: none;
     background: white;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 16px;
     cursor: pointer;
     transition: transform 0.2s;
 }
@@ -119,4 +126,28 @@
 
 .camera-btn {
     color: #333;
+}
+
+@media screen and (max-width: 1100px) {
+    .mobile-frame {
+        transform: rotate(0deg);
+        margin: 20px auto;
+        height: 600px;
+        width: 80%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .mobile-frame {
+        width: 90%;
+        max-width: none;
+        height: auto;
+        aspect-ratio: 9 / 18;
+        transform: rotate(0deg);
+        padding: 12px;
+    }
+
+    .mobile-screen {
+        height: 400px;
+    }
 }

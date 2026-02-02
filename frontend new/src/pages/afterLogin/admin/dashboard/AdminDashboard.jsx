@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import AdminNavbar from '../../../../components/afterLogin/admin/navbar/AdminNavbar';
+import AdminNavbar from '../../../../components/afterLogin/admin/navbar/AdminSideNavbar';
 import './AdminDashboard.css'
 
 function AdminDashboard() {

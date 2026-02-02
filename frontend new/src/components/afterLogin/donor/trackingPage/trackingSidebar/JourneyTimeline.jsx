@@ -1,4 +1,3 @@
-
 import './JourneyTimeline.css';
 
 function JourneyTimeline() {

@@ -3,12 +3,460 @@
     /* Light grayish/greenish background matching right card */
     padding: 32px;
     border-radius: 32px;
-    width: 600px;
+    width: 100%;
+    max-width: 600px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
+}
+
+/* AI Banner */
+.ai-analysis-banner {
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.analysis-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.check-icon-circle {
+    background: #86efac;
+    color: #14532d;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.analysis-text {
+    font-size: 13px;
+    color: #166534;
+    font-weight: 500;
+}
+
+.confidence {
+    font-weight: 700;
+}
+
+.safety-badge {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Section Header */
+.form-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-title h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    color: #1f2937;
+}
+
+.ai-filled-badge {
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.edit-all-btn {
+    background: none;
+    border: none;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4CAF50;
+    margin-bottom: 6px;
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid white;
+    background: white;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #1f2937;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.edit-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #9ca3af;
+    cursor: pointer;
+}
+
+/* Quantity Control */
+.quantity-control {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 8px;
+    padding: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.qty-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #6b7280;
+    font-weight: bold;
+}
+
+.qty-input {
+    flex: 1;
+    border: none;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    padding: 8px 0;
+}
+
+.qty-btn.plus {
+    color: #10b981;
+}
+
+/* Toggles */
+.toggle-group {
+    display: flex;
+    gap: 8px;
+}
+
+.toggle-btn {
+    flex: 1;
+    border: none;
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.toggle-btn.hot.active {
+    background: #22c55e;
+    color: white;
+}
+
+/* Green for active */
+
+.logistics-header {
+    margin-top: 8px;
+    margin-bottom: 12px;
+}
+
+/* Logistics Grid */
+.logistics-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.pickup-toggles {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.pickup-btn {
+    flex: 1;
+    border: none;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 12px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pickup-btn.active {
+    border: 2px solid white;
+    background: white;
+}
+
+.day-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.time-label {
+    display: block;
+    font-size: 10px;
+    color: #6b7280;
+}
+
+.datetime-inputs {
+    display: flex;
+    gap: 8px;
+}
+
+.date-input-wrapper,
+.time-input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.date-input,
+.time-input {
+    width: 100%;
+    padding: 8px 30px 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 11px;
+    background: #d1d5db;
+    /* Greyish input background */
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.calendar-icon,
+.clock-icon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.5;
+}
+
+/* Impact Card */
+.impact-card {
+    background: #dcfce7;
+    border-radius: 16px;
+    padding: 16px;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.share-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 12px;
+    color: #166534;
+}
+
+.impact-content h3 {
+    margin: 0;
+}
+
+.impact-card label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #15803d;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.impact-value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.impact-value .number {
+    font-size: 28px;
+    font-weight: 800;
+    color: #14532d;
+    background: white;
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+.impact-value .unit {
+    font-size: 16px;
+    font-weight: 700;
+    color: #14532d;
+}
+
+.impact-desc {
+    font-size: 10px;
+    color: #166534;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.people-icon-group {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    font-size: 24px;
+    color: #86efac;
+}
+
+/* Footer */
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.checkbox-group input {
+    margin-top: 2px;
+}
+
+.checkbox-group label {
+    font-size: 11px;
+    color: #374151;
+    font-weight: 500;
+}
+
+.post-donation-btn {
+    width: 100%;
+    background: #00C853;
+    color: #003300;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    transition: background 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+}
+
+.post-donation-btn:hover {
+    background: #00e676;
+}
+
+.progress-status {
+    text-align: center;
+}
+
+.progress-text {
+    font-size: 10px;
+    color: #4b5563;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.highlight {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.progress-fraction {
+    color: #9ca3af;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 2px;
+}
+
+
+@media screen and (max-width: 600px) {
+    .donation-form-container {
+        padding: 24px 16px;
+        border-radius: 24px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .logistics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mobile-frame {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        aspect-ratio: 9/19;
+    }
 }
 
 /* AI Banner */

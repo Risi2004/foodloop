@@ -33,8 +33,8 @@ function Navbar() {
                     <Link to="/receiver/dashboard">Home</Link>
                     <Link to="/receiver/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    <Link to="">Find Food</Link>
-                    <Link to="">My Claims</Link>
+                    <Link to="/receiver/find-food">Find Food</Link>
+                    <Link to="/receiver/my-claims">My Claims</Link>
                 </div>
 
                 <div className="navbar__s3">
@@ -75,9 +75,9 @@ function Navbar() {
                     <Link to="/receiver/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/receiver/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="" onClick={toggleMenu}>Find Food</Link>
-                    <Link to="" onClick={toggleMenu}>My Claims</Link>
-                    <Link to="" onClick={toggleMenu}>View Profile</Link>
+                    <Link to="/receiver/find-food" onClick={toggleMenu}>Find Food</Link>
+                    <Link to="/receiver/my-claims" onClick={toggleMenu}>My Claims</Link>
+                    <Link to="/receiver/profile" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>
                     </Link>

@@ -24,3 +24,31 @@
     justify-content: center;
     align-items: center;
 }
+
+@media screen and (max-width: 1100px) {
+    .donation-container {
+        height: auto;
+        min-height: auto;
+    }
+
+    .donation-content {
+        flex-direction: column;
+        gap: 60px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .new-donation-page {
+        padding: 10px;
+    }
+
+    .donation-container {
+        padding: 10px;
+    }
+
+    .donation-content {
+        gap: 40px;
+    }
+}

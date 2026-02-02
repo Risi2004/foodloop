@@ -1,0 +1,13 @@
+.admin__notification__page {
+  background: #102216;
+
+  display: flex;
+}
+
+@media screen and (max-width:1300px) {
+
+  .admin__notification__page {
+    display: block;
+  }
+
+}

@@ -27,12 +27,16 @@ import EditProfile from "./pages/afterLogin/driver/editProfile/EditProfile";
 import MyPickups from "./pages/afterLogin/driver/myPickups/MyPickups";
 import Pickup from "./pages/afterLogin/driver/Pickup/Pickup";
 import AdminDashboard from "./pages/afterLogin/admin/dashboard/AdminDashboard";
+import AdminNotificationPage from "./pages/afterLogin/admin/notificationPage/AdminNotificationPage";
 import DonorProfile from "./pages/afterLogin/donor/profile/DonorProfile";
 import DonorEditProfile from "./pages/afterLogin/donor/editProfile/DonorEditProfile";
 import DonorMyDontaion from "./pages/afterLogin/donor/myDonation/DonorMyDonation";
 import DonorTrackingPage from "./pages/afterLogin/donor/trackingPage/DonorTrackingPage";
 import DigitalReceipt from "./pages/afterLogin/donor/digitalReceipt/DigitalReceipt";
-import IndividualEditProfile from "./pages/afterLogin/donor/individualEditProfile/IndividualEditProfile"
+import IndividualEditProfile from "./pages/afterLogin/donor/individualEditProfile/IndividualEditProfile";
+import ReceiverFindFood from "./pages/afterLogin/receiver/findFood/ReceiverFindFood";
+import ReceiptForm from "./pages/afterLogin/receiver/receiptForm/ReceiptForm";
+import Myclaims from "./pages/afterLogin/receiver/myClaims/MyClaims";
 function App() {
 
 
@@ -75,6 +79,9 @@ function App() {
           <Route path="terms-&-conditions" element={<ReceiverTermsAndConditions />} />
           <Route path="notifications" element={<ReceiverNotifications />} />
           <Route path="profile" element={<ReceiverProfile />} />
+          <Route path="find-food" element={<ReceiverFindFood />} />
+          <Route path="digital-receipt" element={<ReceiptForm />} />
+          <Route path="my-claims" element={<Myclaims />} />
         </Route>
 
         {/* Driver */}
@@ -96,6 +103,7 @@ function App() {
 
         <Route path="/admin">
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="notification" element={<AdminNotificationPage />} />
         </Route>
 
       </Routes>

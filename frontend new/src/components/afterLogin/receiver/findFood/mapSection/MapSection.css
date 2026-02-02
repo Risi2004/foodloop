@@ -1,0 +1,126 @@
+.map-container-wrapper {
+    width: 100%;
+    height: 100%;
+    /* Fill parent */
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.leaflet-map {
+    height: 100%;
+    width: 100%;
+    z-index: 0;
+}
+
+/* Custom Marker CSS */
+.custom-map-marker {
+    background: transparent;
+    border: none;
+}
+
+.marker-pin {
+    width: 48px;
+    height: 48px;
+    background: #1b4332;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin: -20px 0 0 -24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.marker-pin::after {
+    content: '';
+    width: 24px;
+    height: 24px;
+    margin: 8px 0 0 8px;
+    /* Adjustment needed due to rotation */
+    background: #fff;
+    position: absolute;
+    border-radius: 50%;
+}
+
+.marker-img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    transform: rotate(45deg);
+    /* Counter rotate image */
+    z-index: 2;
+    border: 2px solid white;
+    object-fit: cover;
+}
+
+/* Current Location Overlay */
+.current-location-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    /* Above map */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 250px;
+}
+
+.location-icon {
+    font-size: 1.5rem;
+}
+
+.location-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.location-text .label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1b4332;
+}
+
+.location-text .value {
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 500;
+}
+
+/* Map Controls */
+.map-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+}
+
+.control-btn {
+    width: 40px;
+    height: 40px;
+    background: #1b4332;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.control-btn:hover {
+    background: #2e7d32;
+}

@@ -8,3 +8,11 @@ body.admin-mode {
     overflow: hidden;
     background: #102216;
 }
+
+@media screen and (max-width: 1300px) {
+    .dashboard {
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+    }
+}

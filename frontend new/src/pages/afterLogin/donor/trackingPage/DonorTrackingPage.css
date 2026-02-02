@@ -1,7 +1,5 @@
 .tracking-page {
     padding: 30px 50px;
-    background-color: #5c8d73;
-    background: linear-gradient(to bottom, #608d75, #6c9c82);
     min-height: 100vh;
     color: white;
     font-family: 'Montserrat', sans-serif;
@@ -94,6 +92,10 @@
     flex-direction: column;
     min-width: 350px;
     max-width: 450px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Ensure scrollbar doesn't overlap content visually */
+    padding-right: 5px;
 }
 
 @media (max-width: 1000px) {

@@ -1,0 +1,54 @@
+.find-food-page {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.sidebar-section {
+    width: 400px;
+    /* Fixed width for sidebar on desktop */
+    height: 100%;
+    overflow: hidden;
+    flex-shrink: 0;
+    z-index: 10;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.map-section {
+    flex: 1;
+    height: 100%;
+    position: relative;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .find-food-page {
+        flex-direction: column;
+    }
+
+    .sidebar-section {
+        width: 100%;
+        height: 50%;
+        /* Half screen on mobile? Or maybe a toggle? */
+        /* Design request said "make it responsive". 
+           Typically maps on mobile either take full screen with a list drawer, or split vertically. 
+           Given the list density, maybe split 50/50 or list on top. */
+    }
+
+    .map-section {
+        height: 50%;
+    }
+}
+
+@media (max-width: 600px) {
+
+    /* Mobile optimization */
+    .sidebar-section {
+        height: 45%;
+    }
+
+    .map-section {
+        height: 55%;
+    }
+}
