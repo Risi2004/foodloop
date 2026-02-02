@@ -1,4 +1,4 @@
-import "./Myclaims.css";
+import "./MyClaims.css";
 import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
 import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
 import InTransitCard from "../../../../components/afterLogin/receiver/myClaims/InTransitCard";

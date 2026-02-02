@@ -1,5 +1,5 @@
-import './Sidebar.css';
-import FoodCard from '../FoodCard/FoodCard';
+import './SideBar.css';
+import FoodCard from '../../../../../components/afterLogin/receiver/findFood/foodCard/FoodCard';
 
 const Sidebar = ({ items }) => {
     return (
