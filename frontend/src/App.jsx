@@ -6,6 +6,7 @@ import Therms from './component/Therms/Therms.jsx'
 import About from './component/About/About.jsx'
 import ReceiverProfile from './component/ReceiverProfile/ReceiverProfile.jsx'
 import Receiverprofileedit from './component/receiver-profile-edit/Receiverprofileedit.jsx'
+import ReceiptForm from './component/ReceiptForm/ReceiptForm.jsx'
 
 
 function App() {
@@ -13,7 +14,7 @@ function App() {
 
   return (
     <>
-      <Receiverprofileedit />
+      <ReceiptForm />
 
     </>
   )
