@@ -437,6 +437,8 @@ gap: 680px;
     gap: 52px;
     box-sizing: border-box;
     align-items: flex-start;
+    border-radius: 20px;
+background: linear-gradient(180deg, #FFF 0%, #013211 100%);
 }
 
 .icon-wrapper {
