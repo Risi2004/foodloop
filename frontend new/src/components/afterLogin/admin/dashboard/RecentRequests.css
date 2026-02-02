@@ -1,0 +1,166 @@
+.recent-requests-container {
+    width: 100%;
+    margin-top: 32px;
+}
+
+.requests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.requests-header h3 {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.view-all-btn {
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.view-all-btn:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+.requests-table-container {
+    overflow-x: auto;
+}
+
+.requests-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: white;
+}
+
+.requests-table th {
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    padding-bottom: 24px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.requests-table td {
+    padding: 16px 0;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.requests-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* User Info Column */
+.user-info,
+.role-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #f0f0f0;
+}
+
+.user-email,
+.role-org {
+    font-size: 0.85rem;
+    color: #a0a0a0;
+    margin-top: 4px;
+}
+
+.role-type {
+    font-weight: 500;
+    color: #f0f0f0;
+}
+
+/* Date Column */
+.date-cell {
+    color: #10b981;
+    /* Green accent color for date as seen in image */
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding-top: 20px !important;
+    /* Align with top of name roughly */
+}
+
+/* Status / Actions Column */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    /* Align to right? Image seems right aligned for this col */
+}
+
+.th-status {
+    text-align: right !important;
+    /* Header right align */
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+}
+
+.action-btn.approve {
+    background: #6ee7b7;
+    /* Light green */
+    color: #064e3b;
+}
+
+.action-btn.reject {
+    background: #a7f3d0;
+    /* Slightly lighter green/grey mix from image? Or light blue? 
+                           Actually image shows greyish/greenish squares with check/cross. 
+                           Let's match exact style in image: Solid light green square with icon. */
+    background: #a7f3d0;
+    color: #064e3b;
+}
+
+/* Specific styling to match the image icons more precisely if possible with CSS */
+.action-btn {
+    background: #4ade80;
+    /* Bright green base */
+    color: #022c22;
+    font-weight: bold;
+}
+
+.action-btn.reject {
+    background: #6ee7b7;
+    /* Maybe slightly different shade? looks same in screenshot */
+}
+
+@media (max-width: 600px) {
+
+    .requests-table th,
+    .requests-table td {
+        padding: 12px 6px;
+    }
+
+    .user-name {
+        font-size: 0.9rem;
+    }
+}

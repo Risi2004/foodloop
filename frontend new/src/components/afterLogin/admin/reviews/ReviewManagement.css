@@ -1,0 +1,88 @@
+.review-manage-page {
+    background-color: #10221C;
+    color: #ffffff;
+    min-height: 100vh;
+    padding: 40px 60px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 30px;
+    width: 80%;
+    margin: 30px;
+}
+
+/* Card Container for Recent Requests */
+.review-card {
+    background-color: #52615D;
+    /* Muted greenish grey from image */
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.review-card .section-title {
+    color: #ffffff;
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+
+/* Table inside the card needs specific styling to match image */
+.review-card .custom-table th {
+    color: #e0e0e0;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.review-card .custom-table td {
+    border-bottom: none;
+    /* Clean look */
+}
+
+/* Reuse status/action button styles from userManage.css if possible,
+   or redefine here if we want isolation. Redefining for safety/tweaking. */
+
+.action-btn-group {
+    display: flex;
+    gap: 15px;
+    /* Spaced out icons */
+}
+
+.icon-btn-square {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    /* Square with slight radius */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.icon-btn-square.check {
+    background-color: #7abfa1;
+    /* Greenish */
+    color: #ffffff;
+}
+
+.icon-btn-square.cross {
+    background-color: #7abfa1;
+    color: #ffffff;
+}
+
+/* Actually the image shows the X might be same color or slightly different. 
+   Let's stick to the theme. */
+
+.icon-btn-eye {
+    background: transparent;
+    color: #7abfa1;
+    border: none;
+    cursor: pointer;
+}
+
+@media screen and (max-width:1300px) {
+
+    .review-manage-page{
+        width: 90%;
+    }
+
+}

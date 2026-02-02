@@ -28,7 +28,7 @@ function AdminSideNavbar() {
                     </div>
                     <div className='sidebar__links'>
                         <img src={managementIcon} alt="" />
-                        <Link to="/admin/management">User Management</Link>
+                        <Link to="/admin/user-management">User Management</Link>
                     </div>
                     <div className='sidebar__links'>
                         <img src={notificationIcon} alt="" />
@@ -60,7 +60,7 @@ function AdminSideNavbar() {
                 <div className="responsive__navbar__popup">
                     <p onClick={toggleMenu}>X</p>
                     <Link to="/admin/dashboard" onClick={toggleMenu}>Dashboard Overview</Link>
-                    <Link to="/admin/management" onClick={toggleMenu}>User Management</Link>
+                    <Link to="/admin/user-management" onClick={toggleMenu}>User Management</Link>
                     <Link to="/admin/notification" onClick={toggleMenu}>Notification</Link>
                     <Link to="/admin/reviews" onClick={toggleMenu}>Reviews</Link>
                     <Link to="/admin/messages" onClick={toggleMenu}>Messages</Link>

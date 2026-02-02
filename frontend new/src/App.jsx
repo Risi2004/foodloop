@@ -26,8 +26,11 @@ import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
 import EditProfile from "./pages/afterLogin/driver/editProfile/EditProfile";
 import MyPickups from "./pages/afterLogin/driver/myPickups/MyPickups";
 import Pickup from "./pages/afterLogin/driver/Pickup/Pickup";
-import AdminDashboard from "./pages/afterLogin/admin/dashboard/AdminDashboard";
+import AdminDashboardPage from "./pages/afterLogin/admin/dashboard/AdminDashboardPage";
 import AdminNotificationPage from "./pages/afterLogin/admin/notificationPage/AdminNotificationPage";
+import AdminUserManagementPage from "./pages/afterLogin/admin/userManagementPage/AdminUserManagementPage";
+import AdminReviewManagementPage from "./pages/afterLogin/admin/reviewManagementPage/ReviewManagementPage";
+import AdminMessagesPage from "./pages/afterLogin/admin/messagesPage/AdminMessagesPage";
 import DonorProfile from "./pages/afterLogin/donor/profile/DonorProfile";
 import DonorEditProfile from "./pages/afterLogin/donor/editProfile/DonorEditProfile";
 import DonorMyDontaion from "./pages/afterLogin/donor/myDonation/DonorMyDonation";
@@ -37,6 +40,8 @@ import IndividualEditProfile from "./pages/afterLogin/donor/individualEditProfil
 import ReceiverFindFood from "./pages/afterLogin/receiver/findFood/ReceiverFindFood";
 import ReceiptForm from "./pages/afterLogin/receiver/receiptForm/ReceiptForm";
 import Myclaims from "./pages/afterLogin/receiver/myClaims/MyClaims";
+
+
 function App() {
 
 
@@ -102,8 +107,11 @@ function App() {
         {/* Admin */}
 
         <Route path="/admin">
-          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="notification" element={<AdminNotificationPage />} />
+          <Route path="user-management" element={<AdminUserManagementPage />} />
+          <Route path="reviews" element={<AdminReviewManagementPage />} />
+          <Route path="messages" element={<AdminMessagesPage />} />
         </Route>
 
       </Routes>

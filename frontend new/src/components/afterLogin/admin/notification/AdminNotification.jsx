@@ -56,7 +56,7 @@ const AdminNotification = () => {
   };
 
   const handleDeactivate = (id) => {
-    setNotifications(notifications.map(notif => 
+    setNotifications(notifications.map(notif =>
       notif.id === id ? { ...notif, status: "INACTIVE" } : notif
     ));
   };
@@ -100,16 +100,16 @@ const AdminNotification = () => {
               </div>
               <div className="frame-205">
                 <div className="frame-208">
-                  <div 
-                    className="deactivate" 
+                  <div
+                    className="deactivate"
                     onClick={() => handleDeactivate(notification.id)}
                     style={{ cursor: "pointer" }}
                   >
                     Deactivate
                   </div>
-                  <img 
-                    className="cancel" 
-                    src="/src/assets/Cancel.svg" 
+                  <img
+                    className="cancel"
+                    src="/src/assets/Cancel.svg"
                     alt="Cancel"
                     onClick={() => handleDelete(notification.id)}
                     style={{ cursor: "pointer" }}
