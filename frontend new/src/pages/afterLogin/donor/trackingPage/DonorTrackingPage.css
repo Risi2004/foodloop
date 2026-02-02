@@ -1,0 +1,112 @@
+.tracking-page {
+    padding: 30px 50px;
+    background-color: #5c8d73;
+    background: linear-gradient(to bottom, #608d75, #6c9c82);
+    min-height: 100vh;
+    color: white;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.tracking-header {
+    margin-bottom: 25px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0;
+}
+
+.back-btn:hover {
+    color: white;
+}
+
+.header-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+    color: #4CAF50;
+    /* Green accent matching design title */
+    color: #00ff7f;
+    /* Brighter green for title against dark bg */
+}
+
+.tracking-id {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+.help-btn {
+    background: rgba(0, 0, 0, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+}
+
+.robot-icon {
+    font-size: 16px;
+}
+
+.tracking-layout {
+    display: flex;
+    gap: 30px;
+    height: calc(100vh - 150px);
+    /* Fill remaining height roughly */
+}
+
+.map-section {
+    flex: 1.5;
+    /* Takes up more space */
+    background: #e0e0e0;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-section {
+    flex: 1;
+    /* Standard width for sidebar */
+    display: flex;
+    flex-direction: column;
+    min-width: 350px;
+    max-width: 450px;
+}
+
+@media (max-width: 1000px) {
+    .tracking-layout {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .map-section {
+        height: 400px;
+    }
+
+    .sidebar-section {
+        max-width: 100%;
+    }
+}

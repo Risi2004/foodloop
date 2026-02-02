@@ -1,0 +1,122 @@
+.donation-media-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.mobile-frame {
+    width: 320px;
+    height: 650px;
+    background: #e0e5e0;
+    /* Light greenish grey frame */
+    border-radius: 40px;
+    padding: 16px;
+    box-shadow:
+        -20px 20px 40px rgba(0, 0, 0, 0.2),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    transform: rotate(-5deg);
+    /* Slight tilt as in image */
+}
+
+/* Screen area */
+.mobile-screen {
+    background: #d8ded8;
+    border-radius: 32px;
+    height: 75%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    border: 3px solid #333;
+}
+
+.camera-view {
+    width: 100%;
+    height: 100%;
+    background-image: url('https://images.unsplash.com/photo-1595855709940-fae372671549?q=80&w=2670&auto=format&fit=crop');
+    /* Placeholder kitchen/food image */
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.camera-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.4);
+    /* Overlay to make it look like a viewfinder */
+}
+
+.upload-zone {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px dashed #333;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.upload-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    opacity: 0.7;
+}
+
+.upload-zone p {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+/* Controls */
+.mobile-controls {
+    display: flex;
+    gap: 16px;
+    padding: 10px 20px 20px 20px;
+}
+
+.media-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+    border: none;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.media-btn:hover {
+    transform: translateY(-2px);
+}
+
+.gallery-btn {
+    color: #4CAF50;
+}
+
+.camera-btn {
+    color: #333;
+}

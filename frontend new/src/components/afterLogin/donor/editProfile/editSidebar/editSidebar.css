@@ -1,0 +1,118 @@
+.edit-sidebar-card {
+    background: #547864;
+    /* Dark Green Card */
+    border-radius: 20px;
+    padding: 40px 24px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    height: 600px;
+    /* Fixed height visually in design */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.edit-title {
+    color: #4CAF50;
+    /* Bright Green Title */
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0 0 16px 0;
+}
+
+.edit-subtitle {
+    font-size: 14px;
+    color: #e0e0e0;
+    line-height: 1.5;
+    margin-bottom: 40px;
+    padding: 0 10px;
+}
+
+.avatar-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.avatar-circle {
+    width: 120px;
+    height: 120px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 4px solid #fff;
+}
+
+.avatar-icon {
+    width: 80px;
+    height: 80px;
+    color: #2E4E3F;
+}
+
+.camera-btn {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    background: #32CD32;
+    border: 2px solid #547864;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.active-donor-badge {
+    background: #32CD32;
+    color: #003300;
+    display: inline-block;
+    padding: 4px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 0 auto 16px;
+}
+
+.business-name {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: #1a2e22;
+    /* Very Dark Text for Name */
+}
+
+.member-since {
+    font-size: 12px;
+    color: #e0e0e0;
+    margin: 0 0 40px 0;
+    opacity: 0.8;
+}
+
+.change-password-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 24px;
+    border-radius: 30px;
+    color: #1a2e22;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+    width: fit-content;
+    font-size: 14px;
+}
+
+.lock-icon {
+    font-size: 14px;
+}

@@ -33,7 +33,7 @@ function Navbar() {
                     <Link to="/donor/dashboard">Home</Link>
                     <Link to="/donor/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    <Link to="">My Donation</Link>
+                    <Link to="/donor/my-donation">My Donation</Link>
                 </div>
 
                 <div className="navbar__s3">
@@ -46,7 +46,7 @@ function Navbar() {
                 {isProfileOpen && (
                     <div className="navbar__s3__profile__popup">
                         <p onClick={toggleProfile}>X</p>
-                        <Link to="" onClick={toggleProfile}>View Profile</Link>
+                        <Link to="/donor/profile" onClick={toggleProfile}>View Profile</Link>
                         <Link to="" onClick={toggleProfile}>
                             <button>Sign Out</button>
                         </Link>
@@ -74,8 +74,8 @@ function Navbar() {
                     <Link to="/donor/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/donor/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="" onClick={toggleMenu}>My Donation</Link>
-                    <Link to="" onClick={toggleMenu}>View Profile</Link>
+                    <Link to="/donor/my-donation" onClick={toggleMenu}>My Donation</Link>
+                    <Link to="/donor/profile" onClick={toggleMenu}>View Profile</Link>
                     <Link to="" onClick={toggleMenu}>
                         <button>Sign Out</button>
                     </Link>

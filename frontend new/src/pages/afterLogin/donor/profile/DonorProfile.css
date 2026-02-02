@@ -1,0 +1,34 @@
+.profile-page {
+    min-height: 100vh;
+    background-color: #5C7C6D;
+    /* Matching the background from image roughly, deep green/gray */
+    padding: 24px;
+    font-family: 'Inter', sans-serif;
+    color: white;
+}
+
+.profile-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.profile-content {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+}
+
+.profile-sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.profile-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
