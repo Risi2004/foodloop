@@ -1,7 +1,5 @@
 .individual-edit-profile-page {
     min-height: 100vh;
-    background: #6a8a7b;
-    /* Matching the background from image */
     display: flex;
     justify-content: center;
     padding: 40px;

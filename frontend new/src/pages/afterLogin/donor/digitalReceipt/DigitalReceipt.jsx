@@ -1,4 +1,6 @@
 import './DigitalReceipt.css';
+import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection/navbar/DonorNavbar";
+import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter"
 import SuccessBanner from '../../../../components/afterLogin/donor/digitalReceipt/SuccessBanner/SuccessBanner';
 import ReceiptInfo from '../../../../components/afterLogin/donor/digitalReceipt/ReceiptInfo/ReceiptInfo';
 import ImpactCards from '../../../../components/afterLogin/donor/digitalReceipt/ImpactCards/ImpactCards';
@@ -8,37 +10,41 @@ import ActionButtons from '../../../../components/afterLogin/donor/digitalReceip
 
 const DigitalReceipt = () => {
     return (
-        <div className="digital-receipt-container">
-            <div className="back-link">
-                <i className="fa-solid fa-arrow-left"></i> Back to My Donations
-            </div>
+        <>
+        <DonorNavbar />
+            <div className="digital-receipt-container">
+                <div className="back-link">
+                    <i className="fa-solid fa-arrow-left"></i> Back to My Donations
+                </div>
 
-            <div className="receipt-content">
-                <SuccessBanner />
+                <div className="receipt-content">
+                    <SuccessBanner />
 
-                <div className="receipt-details-card">
-                    <ReceiptInfo />
+                    <div className="receipt-details-card">
+                        <ReceiptInfo />
 
-                    <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#666', marginBottom: '15px' }}>IMPACT SUMMARY</h3>
-                    {/* Wait, the design doesn't really have "IMPACT SUMMARY" explicitly labeled but it separates the sections. 
+                        <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#666', marginBottom: '15px' }}>IMPACT SUMMARY</h3>
+                        {/* Wait, the design doesn't really have "IMPACT SUMMARY" explicitly labeled but it separates the sections. 
                Looking at the image, there is a separator line or just spacing.
                The Impact Cards are just there.
            */}
-                    <div style={{ width: '100%', height: '1px', backgroundColor: '#e0e0e0', marginBottom: '20px', marginTop: '-20px', opacity: 0.5 }}></div>
+                        <div style={{ width: '100%', height: '1px', backgroundColor: '#e0e0e0', marginBottom: '20px', marginTop: '-20px', opacity: 0.5 }}></div>
 
-                    <ImpactCards />
+                        <ImpactCards />
 
-                    <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px', marginTop: '30px' }}>Delivery Information</h3>
+                        <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px', marginTop: '30px' }}>Delivery Information</h3>
 
-                    <div className="bottom-summary-section">
-                        <FoodSummary />
-                        <DriverSummary />
+                        <div className="bottom-summary-section">
+                            <FoodSummary />
+                            <DriverSummary />
+                        </div>
+
+                        <ActionButtons />
                     </div>
-
-                    <ActionButtons />
                 </div>
             </div>
-        </div>
+            <DonorFooter />
+        </>
     );
 };
 

@@ -1,6 +1,5 @@
 .edit-profile-page {
     min-height: 100vh;
-    /* Overall dirty green/grey background */
     display: flex;
     justify-content: center;
     padding: 40px;

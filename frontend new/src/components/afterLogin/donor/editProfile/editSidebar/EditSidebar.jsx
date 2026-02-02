@@ -1,6 +1,6 @@
 import React from 'react';
 import './EditSidebar.css';
-
+// edit
 function EditSidebar({
     name = "GreenGrocer Co.",
     subtitle = "Manage your business identity, branch locations, and security settings.",

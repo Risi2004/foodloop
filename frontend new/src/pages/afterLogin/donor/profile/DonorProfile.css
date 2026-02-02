@@ -1,7 +1,5 @@
 .profile-page {
     min-height: 100vh;
-    background-color: #5C7C6D;
-    /* Matching the background from image roughly, deep green/gray */
     padding: 24px;
     font-family: 'Inter', sans-serif;
     color: white;

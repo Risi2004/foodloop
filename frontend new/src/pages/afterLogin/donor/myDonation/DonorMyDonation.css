@@ -1,7 +1,5 @@
 .new-donation-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #749685 0%, #5C7C6D 100%);
-    /* Matching the background from image roughly */
     display: flex;
     align-items: center;
     justify-content: center;
