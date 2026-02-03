@@ -1,13 +1,13 @@
 import TrackingMap from '../../../../components/afterLogin/donor/trackingPage/trackingMap/TrackingMap';
 import TrackingSidebar from '../../../../components/afterLogin/donor/trackingPage/trackingSidebar/TrackingSidebar';
-import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection/navbar/DonorNavbar";
-import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter";
-import './DonorTrackingPage.css';
+import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
+import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
+import './ReceiverTrackingPage.css';
 
-function DonorTrackingPage() {
+function ReceiverTrackingPage() {
     return (
         <>
-        <DonorNavbar />
+        <ReceiverNavbar />
             <div className="tracking-page">
                 <header className="tracking-header">
                     <button className="back-btn">
@@ -38,9 +38,9 @@ function DonorTrackingPage() {
                     </aside>
                 </main>
             </div>
-            <DonorFooter />
+            <ReceiverFooter />
         </>
     );
 }
 
-export default DonorTrackingPage;
+export default ReceiverTrackingPage;

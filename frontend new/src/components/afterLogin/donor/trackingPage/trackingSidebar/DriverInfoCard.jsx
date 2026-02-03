@@ -1,4 +1,3 @@
-import React from 'react';
 import './DriverInfoCard.css';
 
 function DriverInfoCard() {

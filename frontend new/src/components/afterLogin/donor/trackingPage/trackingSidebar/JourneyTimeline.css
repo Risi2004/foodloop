@@ -4,7 +4,6 @@
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
     border-radius: 16px;
     padding: 20px;
-    flex: 1;
     /* Expand to fill space */
     position: relative;
     overflow: hidden;

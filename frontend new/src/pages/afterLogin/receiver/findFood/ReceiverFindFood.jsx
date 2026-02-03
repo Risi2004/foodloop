@@ -2,6 +2,8 @@ import { useState } from 'react';
 import './ReceiverFindFood.css';
 import Sidebar from '../../../../components/afterLogin/receiver/findFood/sideBar/SideBar';
 import MapSection from '../../../../components/afterLogin/receiver/findFood/mapSection/MapSection';
+import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
+import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
 
 const FindFood = () => {
     // Mock Data
@@ -39,14 +41,18 @@ const FindFood = () => {
     ]);
 
     return (
-        <div className="find-food-page">
-            <div className="sidebar-section">
-                <Sidebar items={items} />
+        <>
+            <ReceiverNavbar />
+            <div className="find-food-page">
+                <div className="sidebar-section">
+                    <Sidebar items={items} />
+                </div>
+                <div className="map-section">
+                    <MapSection items={items} />
+                </div>
             </div>
-            <div className="map-section">
-                <MapSection items={items} />
-            </div>
-        </div>
+            <ReceiverFooter />
+        </>
     );
 };
 

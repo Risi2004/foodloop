@@ -40,6 +40,7 @@ import IndividualEditProfile from "./pages/afterLogin/donor/individualEditProfil
 import ReceiverFindFood from "./pages/afterLogin/receiver/findFood/ReceiverFindFood";
 import ReceiptForm from "./pages/afterLogin/receiver/receiptForm/ReceiptForm";
 import Myclaims from "./pages/afterLogin/receiver/myClaims/MyClaims";
+import ReceiverTrackingPage from "./pages/afterLogin/receiver/trackingPage/ReceiverTrackingPage";
 
 
 function App() {
@@ -87,6 +88,7 @@ function App() {
           <Route path="find-food" element={<ReceiverFindFood />} />
           <Route path="digital-receipt" element={<ReceiptForm />} />
           <Route path="my-claims" element={<Myclaims />} />
+          <Route path="track-order" element={<ReceiverTrackingPage />} />
         </Route>
 
         {/* Driver */}

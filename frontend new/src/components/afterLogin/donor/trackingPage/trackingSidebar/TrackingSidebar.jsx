@@ -1,4 +1,3 @@
-
 import DriverInfoCard from './DriverInfoCard';
 import JourneyTimeline from './JourneyTimeline';
 import WhatsNextCard from './WhatsNextCard';

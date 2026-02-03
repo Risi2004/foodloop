@@ -1,4 +1,3 @@
-
 import './WhatsNextCard.css';
 
 function WhatsNextCard() {
