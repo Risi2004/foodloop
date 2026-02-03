@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { signup } from '../../../services/api';
 import './Signup.css';
 
 
@@ -16,10 +17,15 @@ import carIcon from '../../../assets/icons/signup/car.svg';
 import truckIcon from '../../../assets/icons/signup/truck.svg';
 
 function SignupPage() {
+    const navigate = useNavigate();
     const [role, setRole] = useState('Donor'); 
     const [donorType, setDonorType] = useState('Individuals'); 
     const [vehicleType, setVehicleType] = useState('Scooter'); 
     const [profileImage, setProfileImage] = useState(null);
+    const [profileImageFile, setProfileImageFile] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [successMessage, setSuccessMessage] = useState('');
 
     
     const [formData, setFormData] = useState({
@@ -61,6 +67,7 @@ function SignupPage() {
         const file = e.target.files[0];
         if (file) {
             setProfileImage(URL.createObjectURL(file));
+            setProfileImageFile(file);
         }
     };
 
@@ -79,6 +86,136 @@ function SignupPage() {
         if (role === 'Donor') return 'Create Donor Account';
         if (role === 'Receiver') return 'Create Receiver Account';
         if (role === 'Driver') return 'Create Volunteer Driver Account';
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+
+        // Common validations
+        if (!formData.email) newErrors.email = 'Email is required';
+        if (!formData.password) newErrors.password = 'Password is required';
+        if (formData.password && formData.password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+        }
+        if (formData.password !== formData.retypePassword) {
+            newErrors.retypePassword = 'Passwords do not match';
+        }
+        if (!formData.contactNo) newErrors.contactNo = 'Contact number is required';
+        if (!formData.address) newErrors.address = 'Address is required';
+
+        // Role-specific validations
+        if (role === 'Donor' && donorType === 'Individuals') {
+            if (!formData.username) newErrors.username = 'Username is required';
+        } else if (role === 'Donor' && donorType === 'Business Entity') {
+            if (!formData.businessName) newErrors.businessName = 'Business name is required';
+            if (!formData.businessType) newErrors.businessType = 'Business type is required';
+            if (!formData.businessRegFile) newErrors.businessRegFile = 'Business registration file is required';
+            if (!formData.addressProofFile) newErrors.addressProofFile = 'Address proof file is required';
+        } else if (role === 'Receiver') {
+            if (!formData.receiverName) newErrors.receiverName = 'Receiver name is required';
+            if (!formData.receiverType) newErrors.receiverType = 'Receiver type is required';
+            if (!formData.businessRegFile) newErrors.businessRegFile = 'Business registration file is required';
+            if (!formData.addressProofFile) newErrors.addressProofFile = 'Address proof file is required';
+        } else if (role === 'Driver') {
+            if (!formData.driverName) newErrors.driverName = 'Driver name is required';
+            if (!formData.vehicleNumber) newErrors.vehicleNumber = 'Vehicle number is required';
+            if (!formData.nicFile) newErrors.nicFile = 'NIC file is required';
+            if (!formData.licenseFile) newErrors.licenseFile = 'Driving license file is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setErrors({});
+        setSuccessMessage('');
+
+        if (!validateForm()) {
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Create FormData object
+            const submitFormData = new FormData();
+
+            // Add common fields
+            submitFormData.append('role', role);
+            submitFormData.append('email', formData.email);
+            submitFormData.append('password', formData.password);
+            submitFormData.append('retypePassword', formData.retypePassword);
+            submitFormData.append('contactNo', formData.contactNo);
+            submitFormData.append('address', formData.address);
+
+            // Add profile image
+            if (profileImageFile) {
+                submitFormData.append('profileImage', profileImageFile);
+            }
+
+            // Add role-specific fields
+            if (role === 'Donor') {
+                submitFormData.append('donorType', donorType === 'Individuals' ? 'Individual' : 'Business');
+                if (donorType === 'Individuals') {
+                    submitFormData.append('username', formData.username);
+                } else {
+                    submitFormData.append('businessName', formData.businessName);
+                    submitFormData.append('businessType', formData.businessType);
+                    if (formData.businessRegFile) {
+                        submitFormData.append('businessRegFile', formData.businessRegFile);
+                    }
+                    if (formData.addressProofFile) {
+                        submitFormData.append('addressProofFile', formData.addressProofFile);
+                    }
+                }
+            } else if (role === 'Receiver') {
+                submitFormData.append('receiverName', formData.receiverName);
+                submitFormData.append('receiverType', formData.receiverType);
+                if (formData.businessRegFile) {
+                    submitFormData.append('businessRegFile', formData.businessRegFile);
+                }
+                if (formData.addressProofFile) {
+                    submitFormData.append('addressProofFile', formData.addressProofFile);
+                }
+            } else if (role === 'Driver') {
+                submitFormData.append('driverName', formData.driverName);
+                submitFormData.append('vehicleNumber', formData.vehicleNumber);
+                submitFormData.append('vehicleType', vehicleType);
+                if (formData.nicFile) {
+                    submitFormData.append('nicFile', formData.nicFile);
+                }
+                if (formData.licenseFile) {
+                    submitFormData.append('licenseFile', formData.licenseFile);
+                }
+            }
+
+            // Call API
+            const response = await signup(submitFormData);
+
+            if (response.success) {
+                setSuccessMessage('Account created successfully! Redirecting to login...');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Signup error:', error);
+            
+            // Handle API errors
+            if (error.response && error.response.data && error.response.data.errors) {
+                const apiErrors = {};
+                error.response.data.errors.forEach(err => {
+                    apiErrors[err.field] = err.message;
+                });
+                setErrors(apiErrors);
+            } else {
+                setErrors({ submit: error.message || 'An error occurred. Please try again.' });
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -198,6 +335,7 @@ function SignupPage() {
                                 <div className="input__group">
                                     <label htmlFor="username">Username</label>
                                     <input type="text" id="username" placeholder="Eg:-jjhon." value={formData.username} onChange={handleInputChange} />
+                                    {errors.username && <span className="error-message">{errors.username}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
@@ -221,15 +359,17 @@ function SignupPage() {
                                     <div className="input__group half">
                                         <label htmlFor="businessName">Business Name</label>
                                         <input type="text" id="businessName" placeholder="xmksn" value={formData.businessName} onChange={handleInputChange} />
+                                        {errors.businessName && <span className="error-message">{errors.businessName}</span>}
                                     </div>
-                                    <div className="input__group half">
+                                                    <div className="input__group half">
                                         <label htmlFor="businessType">Business Type</label>
-                                        <select id="businessType">
-                                            <option>Select</option>
-                                            <option>Restaurant</option>
-                                            <option>Supermarket</option>
-                                            <option>Wedding Hall</option>
+                                        <select id="businessType" value={formData.businessType} onChange={handleInputChange}>
+                                            <option value="">Select</option>
+                                            <option value="Restaurant">Restaurant</option>
+                                            <option value="Supermarket">Supermarket</option>
+                                            <option value="Wedding Hall">Wedding Hall</option>
                                         </select>
+                                        {errors.businessType && <span className="error-message">{errors.businessType}</span>}
                                     </div>
                                 </div>
                                 <div className="input__group border__group">
@@ -239,18 +379,22 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="biz-reg-file" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
+                                    {errors.businessRegFile && <span className="error-message">{errors.businessRegFile}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
                                     <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
                                     <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="address">Address</label>
                                     <input type="text" id="address" placeholder="Eg:-colombo" value={formData.address} onChange={handleInputChange} />
+                                    {errors.address && <span className="error-message">{errors.address}</span>}
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Address Proof</label>
@@ -259,6 +403,7 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="addr-proof-file" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
+                                    {errors.addressProofFile && <span className="error-message">{errors.addressProofFile}</span>}
                                 </div>
                             </>
                         )}
@@ -270,15 +415,17 @@ function SignupPage() {
                                     <div className="input__group half">
                                         <label htmlFor="receiverName">Receiver Name</label>
                                         <input type="text" id="receiverName" placeholder="xmksn" value={formData.receiverName} onChange={handleInputChange} />
+                                        {errors.receiverName && <span className="error-message">{errors.receiverName}</span>}
                                     </div>
                                     <div className="input__group half">
                                         <label htmlFor="receiverType">Receiver Type</label>
-                                        <select id="receiverType">
-                                            <option>Select</option>
-                                            <option>NGO</option>
-                                            <option>Food Banks</option>
-                                            <option>Service Organization</option>
+                                        <select id="receiverType" value={formData.receiverType} onChange={handleInputChange}>
+                                            <option value="">Select</option>
+                                            <option value="NGO">NGO</option>
+                                            <option value="Food Banks">Food Banks</option>
+                                            <option value="Service Organization">Service Organization</option>
                                         </select>
+                                        {errors.receiverType && <span className="error-message">{errors.receiverType}</span>}
                                     </div>
                                 </div>
                                 <div className="input__group border__group">
@@ -288,18 +435,22 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="rec-biz-reg-file" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
+                                    {errors.businessRegFile && <span className="error-message">{errors.businessRegFile}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
                                     <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
                                     <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="address">Address</label>
                                     <input type="text" id="address" placeholder="Eg:-colombo" value={formData.address} onChange={handleInputChange} />
+                                    {errors.address && <span className="error-message">{errors.address}</span>}
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Address Proof</label>
@@ -308,6 +459,7 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="rec-addr-proof-file" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
+                                    {errors.addressProofFile && <span className="error-message">{errors.addressProofFile}</span>}
                                 </div>
                             </>
                         )}
@@ -319,23 +471,28 @@ function SignupPage() {
                                     <div className="input__group half">
                                         <label htmlFor="driverName">Driver Name</label>
                                         <input type="text" id="driverName" placeholder="xmksn" value={formData.driverName} onChange={handleInputChange} />
+                                        {errors.driverName && <span className="error-message">{errors.driverName}</span>}
                                     </div>
                                     <div className="input__group half">
                                         <label htmlFor="vehicleNumber">Vehicle number</label>
                                         <input type="text" id="vehicleNumber" placeholder="BYD 2344" value={formData.vehicleNumber} onChange={handleInputChange} />
+                                        {errors.vehicleNumber && <span className="error-message">{errors.vehicleNumber}</span>}
                                     </div>
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
                                     <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
                                     <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="address">Address</label>
                                     <input type="text" id="address" placeholder="Eg:-colombo" value={formData.address} onChange={handleInputChange} />
+                                    {errors.address && <span className="error-message">{errors.address}</span>}
                                 </div>
 
                                 <div className="input__group border__group">
@@ -345,6 +502,7 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="nic-file" hidden onChange={(e) => handleFileChange(e, 'nicFile')} />
+                                    {errors.nicFile && <span className="error-message">{errors.nicFile}</span>}
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Driving License (Front & Back view)</label>
@@ -353,6 +511,7 @@ function SignupPage() {
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
                                     <input type="file" id="license-file" hidden onChange={(e) => handleFileChange(e, 'licenseFile')} />
+                                    {errors.licenseFile && <span className="error-message">{errors.licenseFile}</span>}
                                 </div>
                             </>
                         )}
@@ -362,16 +521,36 @@ function SignupPage() {
                             <div className="input__group half">
                                 <label htmlFor="password">Password</label>
                                 <input type="password" id="password" placeholder="*******" value={formData.password} onChange={handleInputChange} />
+                                {errors.password && <span className="error-message">{errors.password}</span>}
                             </div>
                             <div className="input__group half">
                                 <label htmlFor="retypePassword">Retype Password</label>
                                 <input type="password" id="retypePassword" placeholder="******" value={formData.retypePassword} onChange={handleInputChange} />
+                                {errors.retypePassword && <span className="error-message">{errors.retypePassword}</span>}
                             </div>
                         </div>
 
                     </div>
 
-                    <button className="create__account__btn">Create Account</button>
+                    {/* Error and Success Messages */}
+                    {errors.submit && (
+                        <div className="error-message" style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
+                            {errors.submit}
+                        </div>
+                    )}
+                    {successMessage && (
+                        <div className="success-message" style={{ color: 'green', marginBottom: '10px', textAlign: 'center' }}>
+                            {successMessage}
+                        </div>
+                    )}
+
+                    <button 
+                        className="create__account__btn" 
+                        onClick={handleSubmit}
+                        disabled={loading}
+                    >
+                        {loading ? 'Creating Account...' : 'Create Account'}
+                    </button>
 
                     <div className="signup__footer">
                         <p>Already have an account? <Link to="/login">Sign In</Link></p>

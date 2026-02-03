@@ -1,6 +1,6 @@
 import Feedback from "../../../../components/afterLogin/dashboard/common/feedback/Feedback";
-import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection//navbar/DonorNavbar";
-import FunctionsSection from "../../../../components/afterLogin/dashboard/donorSection/functionsSection/functionsSection";
+import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection/navbar/DonorNavbar";
+import FunctionsSection from "../../../../components/afterLogin/dashboard/donorSection/functionsSection/FunctionsSection";
 import Header from "../../../../components/afterLogin/dashboard/donorSection/header/Header"
 import Map from "../../../../components/afterLogin/dashboard/donorSection/map/DonorMap"
 import Contact from "../../../../components/beforeLogin/Contact/Contact"
@@ -16,7 +16,7 @@ function DonorDashboard() {
             <FunctionsSection />
             <Feedback />
             <Map />
-            <StatusBatchCard/>
+            <StatusBatchCard />
             <Contact />
             <DonorFooter />
         </div>

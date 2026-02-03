@@ -1,12 +1,32 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import React, { useState } from 'react';
 import "./ReceiverNavbar.css"
 import notification from "../../../../../assets/icons/afterLogin/navbar/notification.svg"
 import profile from "../../../../../assets/icons/afterLogin/navbar/profile.svg"
 import menu from "../../../../../assets/icons/navbar/menu-bar.svg"
+import { clearAuth, getUser } from "../../../../../utils/auth";
 
 function Navbar() {
+    const navigate = useNavigate();
+    const user = getUser();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // Get user display name
+    const getUserName = () => {
+        if (!user) return 'User_Name';
+        if (user.role === 'Receiver') {
+            return user.receiverName || user.email;
+        }
+        return user.email;
+    };
+    
+    // Get profile image URL or default icon
+    const getProfileImage = () => {
+        if (user && user.profileImageUrl) {
+            return user.profileImageUrl;
+        }
+        return profile;
+    };
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
@@ -17,6 +37,13 @@ function Navbar() {
 
     const toggleProfile = () => {
         setIsProfileOpen(!isProfileOpen)
+    }
+
+    const handleLogout = () => {
+        clearAuth();
+        setIsMenuOpen(false);
+        setIsProfileOpen(false);
+        navigate('/login');
     }
     return (
         <>
@@ -33,22 +60,30 @@ function Navbar() {
                     <Link to="/receiver/dashboard">Home</Link>
                     <Link to="/receiver/about">About Us</Link>
                     <Link to="/contact">Contact Us</Link>
-                    <Link to="">Find Food</Link>
-                    <Link to="">My Claims</Link>
+                    <Link to="/receiver/find-food">Find Food</Link>
+                    <Link to="/receiver/my-claims">My Claims</Link>
                 </div>
 
                 <div className="navbar__s3">
                     <img className="navbar__s3__img1" src={notification} alt="notification-icon" />
                     <div className="navbar__s3__sub" onClick={toggleProfile}>
-                        <h3>User_Name</h3>
-                        <img className="navbar__s3__img2" src={profile} alt="profile-icon" />
+                        <h3>{getUserName()}</h3>
+                        <img 
+                            className="navbar__s3__img2" 
+                            src={getProfileImage()} 
+                            alt="profile-icon"
+                            onError={(e) => {
+                                // Fallback to default icon if image fails to load
+                                e.target.src = profile;
+                            }}
+                        />
                     </div>
                 </div>
                 {isProfileOpen && (
                     <div className="navbar__s3__profile__popup">
                         <p onClick={toggleProfile}>X</p>
                         <Link to="/receiver/profile" onClick={toggleProfile}>View Profile</Link>
-                        <Link to="" onClick={toggleProfile}>
+                        <Link to="" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                             <button>Sign Out</button>
                         </Link>
                     </div>
@@ -75,10 +110,10 @@ function Navbar() {
                     <Link to="/receiver/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/receiver/about" onClick={toggleMenu}>About Us</Link>
                     <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
-                    <Link to="" onClick={toggleMenu}>Find Food</Link>
-                    <Link to="" onClick={toggleMenu}>My Claims</Link>
-                    <Link to="" onClick={toggleMenu}>View Profile</Link>
-                    <Link to="" onClick={toggleMenu}>
+                    <Link to="/receiver/find-food" onClick={toggleMenu}>Find Food</Link>
+                    <Link to="/receiver/my-claims" onClick={toggleMenu}>My Claims</Link>
+                    <Link to="/receiver/profile" onClick={toggleMenu}>View Profile</Link>
+                    <Link to="" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                         <button>Sign Out</button>
                     </Link>
                 </div>

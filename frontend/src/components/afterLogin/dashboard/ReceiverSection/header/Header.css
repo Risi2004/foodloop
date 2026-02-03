@@ -68,20 +68,51 @@
     cursor: pointer;
 }
 
-.header__s1__btns{
+.header__s1__btns {
     display: flex;
     align-items: center;
     gap: 30px;
 
 }
 
-.header__s1__btn p, .header__s1__btn2 p {
+.header__s1__btn p,
+.header__s1__btn2 p {
     font-size: 18px;
     margin: 0;
 }
 
 @media screen and (max-width:1300px) {
-    .header__s1 img {
+    .header__image1 {
         display: none;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .header__s1__caption h1 {
+        font-size: 35px;
+    }
+
+    .header__s1__caption p {
+        font-size: 14px;
+    }
+
+    .header__s1__btn p,
+    .header__s1__btn2 p {
+        font-size: 14px;
+    }
+
+    .header__s1__caption {
+        width: 100%;
+        margin: 10px;
+    }
+
+    .header__s1__btns {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .header__image2 {
+        height: 500px;
+        object-fit: cover;
     }
 }

@@ -1,18 +1,91 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { login } from '../../../services/api';
+import { setToken, setUser } from '../../../utils/auth';
 import './LoginPage.css';
 import loginImage from '../../../assets/images/login/login.svg';
 import eye from "../../../assets/icons/login/eye-icon.svg"
 import receive from "../../../assets/icons/login/receive.svg"
 
 function LoginPage() {
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [generalError, setGeneralError] = useState('');
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setErrors({});
+        setGeneralError('');
+
+        // Basic validation
+        if (!email.trim()) {
+            setErrors({ email: 'Email/username is required' });
+            return;
+        }
+        if (!password) {
+            setErrors({ password: 'Password is required' });
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await login(email.trim(), password);
+
+            if (response.success) {
+                // Store token and user data
+                setToken(response.token);
+                setUser(response.user);
+
+                // Redirect based on user role
+                const role = response.user.role.toLowerCase();
+                if (role === 'donor') {
+                    navigate('/donor/dashboard');
+                } else if (role === 'receiver') {
+                    navigate('/receiver/dashboard');
+                } else if (role === 'driver') {
+                    navigate('/driver/dashboard');
+                } else if (role === 'admin') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/');
+                }
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            
+            // Handle API errors
+            if (error.response && error.response.data) {
+                const errorData = error.response.data;
+                
+                // Check for status-related errors (pending/rejected)
+                if (errorData.message) {
+                    setGeneralError(errorData.message);
+                }
+                
+                // Handle field-specific errors
+                if (errorData.errors && Array.isArray(errorData.errors)) {
+                    const fieldErrors = {};
+                    errorData.errors.forEach(err => {
+                        fieldErrors[err.field] = err.message;
+                    });
+                    setErrors(fieldErrors);
+                }
+            } else {
+                setGeneralError(error.message || 'An error occurred. Please try again.');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -31,7 +104,23 @@ function LoginPage() {
                         <p className="subtitle">Connect to minimize waste and maximize impact.</p>
                     </div>
 
-                    <div className="form__card">
+                    <form className="form__card" onSubmit={handleSubmit}>
+                        {/* General Error Message */}
+                        {generalError && (
+                            <div className="error-message" style={{ 
+                                color: '#ff6b6b', 
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                padding: '12px',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                textAlign: 'center',
+                                fontSize: '0.9rem',
+                                fontWeight: '600'
+                            }}>
+                                {generalError}
+                            </div>
+                        )}
+
                         <div className="input__group">
                             <label htmlFor="email">Email or Username</label>
                             <input
@@ -40,7 +129,18 @@ function LoginPage() {
                                 placeholder="Eg:-john or johndoe@gmail.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                disabled={loading}
                             />
+                            {errors.email && (
+                                <span className="error-message" style={{ 
+                                    color: '#ff6b6b', 
+                                    fontSize: '0.85rem', 
+                                    marginTop: '0.25rem',
+                                    display: 'block'
+                                }}>
+                                    {errors.email}
+                                </span>
+                            )}
                         </div>
                         <div className="input__group">
                             <label htmlFor="password">Password</label>
@@ -51,6 +151,7 @@ function LoginPage() {
                                     placeholder="**************"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
                                 />
                                 <span className="toggle__password" onClick={togglePasswordVisibility} style={{ zIndex: 10 }}>
                                     {showPassword ? (
@@ -60,6 +161,16 @@ function LoginPage() {
                                     )}
                                 </span>
                             </div>
+                            {errors.password && (
+                                <span className="error-message" style={{ 
+                                    color: '#ff6b6b', 
+                                    fontSize: '0.85rem', 
+                                    marginTop: '0.25rem',
+                                    display: 'block'
+                                }}>
+                                    {errors.password}
+                                </span>
+                            )}
                         </div>
 
                         <div className="form__actions">
@@ -67,8 +178,14 @@ function LoginPage() {
                             <input type="checkbox" className="remember__me" />
                         </div>
 
-                        <button className="login__btn">Login</button>
-                    </div>
+                        <button 
+                            type="submit" 
+                            className="login__btn" 
+                            disabled={loading}
+                        >
+                            {loading ? 'Logging in...' : 'Login'}
+                        </button>
+                    </form>
 
                     <div className="login__footer">
                         <p>Don't have an account?</p>

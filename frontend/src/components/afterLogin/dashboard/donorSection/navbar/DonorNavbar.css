@@ -79,6 +79,14 @@
     cursor: pointer;
 }
 
+.navbar__s3__img2 {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
 .navbar__s3__profile__popup {
     z-index: 999;
     position: fixed;

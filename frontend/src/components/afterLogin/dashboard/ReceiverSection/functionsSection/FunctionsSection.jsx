@@ -1,7 +1,7 @@
 import icon1 from "../../../../../assets/icons/afterLogin/functions/camera-green.svg"
 import icon2 from "../../../../../assets/icons/afterLogin/functions/Scorecard.svg"
 import icon3 from "../../../../../assets/icons/afterLogin/functions/Lightning-Bolt.svg"
-import FunctionCard from "../../common/functionsCard/functionsCard"
+import FunctionCard from "../../common/functionsCard/FunctionsCard"
 import './FunctionsSection.css'
 
 function FunctionsSection() {
