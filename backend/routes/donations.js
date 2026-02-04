@@ -8,7 +8,7 @@ const { authenticateUser } = require('../middleware/auth');
 const Donation = require('../models/Donation');
 const User = require('../models/User');
 const { calculateExpiryDate } = require('../services/expiryService');
-const { sendDonationLiveEmail } = require('../utils/emailService');
+const { sendDonationLiveEmail, sendNewDonationNotificationToReceivers } = require('../utils/emailService');
 const { geocodeAddress } = require('../services/geocodingService');
 
 // Apply file upload middleware for image uploads
@@ -460,13 +460,22 @@ router.post('/', authenticateUser, async (req, res) => {
       expiryDate: donation.expiryDate,
     });
 
-    // Send email notification (async, don't block response)
+    // Send email notifications (async, don't block response)
+    // 1. Send confirmation email to donor
     try {
       await sendDonationLiveEmail(donation, donor);
     } catch (emailError) {
-      console.error('[Donations] Error sending donation email:', emailError.message);
+      console.error('[Donations] Error sending donation email to donor:', emailError.message);
       // Don't fail donation creation if email fails
     }
+
+    // 2. Send notification emails to all registered receivers
+    // This runs asynchronously and doesn't block the response
+    sendNewDonationNotificationToReceivers(donation, donor)
+      .catch(error => {
+        console.error('[Donations] Error sending notifications to receivers:', error.message);
+        // Don't fail donation creation if email fails
+      });
 
     res.status(201).json({
       success: true,
@@ -505,10 +514,11 @@ router.get('/available', async (req, res) => {
   try {
     const currentDate = new Date();
     
-    // Fetch donations with status 'pending' or 'approved' that haven't expired
+    // Fetch donations with status 'pending' or 'approved' that haven't expired and are not claimed
     const donations = await Donation.find({
       status: { $in: ['pending', 'approved'] },
       expiryDate: { $gt: currentDate }, // Only non-expired donations
+      assignedReceiverId: null, // Only unclaimed donations
     })
       .populate('donorId', 'address email donorType username businessName')
       .sort({ createdAt: -1 }) // Newest first
@@ -612,6 +622,523 @@ router.get('/available', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch available donations',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/donations/:id/claim
+ * Claim a donation (receiver claims a food donation)
+ * Requires authentication (Receiver role)
+ */
+router.post('/:id/claim', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Receiver
+    if (req.user.role !== 'Receiver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only receivers can claim donations',
+      });
+    }
+
+    const { id } = req.params;
+    const receiverId = req.user.id;
+
+    // Find the donation
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Check if donation is already claimed
+    if (donation.assignedReceiverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has already been claimed by another receiver',
+      });
+    }
+
+    // Check if donation is available for claiming (status: 'pending' or 'approved')
+    if (!['pending', 'approved'].includes(donation.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `This donation is not available for claiming. Current status: ${donation.status}`,
+      });
+    }
+
+    // Check if donation has expired
+    const currentDate = new Date();
+    if (donation.expiryDate <= currentDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has expired and cannot be claimed',
+      });
+    }
+
+    // Update donation: assign to receiver and change status to 'assigned'
+    donation.assignedReceiverId = receiverId;
+    donation.status = 'assigned';
+    await donation.save();
+
+    console.log('[Donations] Donation claimed successfully:', {
+      donationId: donation._id,
+      trackingId: donation.trackingId,
+      receiverId: receiverId,
+      status: donation.status,
+    });
+
+    // Fetch receiver details for email
+    const receiver = await User.findById(receiverId).select('-password');
+    
+    // Fetch donor details for email
+    const donor = await User.findById(donation.donorId).select('-password');
+
+    // Send email notification to donor (async, don't block response)
+    const { sendDonationClaimedEmail } = require('../utils/emailService');
+    sendDonationClaimedEmail(donation, donor, receiver)
+      .catch(error => {
+        console.error('[Donations] Error sending claim notification email to donor:', error.message);
+        // Don't fail claim if email fails
+      });
+
+    // Populate donor and receiver info for response
+    await donation.populate('donorId', 'address email donorType username businessName');
+    await donation.populate('assignedReceiverId', 'receiverName receiverType email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Donation claimed successfully',
+      donation: {
+        id: donation._id,
+        trackingId: donation.trackingId,
+        foodCategory: donation.foodCategory,
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        status: donation.status,
+        assignedReceiverId: donation.assignedReceiverId,
+        createdAt: donation.createdAt,
+        updatedAt: donation.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error claiming donation:', error);
+    console.error('[Donations] Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to claim donation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/my-claims
+ * Get all donations claimed by the authenticated receiver
+ * Requires authentication (Receiver role)
+ */
+router.get('/my-claims', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Receiver
+    if (req.user.role !== 'Receiver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only receivers can view their claims',
+      });
+    }
+
+    const receiverId = req.user.id;
+
+    // Fetch all donations claimed by this receiver
+    const donations = await Donation.find({
+      assignedReceiverId: receiverId,
+    })
+      .populate('donorId', 'address email donorType username businessName')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType')
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    // Format donations for frontend
+    const formattedDonations = donations.map(donation => {
+      const donor = donation.donorId;
+      const donorName = donor?.donorType === 'Business' 
+        ? donor.businessName 
+        : donor?.username || donor?.email || 'Anonymous';
+
+      return {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        // Food details
+        itemName: donation.itemName,
+        foodCategory: donation.foodCategory,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+        expiryDate: donation.expiryDate,
+        storageRecommendation: donation.storageRecommendation,
+        // Donor details
+        donorId: donation.donorId?._id?.toString(),
+        donorAddress: donation.donorAddress || donor?.address || '',
+        donorEmail: donation.donorEmail || donor?.email,
+        donorName: donorName,
+        donorType: donor?.donorType,
+        // Driver details (if assigned)
+        assignedDriverId: donation.assignedDriverId?._id?.toString(),
+        driverName: donation.assignedDriverId?.driverName,
+        vehicleNumber: donation.assignedDriverId?.vehicleNumber,
+        // Status and assignment
+        status: donation.status,
+        // Pickup information
+        preferredPickupDate: donation.preferredPickupDate,
+        preferredPickupTimeFrom: donation.preferredPickupTimeFrom,
+        preferredPickupTimeTo: donation.preferredPickupTimeTo,
+        actualPickupDate: donation.actualPickupDate,
+        // AI analysis data
+        aiQualityScore: donation.aiQualityScore,
+        aiFreshness: donation.aiFreshness,
+        aiConfidence: donation.aiConfidence,
+        aiDetectedItems: donation.aiDetectedItems || [],
+        // Timestamps
+        createdAt: donation.createdAt,
+        updatedAt: donation.updatedAt,
+      };
+    });
+
+    console.log(`[Donations] Returning ${formattedDonations.length} claimed donations for receiver ${receiverId}`);
+
+    res.status(200).json({
+      success: true,
+      donations: formattedDonations,
+      count: formattedDonations.length,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching receiver claims:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your claims',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/available-pickups
+ * Get all available pickups for drivers
+ * Returns donations with status 'assigned' that have been claimed by receivers
+ * Requires authentication (Driver role)
+ */
+router.get('/available-pickups', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can view available pickups',
+      });
+    }
+
+    const driverId = req.user.id;
+    const currentDate = new Date();
+
+    // Get driver's current location
+    const driver = await User.findById(driverId).select('driverLatitude driverLongitude');
+    const driverLat = driver?.driverLatitude;
+    const driverLng = driver?.driverLongitude;
+
+    // Fetch donations that are assigned to receivers but not yet picked up
+    const donations = await Donation.find({
+      status: 'assigned',
+      assignedReceiverId: { $ne: null },
+      expiryDate: { $gt: currentDate }, // Only non-expired donations
+    })
+      .populate('donorId', 'address email donorType username businessName')
+      .populate('assignedReceiverId', 'address email receiverName receiverType')
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    // Import distance service
+    const { calculateDistance, formatDistance } = require('../utils/distanceService');
+    const { geocodeAddress } = require('../services/geocodingService');
+
+    // Format pickups and calculate distances
+    const formattedPickups = await Promise.all(
+      donations.map(async (donation) => {
+        const donor = donation.donorId;
+        const receiver = donation.assignedReceiverId;
+
+        // Get donor name
+        const donorName = donor?.donorType === 'Business' 
+          ? donor.businessName 
+          : donor?.username || donor?.email || 'Anonymous';
+
+        // Get receiver name
+        const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
+
+        // Get donor coordinates
+        let donorLat = donation.donorLatitude;
+        let donorLng = donation.donorLongitude;
+
+        // If donor coordinates are missing, try to geocode
+        if ((!donorLat || !donorLng) && donation.donorAddress) {
+          const coords = await geocodeAddress(donation.donorAddress);
+          if (coords) {
+            donorLat = coords.lat;
+            donorLng = coords.lng;
+            // Save coordinates back to database (async, don't block response)
+            Donation.findByIdAndUpdate(
+              donation._id,
+              { donorLatitude: coords.lat, donorLongitude: coords.lng },
+              { new: true }
+            ).catch(err => {
+              console.error(`[Donations] Error saving donor coordinates: ${err}`);
+            });
+          }
+        }
+
+        // Get receiver coordinates (geocode receiver address)
+        let receiverLat = null;
+        let receiverLng = null;
+        if (receiver?.address) {
+          const receiverCoords = await geocodeAddress(receiver.address);
+          if (receiverCoords) {
+            receiverLat = receiverCoords.lat;
+            receiverLng = receiverCoords.lng;
+          }
+        }
+
+        // Calculate distances
+        let driverToDonorDistance = null;
+        let donorToReceiverDistance = null;
+        let totalRouteDistance = null;
+
+        if (driverLat && driverLng && donorLat && donorLng) {
+          driverToDonorDistance = calculateDistance(driverLat, driverLng, donorLat, donorLng);
+        }
+
+        if (donorLat && donorLng && receiverLat && receiverLng) {
+          donorToReceiverDistance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+        }
+
+        if (driverToDonorDistance !== null && donorToReceiverDistance !== null) {
+          totalRouteDistance = driverToDonorDistance + donorToReceiverDistance;
+        }
+
+        // Calculate time until expiry
+        const expiryDate = new Date(donation.expiryDate);
+        const timeUntilExpiry = expiryDate - currentDate;
+        const hoursUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60 * 60));
+        const minutesUntilExpiry = Math.floor((timeUntilExpiry % (1000 * 60 * 60)) / (1000 * 60));
+
+        let expiryText = 'Expired';
+        if (timeUntilExpiry > 0) {
+          if (hoursUntilExpiry > 0) {
+            expiryText = `Expires in ${hoursUntilExpiry} ${hoursUntilExpiry === 1 ? 'hour' : 'hours'}`;
+            if (minutesUntilExpiry > 0 && hoursUntilExpiry < 24) {
+              expiryText += ` ${minutesUntilExpiry} ${minutesUntilExpiry === 1 ? 'min' : 'mins'}`;
+            }
+          } else {
+            expiryText = `Expires in ${minutesUntilExpiry} ${minutesUntilExpiry === 1 ? 'min' : 'mins'}`;
+          }
+        }
+
+        return {
+          id: donation._id.toString(),
+          trackingId: donation.trackingId,
+          // Food details
+          itemName: donation.itemName,
+          foodCategory: donation.foodCategory,
+          quantity: donation.quantity,
+          imageUrl: donation.imageUrl,
+          expiryDate: donation.expiryDate,
+          expiryText: expiryText,
+          storageRecommendation: donation.storageRecommendation,
+          // Donor details
+          donorId: donation.donorId?._id?.toString(),
+          donorName: donorName,
+          donorAddress: donation.donorAddress || donor?.address || '',
+          donorEmail: donation.donorEmail || donor?.email,
+          donorType: donor?.donorType,
+          donorLatitude: donorLat,
+          donorLongitude: donorLng,
+          // Receiver details
+          receiverId: donation.assignedReceiverId?._id?.toString(),
+          receiverName: receiverName,
+          receiverAddress: receiver?.address || '',
+          receiverEmail: receiver?.email,
+          receiverType: receiver?.receiverType,
+          receiverLatitude: receiverLat,
+          receiverLongitude: receiverLng,
+          // Distances
+          driverToDonorDistance: driverToDonorDistance,
+          driverToDonorDistanceFormatted: formatDistance(driverToDonorDistance),
+          donorToReceiverDistance: donorToReceiverDistance,
+          donorToReceiverDistanceFormatted: formatDistance(donorToReceiverDistance),
+          totalRouteDistance: totalRouteDistance,
+          totalRouteDistanceFormatted: formatDistance(totalRouteDistance),
+          // Pickup information
+          preferredPickupDate: donation.preferredPickupDate,
+          preferredPickupTimeFrom: donation.preferredPickupTimeFrom,
+          preferredPickupTimeTo: donation.preferredPickupTimeTo,
+          // Timestamps
+          createdAt: donation.createdAt,
+          updatedAt: donation.updatedAt,
+        };
+      })
+    );
+
+    console.log(`[Donations] Returning ${formattedPickups.length} available pickups for driver ${driverId}`);
+
+    res.status(200).json({
+      success: true,
+      pickups: formattedPickups,
+      count: formattedPickups.length,
+      driverLocation: driverLat && driverLng ? {
+        latitude: driverLat,
+        longitude: driverLng,
+      } : null,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching available pickups:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch available pickups',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/donations/:id/confirm-pickup
+ * Confirm pickup of a donation (driver confirms they will pick up)
+ * Requires authentication (Driver role)
+ */
+router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can confirm pickups',
+      });
+    }
+
+    const { id } = req.params;
+    const driverId = req.user.id;
+
+    // Find the donation
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Check if donation is already assigned to a driver
+    if (donation.assignedDriverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has already been assigned to another driver',
+      });
+    }
+
+    // Check if donation is in 'assigned' status (claimed by receiver but not yet picked up)
+    if (donation.status !== 'assigned') {
+      return res.status(400).json({
+        success: false,
+        message: `This donation cannot be picked up. Current status: ${donation.status}`,
+      });
+    }
+
+    // Check if donation has a receiver assigned
+    if (!donation.assignedReceiverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has not been claimed by a receiver yet',
+      });
+    }
+
+    // Check if donation has expired
+    const currentDate = new Date();
+    if (donation.expiryDate <= currentDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has expired and cannot be picked up',
+      });
+    }
+
+    // Update donation: assign driver and change status to 'picked_up'
+    donation.assignedDriverId = driverId;
+    donation.status = 'picked_up';
+    donation.actualPickupDate = new Date();
+    await donation.save();
+
+    console.log('[Donations] Pickup confirmed successfully:', {
+      donationId: donation._id,
+      trackingId: donation.trackingId,
+      driverId: driverId,
+      receiverId: donation.assignedReceiverId,
+      status: donation.status,
+    });
+
+    // Fetch donor, receiver, and driver details for emails
+    const donor = await User.findById(donation.donorId).select('-password');
+    const receiver = await User.findById(donation.assignedReceiverId).select('-password');
+    const driver = await User.findById(driverId).select('-password');
+
+    if (!donor || !receiver || !driver) {
+      console.error('[Donations] Missing user data for email notifications');
+    }
+
+    // Send email notifications (async, don't block response)
+    const { 
+      sendPickupConfirmedEmailToDonor, 
+      sendPickupConfirmedEmailToReceiver 
+    } = require('../utils/emailService');
+
+    // Send email to donor
+    if (donor) {
+      sendPickupConfirmedEmailToDonor(donation, donor, driver)
+        .catch(error => {
+          console.error('[Donations] Error sending pickup confirmation email to donor:', error.message);
+        });
+    }
+
+    // Send email to receiver
+    if (receiver) {
+      sendPickupConfirmedEmailToReceiver(donation, receiver, driver)
+        .catch(error => {
+          console.error('[Donations] Error sending pickup confirmation email to receiver:', error.message);
+        });
+    }
+
+    // Populate donation details for response
+    await donation.populate('donorId', 'address email donorType username businessName');
+    await donation.populate('assignedReceiverId', 'receiverName receiverType email address');
+    await donation.populate('assignedDriverId', 'driverName vehicleNumber vehicleType');
+
+    res.status(200).json({
+      success: true,
+      message: 'Pickup confirmed successfully. Emails have been sent to donor and receiver.',
+      donation: {
+        id: donation._id,
+        trackingId: donation.trackingId,
+        status: donation.status,
+        assignedDriverId: donation.assignedDriverId?._id?.toString(),
+        driverName: donation.assignedDriverId?.driverName,
+        assignedReceiverId: donation.assignedReceiverId?._id?.toString(),
+        receiverName: donation.assignedReceiverId?.receiverName,
+        actualPickupDate: donation.actualPickupDate,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error confirming pickup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm pickup',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

@@ -1,7 +1,9 @@
 import './FoodCard.css';
+import { useState } from 'react';
 
-const FoodCard = ({ item, onCardClick }) => {
+const FoodCard = ({ item, onCardClick, onClaim }) => {
     const donation = item.donation || item;
+    const [isClaiming, setIsClaiming] = useState(false);
     const storageIcon = donation.storageRecommendation === 'Hot' ? '☀️' : 
                        donation.storageRecommendation === 'Cold' ? '❄️' : 
                        '💧';
@@ -18,6 +20,30 @@ const FoodCard = ({ item, onCardClick }) => {
         }
     };
 
+    const handleClaimClick = async (e) => {
+        e.stopPropagation(); // Prevent card click event
+        
+        if (!onClaim || isClaiming) {
+            return;
+        }
+
+        const donationId = item.id || donation._id || donation.id;
+        if (!donationId) {
+            console.error('[FoodCard] No donation ID found');
+            return;
+        }
+
+        setIsClaiming(true);
+        try {
+            await onClaim(donationId);
+        } catch (error) {
+            console.error('[FoodCard] Error claiming donation:', error);
+            // Error handling is done in parent component
+        } finally {
+            setIsClaiming(false);
+        }
+    };
+
     return (
         <div className="food-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             {showAIBadge && (
@@ -25,7 +51,17 @@ const FoodCard = ({ item, onCardClick }) => {
                     <span className="dot"></span> AI verified
                 </div>
             )}
-            <button className="claim-btn">Claim now</button>
+            <button 
+                className="claim-btn" 
+                onClick={handleClaimClick}
+                disabled={isClaiming || !onClaim}
+                style={{ 
+                    opacity: isClaiming ? 0.6 : 1,
+                    cursor: isClaiming ? 'not-allowed' : 'pointer'
+                }}
+            >
+                {isClaiming ? 'Claiming...' : 'Claim now'}
+            </button>
 
             <div className="card-content">
                 <div className="card-image-container">

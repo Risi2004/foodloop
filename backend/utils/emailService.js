@@ -720,6 +720,603 @@ const sendDonationLiveEmail = async (donation, user) => {
   }
 };
 
+/**
+ * Send new donation notification email to a single receiver
+ * @param {Object} donation - Donation object
+ * @param {Object} donor - Donor user object
+ * @param {Object} receiver - Receiver user object
+ */
+const sendNewDonationNotificationToReceiver = async (donation, donor, receiver) => {
+  if (!isEmailConfigured() || !transporter) {
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const receiverName = getUserDisplayName(receiver);
+    const expiryDate = new Date(donation.expiryDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    
+    const pickupDate = new Date(donation.preferredPickupDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: receiver.email,
+      subject: '🍽️ New Food Donation Available!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Donation Available</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🍽️ New Donation Available!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello ${receiverName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Great news! A new food donation has been posted on FoodLoop and is now available for claiming.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+              <h2 style="color: #10b981; margin-top: 0; font-size: 20px;">Donation Details</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Item Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.itemName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Category:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.foodCategory}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quantity:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Donor:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donorName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Location:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.donorAddress}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Expiry Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${expiryDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${pickupDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Window:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.preferredPickupTimeFrom} - ${donation.preferredPickupTimeTo}</td>
+                </tr>
+                ${donation.aiQualityScore ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quality Score:</td>
+                  <td style="padding: 8px 0; color: #111827;">${(donation.aiQualityScore * 100).toFixed(0)}%</td>
+                </tr>
+                ` : ''}
+                ${donation.aiFreshness ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Freshness:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.aiFreshness}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                <strong>⚡ Act Fast!</strong><br>
+                This donation is available on a first-come, first-served basis. Log in to your FoodLoop account to claim it now!
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/receiver/find-food" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                View & Claim Donation
+              </a>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">
+              Thank you for being part of the FoodLoop community and helping reduce food waste!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Best regards,<br>
+              <strong>The FoodLoop Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ New donation notification email sent to receiver: ${receiver.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending new donation notification email to ${receiver.email}:`, error.message);
+    // Don't throw error - email failure shouldn't break the process
+  }
+};
+
+/**
+ * Send new donation notification emails to all registered receivers
+ * @param {Object} donation - Donation object
+ * @param {Object} donor - Donor user object
+ */
+const sendNewDonationNotificationToReceivers = async (donation, donor) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping new donation notification emails to receivers.');
+    return;
+  }
+
+  try {
+    // Import User model here to avoid circular dependencies
+    const User = require('../models/User');
+    
+    // Fetch all receivers with status 'completed' (approved receivers)
+    const receivers = await User.find({
+      role: 'Receiver',
+      status: 'completed',
+    }).select('email receiverName');
+
+    if (!receivers || receivers.length === 0) {
+      console.log('[Donations] No approved receivers found. Skipping email notifications.');
+      return;
+    }
+
+    console.log(`[Donations] Sending new donation notification to ${receivers.length} receiver(s)...`);
+
+    // Send emails to all receivers asynchronously (don't wait for all to complete)
+    // Use Promise.allSettled to handle individual failures gracefully
+    const emailPromises = receivers.map(receiver => 
+      sendNewDonationNotificationToReceiver(donation, donor, receiver)
+    );
+
+    const results = await Promise.allSettled(emailPromises);
+    
+    // Count successful and failed emails
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`[Donations] Email notifications sent: ${successful} successful, ${failed} failed`);
+    
+    if (failed > 0) {
+      console.warn(`[Donations] ${failed} email notification(s) failed, but donation was still created successfully.`);
+    }
+  } catch (error) {
+    console.error('[Donations] Error sending new donation notifications to receivers:', error.message);
+    // Don't throw error - email failure shouldn't break donation creation
+  }
+};
+
+/**
+ * Send donation claimed notification email to donor
+ * Sent when a receiver claims their donation
+ */
+const sendDonationClaimedEmail = async (donation, donor, receiver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation claimed email.');
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const receiverName = getUserDisplayName(receiver);
+    const expiryDate = new Date(donation.expiryDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    
+    const pickupDate = new Date(donation.preferredPickupDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: '🎉 Your Donation Has Been Claimed!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Donation Claimed</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Your Donation Has Been Claimed!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello ${donorName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Great news! Your food donation has been claimed by a receiver. A driver will be allocated soon to pick up the donation.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+              <h2 style="color: #10b981; margin-top: 0; font-size: 20px;">Donation Details</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Tracking ID:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.trackingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Item Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.itemName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Category:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.foodCategory}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quantity:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Expiry Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${expiryDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${pickupDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Window:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.preferredPickupTimeFrom} - ${donation.preferredPickupTimeTo}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                <strong>📋 What's Next?</strong><br>
+                Your donation has been claimed by <strong>${receiverName}</strong>. A driver will be allocated soon to pick up the donation from your location. You'll receive another notification once the driver is assigned.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/donor/my-donation" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                View My Donations
+              </a>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">
+              Thank you for your generous contribution to reducing food waste and helping those in need!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Best regards,<br>
+              <strong>The FoodLoop Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Donation claimed email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending donation claimed email to ${donor.email}:`, error.message);
+    // Don't throw error - email failure shouldn't break the claim process
+  }
+};
+
+/**
+ * Send pickup confirmed email to donor
+ * Sent when a driver confirms pickup of the donation
+ */
+const sendPickupConfirmedEmailToDonor = async (donation, donor, driver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping pickup confirmed email to donor.');
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const driverName = getUserDisplayName(driver);
+    const pickupDate = new Date(donation.preferredPickupDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: '🚚 Driver Has Confirmed Pickup of Your Donation!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Pickup Confirmed</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🚚 Pickup Confirmed!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello ${donorName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Great news! A driver has confirmed pickup of your donation. The driver will be arriving at your location soon to collect the food.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <h2 style="color: #3b82f6; margin-top: 0; font-size: 20px;">Donation Details</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Tracking ID:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.trackingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Item Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.itemName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quantity:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${pickupDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Window:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.preferredPickupTimeFrom} - ${donation.preferredPickupTimeTo}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <h3 style="color: #3b82f6; margin-top: 0; font-size: 18px;">Driver Information</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Driver Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driverName}</td>
+                </tr>
+                ${driver.vehicleNumber ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Vehicle Number:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driver.vehicleNumber}</td>
+                </tr>
+                ` : ''}
+                ${driver.vehicleType ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Vehicle Type:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driver.vehicleType}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+              <p style="margin: 0; color: #856404; font-size: 14px;">
+                <strong>📋 What's Next?</strong><br>
+                Please have your donation ready for pickup. The driver will arrive at your location during the specified pickup window. 
+                You can track the delivery status from your dashboard.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/donor/my-donation" 
+                 style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                View My Donations
+              </a>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">
+              Thank you for your generous contribution!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Best regards,<br>
+              <strong>The FoodLoop Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Pickup confirmed email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending pickup confirmed email to donor ${donor.email}:`, error.message);
+  }
+};
+
+/**
+ * Send pickup confirmed email to receiver
+ * Sent when a driver confirms pickup of the donation
+ */
+const sendPickupConfirmedEmailToReceiver = async (donation, receiver, driver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping pickup confirmed email to receiver.');
+    return;
+  }
+
+  try {
+    const receiverName = getUserDisplayName(receiver);
+    const driverName = getUserDisplayName(driver);
+    const donorName = donation.donorName || 'Donor';
+    const pickupDate = new Date(donation.preferredPickupDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: receiver.email,
+      subject: '🚚 Driver Has Confirmed Pickup - Your Food is on the Way!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Pickup Confirmed</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🚚 Pickup Confirmed!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello ${receiverName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Great news! A driver has confirmed pickup of your claimed donation. Your food is now on the way to you!
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+              <h2 style="color: #10b981; margin-top: 0; font-size: 20px;">Donation Details</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Tracking ID:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.trackingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Item Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.itemName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quantity:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">From Donor:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donorName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${pickupDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Window:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.preferredPickupTimeFrom} - ${donation.preferredPickupTimeTo}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <h3 style="color: #3b82f6; margin-top: 0; font-size: 18px;">Driver Information</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Driver Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driverName}</td>
+                </tr>
+                ${driver.vehicleNumber ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Vehicle Number:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driver.vehicleNumber}</td>
+                </tr>
+                ` : ''}
+                ${driver.vehicleType ? `
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Vehicle Type:</td>
+                  <td style="padding: 8px 0; color: #111827;">${driver.vehicleType}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            
+            <div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+              <p style="margin: 0; color: #065f46; font-size: 14px;">
+                <strong>📋 What's Next?</strong><br>
+                The driver is now on the way to pick up your donation from the donor. You can track the delivery status in real-time from your dashboard. 
+                The driver will deliver the food to your location soon.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/receiver/my-claims" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Track My Claims
+              </a>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">
+              Thank you for being part of the FoodLoop community!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Best regards,<br>
+              <strong>The FoodLoop Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Pickup confirmed email sent to receiver: ${receiver.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending pickup confirmed email to receiver ${receiver.email}:`, error.message);
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendPendingApprovalEmail,
@@ -728,4 +1325,9 @@ module.exports = {
   sendDeactivationEmail,
   sendActivationEmail,
   sendDonationLiveEmail,
+  sendNewDonationNotificationToReceivers,
+  sendNewDonationNotificationToReceiver,
+  sendDonationClaimedEmail,
+  sendPickupConfirmedEmailToDonor,
+  sendPickupConfirmedEmailToReceiver,
 };

@@ -15,21 +15,8 @@
     z-index: 1;
 }
 
-.location-box {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: white;
-    padding: 10px 15px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    /* Above map */
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 200px;
-}
+/* LocationBox is now a separate component, so we don't need these styles here */
+/* They are in LocationBox.css */
 
 .location-icon {
     width: 24px;
@@ -108,4 +95,62 @@
 
 .custom-zoom-buttons button:hover {
     background: #163a28;
+}
+
+.distance-info-box {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.distance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.distance-item:last-child {
+    border-bottom: none;
+}
+
+.distance-item.total {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 2px solid #1F4E36;
+    border-bottom: none;
+    font-weight: bold;
+}
+
+.distance-label {
+    font-size: 13px;
+    color: #666;
+}
+
+.distance-value {
+    font-size: 14px;
+    color: #1F4E36;
+    font-weight: 600;
+}
+
+.distance-item.total .distance-value {
+    font-size: 16px;
+    color: #1F4E36;
+}
+
+.distance-warning {
+    margin-top: 8px;
+    padding: 8px;
+    background: #fff3cd;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #856404;
 }

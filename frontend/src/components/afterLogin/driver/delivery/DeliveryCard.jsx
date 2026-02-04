@@ -3,7 +3,23 @@ import schedule from "../../../../assets/icons/afterLogin/driver/schedule.svg";
 import transit from "../../../../assets/icons/afterLogin/driver/transit.svg";
 import './DeliveryCard.css';
 
-function DeliveryCard({ isSelected, onClick }) {
+function DeliveryCard({ donation, isSelected, onClick }) {
+    if (!donation) {
+        return null;
+    }
+
+    // Format quantity display
+    const formatQuantity = (quantity) => {
+        if (!quantity) return 'N/A';
+        return `${quantity} ${quantity === 1 ? 'serving' : 'servings'}`;
+    };
+
+    const donorName = donation.donorName || 'Donor';
+    const distanceText = donation.driverToDonorDistanceFormatted || 'Distance N/A';
+    const itemName = donation.itemName || 'Food Item';
+    const quantity = formatQuantity(donation.quantity);
+    const expiryText = donation.expiryText || 'Expired';
+
     return (
         <div
             className="delivery__card"
@@ -16,15 +32,15 @@ function DeliveryCard({ isSelected, onClick }) {
             }}
         >
             <div className="delivery__card__s1">
-                <h4>Fresh Bakery Bakery</h4>
-                <h5>0.5km Away</h5>
+                <h4>{donorName}</h4>
+                <h5>{distanceText} Away</h5>
             </div>
-            <p style={{ marginBottom: "15px" }}>Assorted Pastries • 4.2 kg</p>
+            <p style={{ marginBottom: "15px" }}>{itemName} • {quantity}</p>
             <div className="delivery__card__s2">
                 <img src={schedule} alt="schedule" />
-                <p>Expires in 15 min</p>
+                <p>{expiryText}</p>
             </div>
-            <Link to="/driver/pickup">
+            <Link to={`/driver/pickup?donationId=${donation.id}`}>
                 <button>
                     <p>Confirm Pickup</p>
                     <img src={transit} alt="pickup" />

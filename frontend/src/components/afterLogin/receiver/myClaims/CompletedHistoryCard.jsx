@@ -5,7 +5,21 @@ import receipt from "../../../../assets/icons/afterLogin/receiver/Receipt.svg"
 import { Link } from "react-router-dom";
 import './MyClaimsCards.css';
 
-const CompletedHistoryCard = () => {
+const CompletedHistoryCard = ({ donation }) => {
+    if (!donation) {
+        return null;
+    }
+
+    // Format quantity display
+    const formatQuantity = (quantity) => {
+        if (!quantity) return 'N/A';
+        return `${quantity} ${quantity === 1 ? 'serving' : 'servings'}`;
+    };
+
+    const itemName = donation.itemName || 'Food Item';
+    const quantity = donation.quantity || 0;
+    const driverName = donation.driverName || `Driver #${donation.assignedDriverId?.slice(-3) || 'N/A'}`;
+    const imageUrl = donation.imageUrl || foodImage;
 
     return (
         <div className="donation-card">
@@ -21,7 +35,7 @@ const CompletedHistoryCard = () => {
                     </div>
                 </div>
                 <div className="tool">
-                    <Link to="/receiver/digital-receipt">
+                    <Link to={`/receiver/digital-receipt?donationId=${donation.id}`}>
                         <div className="edit">
                             <img
                                 className="receipt"
@@ -38,11 +52,18 @@ const CompletedHistoryCard = () => {
                 </div>
             </div>
             <div className="fed">
-                <img className="img" src={foodImage} alt="Avocado Toast" />
+                <img 
+                    className="img" 
+                    src={imageUrl} 
+                    alt={itemName}
+                    onError={(e) => {
+                        e.target.src = foodImage;
+                    }}
+                />
                 <div className="detail">
                     <div className="name">
-                        <div className="bag-of-fuji-apples">Avocado Toast (6pcs)</div>
-                        <div className="listed-2-mins-ago">Delevered by Driver #402</div>
+                        <div className="bag-of-fuji-apples">{itemName} ({formatQuantity(quantity)})</div>
+                        <div className="listed-2-mins-ago">Delivered by {driverName}</div>
                     </div>
                     <div className="wight">
                         <div className="wight2">
@@ -53,7 +74,7 @@ const CompletedHistoryCard = () => {
                             />
                             <div className="_5-kg-available">
                                 <span>
-                                    <span className="_5-kg-available-span">6pcs</span>
+                                    <span className="_5-kg-available-span">{quantity}</span>
                                     <span className="_5-kg-available-span2">Available</span>
                                 </span>
                             </div>

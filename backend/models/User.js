@@ -100,6 +100,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  // Driver location (for real-time tracking)
+  driverLatitude: {
+    type: Number,
+    default: null,
+  },
+  driverLongitude: {
+    type: Number,
+    default: null,
+  },
 
 }, {
   timestamps: true, // Automatically adds createdAt and updatedAt

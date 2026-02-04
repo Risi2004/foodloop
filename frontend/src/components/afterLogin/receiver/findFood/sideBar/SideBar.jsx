@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import './SideBar.css';
 import FoodCard from '../../../../../components/afterLogin/receiver/findFood/foodCard/FoodCard';
 
-const Sidebar = ({ items, onCardClick }) => {
+const Sidebar = ({ items, onCardClick, onClaim }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedStorage, setSelectedStorage] = useState(null);
@@ -187,6 +187,7 @@ const Sidebar = ({ items, onCardClick }) => {
                             key={item.id || index} 
                             item={item}
                             onCardClick={onCardClick}
+                            onClaim={onClaim}
                         />
                     ))
                 )}

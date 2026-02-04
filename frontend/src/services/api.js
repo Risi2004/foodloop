@@ -204,3 +204,39 @@ export const getAllUsers = async (filters = {}) => {
     throw wrappedError;
   }
 };
+
+/**
+ * Update driver's current location
+ * @param {number} latitude - Driver's latitude
+ * @param {number} longitude - Driver's longitude
+ * @returns {Promise} Response with updated location
+ */
+export const updateDriverLocation = async (latitude, longitude) => {
+  try {
+    console.log('[API] Updating driver location:', { latitude, longitude });
+    
+    const response = await fetch(`${API_URL}/api/users/me/location`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ latitude, longitude }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update location');
+      error.response = { data };
+      throw error;
+    }
+
+    console.log('[API] Driver location updated successfully');
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw error;
+    }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};

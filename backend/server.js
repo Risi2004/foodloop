@@ -9,6 +9,7 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const donationRoutes = require('./routes/donations');
+const userRoutes = require('./routes/users');
 
 const app = express();
 
@@ -33,6 +34,9 @@ app.use('/api/admin', adminRoutes);
 
 // Donation routes (for image upload and AI analysis)
 app.use('/api/donations', donationRoutes);
+
+// User routes (for user profile updates)
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

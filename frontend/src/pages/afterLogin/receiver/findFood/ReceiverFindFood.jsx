@@ -4,7 +4,7 @@ import Sidebar from '../../../../components/afterLogin/receiver/findFood/sideBar
 import MapSection from '../../../../components/afterLogin/receiver/findFood/mapSection/MapSection';
 import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
 import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
-import { getAvailableDonations } from '../../../../services/donationApi';
+import { getAvailableDonations, claimDonation } from '../../../../services/donationApi';
 
 const FindFood = () => {
     const [items, setItems] = useState([]);
@@ -182,12 +182,44 @@ const FindFood = () => {
         }
     };
 
+    // Handle claim donation
+    const handleClaim = async (donationId) => {
+        try {
+            console.log('[ReceiverFindFood] Claiming donation:', donationId);
+            
+            // Call API to claim donation
+            const response = await claimDonation(donationId);
+            
+            if (response.success) {
+                // Remove claimed donation from local state
+                setItems(prevItems => prevItems.filter(item => {
+                    const id = item.id || item.donation?._id || item.donation?.id;
+                    return id !== donationId;
+                }));
+                
+                // Show success message (optional - you can add a toast notification here)
+                console.log('[ReceiverFindFood] Donation claimed successfully');
+                
+                // Optionally refresh the list to ensure consistency
+                // fetchDonations();
+            }
+        } catch (error) {
+            console.error('[ReceiverFindFood] Error claiming donation:', error);
+            
+            // Show error message to user
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to claim donation. Please try again.';
+            alert(errorMessage); // You can replace this with a better notification system
+            
+            throw error; // Re-throw to let FoodCard handle it
+        }
+    };
+
     return (
         <>
             <ReceiverNavbar />
             <div className="find-food-page">
                 <div className="sidebar-section">
-                    <Sidebar items={items} onCardClick={handleCardClick} />
+                    <Sidebar items={items} onCardClick={handleCardClick} onClaim={handleClaim} />
                 </div>
                 <div className="map-section">
                     <MapSection items={items} />
