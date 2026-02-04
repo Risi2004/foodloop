@@ -1,10 +1,13 @@
 .new-donation-page {
-    min-height: 100vh;
+    min-height: calc(100vh - 400px);
+    /* Adjust height to account for 200px + 200px margins */
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
     font-family: 'Inter', sans-serif;
+    margin-top: 200px;
+    margin-bottom: 200px;
 }
 
 .donation-container {

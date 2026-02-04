@@ -8,6 +8,7 @@ const { PORT, NODE_ENV } = require('./config/env');
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const donationRoutes = require('./routes/donations');
 
 const app = express();
 
@@ -29,6 +30,9 @@ app.use('/api/auth', authRoutes);
 
 // Admin routes (protected by admin authentication middleware)
 app.use('/api/admin', adminRoutes);
+
+// Donation routes (for image upload and AI analysis)
+app.use('/api/donations', donationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

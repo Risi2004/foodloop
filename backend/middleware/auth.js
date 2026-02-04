@@ -53,4 +53,49 @@ const authenticateAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateAdmin };
+/**
+ * Middleware to authenticate any user (Donor, Receiver, Driver, Admin)
+ * Verifies JWT token and attaches user info to request
+ */
+const authenticateUser = async (req, res, next) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided. Authentication required.',
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    try {
+      // Verify token
+      const decoded = verifyToken(token);
+
+      // Attach user info to request
+      req.user = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+      };
+
+      next();
+    } catch (tokenError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+      });
+    }
+  } catch (error) {
+    console.error('User authentication error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during authentication',
+    });
+  }
+};
+
+module.exports = { authenticateAdmin, authenticateUser };

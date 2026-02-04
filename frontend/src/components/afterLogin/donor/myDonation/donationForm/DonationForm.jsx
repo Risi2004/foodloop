@@ -1,33 +1,173 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { submitDonation } from '../../../../../services/donationApi';
 import './DonationForm.css';
 
-function DonationForm() {
-    // State for toggles
+function DonationForm({ aiPredictions, imageUrl, error }) {
+    const navigate = useNavigate();
+    
+    // Form state
+    const [foodCategory, setFoodCategory] = useState('Cooked Meals');
+    const [itemName, setItemName] = useState('Vegetable Curry with Rice');
+    const [quantity, setQuantity] = useState(15);
     const [storage, setStorage] = useState('hot'); // hot, cold, dry
     const [pickup, setPickup] = useState('today'); // today, tomorrow
+    const [aiConfidence, setAiConfidence] = useState(null);
+    const [aiQualityScore, setAiQualityScore] = useState(null);
+    const [isAiFilled, setIsAiFilled] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+
+    // Auto-fill form when AI predictions are received
+    useEffect(() => {
+        console.log('[DonationForm] aiPredictions changed:', aiPredictions);
+        console.log('[DonationForm] isEditing:', isEditing);
+        
+        if (aiPredictions && !isEditing) {
+            console.log('[DonationForm] Filling form with AI predictions:', aiPredictions);
+            
+            // Update form fields with AI predictions
+            if (aiPredictions.foodCategory) {
+                console.log('[DonationForm] Setting foodCategory:', aiPredictions.foodCategory);
+                setFoodCategory(aiPredictions.foodCategory);
+            }
+            if (aiPredictions.itemName) {
+                console.log('[DonationForm] Setting itemName:', aiPredictions.itemName);
+                setItemName(aiPredictions.itemName);
+            }
+            if (aiPredictions.quantity) {
+                console.log('[DonationForm] Setting quantity:', aiPredictions.quantity);
+                setQuantity(aiPredictions.quantity);
+            }
+            if (aiPredictions.storageRecommendation) {
+                const storageLower = aiPredictions.storageRecommendation.toLowerCase();
+                console.log('[DonationForm] Setting storage:', storageLower);
+                if (storageLower === 'hot' || storageLower === 'cold' || storageLower === 'dry') {
+                    setStorage(storageLower);
+                } else {
+                    console.warn('[DonationForm] Invalid storage recommendation:', aiPredictions.storageRecommendation);
+                }
+            }
+            if (aiPredictions.confidence) {
+                console.log('[DonationForm] Setting confidence:', aiPredictions.confidence);
+                setAiConfidence(aiPredictions.confidence);
+            }
+            if (aiPredictions.qualityScore) {
+                console.log('[DonationForm] Setting qualityScore:', aiPredictions.qualityScore);
+                setAiQualityScore(aiPredictions.qualityScore);
+            }
+            setIsAiFilled(true);
+            console.log('[DonationForm] Form filled successfully with AI predictions');
+        } else if (aiPredictions && isEditing) {
+            console.log('[DonationForm] Predictions received but form is in editing mode, skipping auto-fill');
+        } else if (!aiPredictions) {
+            console.log('[DonationForm] No predictions available yet');
+        }
+    }, [aiPredictions, isEditing]);
+
+    // Handle quantity increment/decrement
+    const handleQuantityChange = (delta) => {
+        setQuantity(prev => Math.max(1, prev + delta));
+    };
+
+    // Handle edit all fields
+    const handleEditAll = () => {
+        setIsEditing(!isEditing);
+    };
+
+    const handlePostDonation = async () => {
+        // Validate required fields
+        if (!imageUrl) {
+            setSubmitError('Please upload an image first');
+            return;
+        }
+
+        if (!itemName || !foodCategory || !quantity) {
+            setSubmitError('Please fill in all required fields');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            // Capitalize storage recommendation (Hot, Cold, Dry)
+            const storageCapitalized = storage.charAt(0).toUpperCase() + storage.slice(1);
+
+            const donationData = {
+                foodCategory,
+                itemName,
+                quantity: Number(quantity),
+                storageRecommendation: storageCapitalized,
+                imageUrl,
+                preferredPickupDate: pickup,
+                aiConfidence: aiConfidence || aiPredictions?.confidence || null,
+                aiQualityScore: aiPredictions?.qualityScore || null,
+                aiFreshness: aiPredictions?.freshness || null,
+                aiDetectedItems: aiPredictions?.detectedItems || [],
+            };
+
+            console.log('[DonationForm] Submitting donation:', donationData);
+
+            const response = await submitDonation(donationData);
+
+            if (response.success) {
+                console.log('[DonationForm] Donation submitted successfully:', response.donation);
+                // Navigate to tracking page with donation ID
+                navigate(`/donor/track-order?donationId=${response.donation.id}&trackingId=${response.donation.trackingId}`);
+            } else {
+                throw new Error(response.message || 'Failed to submit donation');
+            }
+        } catch (error) {
+            console.error('[DonationForm] Error submitting donation:', error);
+            const errorMessage = error.response?.data?.message || 
+                                error.response?.data?.errors?.[0]?.message ||
+                                error.message || 
+                                'Failed to submit donation. Please try again.';
+            setSubmitError(errorMessage);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="donation-form-container">
             {/* AI Analysis Banner */}
-            <div className="ai-analysis-banner">
-                <div className="analysis-status">
-                    <span className="check-icon-circle">✓</span>
-                    <span className="analysis-text">
-                        AI Analysis: <span className="confidence">98% confidence</span> — Freshness Verified
-                    </span>
+            {aiPredictions && (
+                <div className="ai-analysis-banner">
+                    <div className="analysis-status">
+                        <span className="check-icon-circle">✓</span>
+                        <span className="analysis-text">
+                            AI Analysis: <span className="confidence">{Math.round((aiConfidence || aiPredictions.confidence || 0.90) * 100)}% confidence</span> — <span className="quality">{Math.round((aiQualityScore || aiPredictions.qualityScore || 0.85) * 100)}% quality</span> — Freshness Verified
+                        </span>
+                    </div>
+                    <div className="safety-badge">⚡ High Safety</div>
                 </div>
-                <div className="safety-badge">⚡ High Safety</div>
-            </div>
+            )}
+            {error && (
+                <div className="error-banner">
+                    <span className="error-icon">⚠️</span>
+                    <span className="error-text">{error}</span>
+                </div>
+            )}
+            {submitError && (
+                <div className="error-banner">
+                    <span className="error-icon">⚠️</span>
+                    <span className="error-text">{submitError}</span>
+                </div>
+            )}
 
             {/* Core Details Header */}
             <div className="form-section-header">
                 <div className="section-title">
                     <span className="magic-wand-icon">🪄</span>
                     <h2>Core Details</h2>
-                    <span className="ai-filled-badge">(AI-Filled)</span>
+                    {isAiFilled && <span className="ai-filled-badge">(AI-Filled)</span>}
                 </div>
-                <button className="edit-all-btn">Edit All Fields</button>
+                <button className="edit-all-btn" onClick={handleEditAll}>
+                    {isEditing ? 'Done Editing' : 'Edit All Fields'}
+                </button>
             </div>
 
             {/* Core Details Form */}
@@ -35,25 +175,71 @@ function DonationForm() {
                 <div className="form-group">
                     <label>Food Category</label>
                     <div className="input-with-icon">
-                        <input type="text" defaultValue="Cooked Meals" />
-                        <span className="edit-icon">📝</span>
+                        <input 
+                            type="text" 
+                            value={foodCategory}
+                            onChange={(e) => {
+                                setFoodCategory(e.target.value);
+                                setIsEditing(true);
+                            }}
+                            readOnly={!isEditing && isAiFilled}
+                        />
+                        {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
                     </div>
                 </div>
 
                 <div className="form-group">
                     <label>Item Name</label>
                     <div className="input-with-icon">
-                        <input type="text" defaultValue="Vegetable Curry with Rice" />
-                        <span className="edit-icon">📝</span>
+                        <input 
+                            type="text" 
+                            value={itemName}
+                            onChange={(e) => {
+                                setItemName(e.target.value);
+                                setIsEditing(true);
+                            }}
+                            readOnly={!isEditing && isAiFilled}
+                        />
+                        {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
                     </div>
                 </div>
 
                 <div className="form-group">
                     <label>Quantity / Servings</label>
                     <div className="quantity-control">
-                        <button className="qty-btn minus">—</button>
-                        <input type="text" defaultValue="15 Plates" className="qty-input" />
-                        <button className="qty-btn plus">＋</button>
+                        <button 
+                            className="qty-btn minus" 
+                            onClick={() => handleQuantityChange(-1)}
+                            disabled={!isEditing && isAiFilled}
+                        >
+                            —
+                        </button>
+                        <input 
+                            type="text" 
+                            value={isEditing ? quantity : `${quantity} Plates`}
+                            className="qty-input"
+                            readOnly={!isEditing && isAiFilled}
+                            onChange={(e) => {
+                                const text = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                                const value = parseInt(text) || 1;
+                                setQuantity(value);
+                                setIsEditing(true);
+                            }}
+                            onFocus={(e) => {
+                                if (!isEditing && isAiFilled) {
+                                    e.target.blur();
+                                } else {
+                                    e.target.value = quantity.toString();
+                                }
+                            }}
+                        />
+                        <button 
+                            className="qty-btn plus" 
+                            onClick={() => handleQuantityChange(1)}
+                            disabled={!isEditing && isAiFilled}
+                        >
+                            ＋
+                        </button>
                     </div>
                 </div>
 
@@ -99,43 +285,37 @@ function DonationForm() {
                             className={`pickup-btn ${pickup === 'today' ? 'active' : ''}`}
                             onClick={() => setPickup('today')}
                         >
-                            <span className="day-label">Today</span>
-                            <span className="time-label">4:00 PM - 5:30 PM</span>
+                            <div className="pickup-btn-content">
+                                <span className="day-label">Today</span>
+                                <span className="time-label">4:00 PM - 5:30 PM</span>
+                            </div>
+                            <div className="pickup-icons">
+                                <span className="calendar-icon">📅</span>
+                                <span className="clock-icon">🕒</span>
+                            </div>
                         </button>
                         <button
                             className={`pickup-btn ${pickup === 'tomorrow' ? 'active' : ''}`}
                             onClick={() => setPickup('tomorrow')}
                         >
-                            <span className="day-label">Tomorrow</span>
-                            <span className="time-label">10:00 AM - 12:00 PM</span>
+                            <div className="pickup-btn-content">
+                                <span className="day-label">Tomorrow</span>
+                                <span className="time-label">10:00 AM - 12:00 PM</span>
+                            </div>
+                            <div className="pickup-icons">
+                                <span className="calendar-icon">📅</span>
+                                <span className="clock-icon">🕒</span>
+                            </div>
                         </button>
-                    </div>
-
-                    <div className="datetime-inputs">
-                        <div className="date-input-wrapper">
-                            <input type="text" defaultValue="03 Jan 2026" className="date-input" />
-                            <span className="calendar-icon">📅</span>
-                        </div>
-                        <div className="time-input-wrapper">
-                            <input type="text" defaultValue="10:00 AM - 12:00 PM" className="time-input" />
-                            <span className="clock-icon">🕒</span>
-                        </div>
                     </div>
                 </div>
 
                 <div className="impact-column">
                     <div className="impact-card">
-                        <span className="share-icon">↗</span>
-                        <div className="impact-content">
-                            <label>Impact Estimate</label>
-                            <div className="impact-value">
-                                <span className="number">15</span>
-                                <span className="unit">people</span>
-                            </div>
-                            <p className="impact-desc">will be fed from this donation!</p>
-                        </div>
-                        <div className="people-icon-group">
-                            👥
+                        <label>Impact Estimate</label>
+                        <div className="impact-value">
+                            <span className="number">{quantity}</span>
+                            <span className="unit">people</span>
                         </div>
                     </div>
                 </div>
@@ -148,13 +328,17 @@ function DonationForm() {
                     <label htmlFor="safety-confirm">I confirm that all detected AI details are accurate and the food meets safety standards.</label>
                 </div>
 
-                <button className="post-donation-btn">
-                    <Link to="/donor/track-order">Post Donation ➤</Link>
+                <button 
+                    className="post-donation-btn" 
+                    onClick={handlePostDonation}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? 'Submitting...' : 'Post Donation ▶'}
                 </button>
 
                 <div className="progress-status">
                     <div className="progress-text">
-                        You are 2 donations away from your Gold Donor Badge!
+                        You are 2 donations away from your Gold Donor badge!
                         <span className="progress-fraction">8/10 Completed</span>
                     </div>
                     <div className="progress-bar-bg">
