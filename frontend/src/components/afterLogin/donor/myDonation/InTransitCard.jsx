@@ -1,13 +1,13 @@
 import foodImage from "../../../../assets/icons/afterLogin/receiver/img.png";
 import organicFoodIcon from "../../../../assets/icons/afterLogin/receiver/Organic Food.svg";
 import swapIcon from "../../../../assets/icons/afterLogin/receiver/Swap.svg";
-import './MyClaimsCards.css';
+import './DonationCards.css';
 import { useNavigate } from 'react-router-dom';
 
 const InTransitCard = ({ donation }) => {
     const navigate = useNavigate();
     const handleFollowMapClick = () => {
-        navigate(`/receiver/track-order?donationId=${donation.id}`);
+        navigate(`/donor/track-order?donationId=${donation.id}`);
     };
 
     if (!donation) {
@@ -17,12 +17,13 @@ const InTransitCard = ({ donation }) => {
     // Format quantity display
     const formatQuantity = (quantity) => {
         if (!quantity) return 'N/A';
-        return `${quantity} ${quantity === 1 ? 'serving' : 'servings'}`;
+        return `${quantity}${quantity === 1 ? 'pc' : 'pcs'}`;
     };
 
     const itemName = donation.itemName || 'Food Item';
     const quantity = donation.quantity || 0;
     const driverName = donation.driverName || `Driver #${donation.assignedDriverId?.slice(-3) || 'N/A'}`;
+    const receiverName = donation.receiverName || 'Receiver';
     const imageUrl = donation.imageUrl || foodImage;
 
     return (
@@ -53,7 +54,8 @@ const InTransitCard = ({ donation }) => {
                 <div className="detail">
                     <div className="name">
                         <div className="bag-of-fuji-apples">{itemName} ({formatQuantity(quantity)})</div>
-                        <div className="listed-2-mins-ago">Picked up by {driverName}</div>
+                        <div className="listed-2-mins-ago">Claimed by {driverName}</div>
+                        <div className="listed-2-mins-ago">To: {receiverName}</div>
                     </div>
                     <div className="wight">
                         <div className="wight2">

@@ -37,7 +37,18 @@ const Myclaims = () => {
             }
         };
 
+        // Initial fetch
         fetchClaims();
+
+        // Poll for updates every 5 seconds to catch status changes
+        const intervalId = setInterval(() => {
+            fetchClaims();
+        }, 5000);
+
+        // Cleanup interval on unmount
+        return () => {
+            clearInterval(intervalId);
+        };
     }, []);
 
     // Filter donations by status

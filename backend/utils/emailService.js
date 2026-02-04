@@ -1317,6 +1317,219 @@ const sendPickupConfirmedEmailToReceiver = async (donation, receiver, driver) =>
   }
 };
 
+/**
+ * Send delivery confirmed email to donor
+ */
+const sendDeliveryConfirmedEmailToDonor = async (donation, donor, receiver, driver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping delivery confirmed email to donor.');
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const receiverName = getUserDisplayName(receiver);
+    const driverName = driver?.driverName || 'Driver';
+    
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: '✅ Your Donation Has Been Delivered Successfully!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .success-icon {
+              font-size: 48px;
+              margin-bottom: 20px;
+            }
+            .info-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background: #1b4332;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              margin-top: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="success-icon">✅</div>
+            <h1 style="margin: 0;">Delivery Confirmed!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${donorName},</p>
+            
+            <p>Great news! Your donation has been successfully delivered to the receiver.</p>
+            
+            <div class="info-box">
+              <strong>Donation Details:</strong><br>
+              <strong>Item:</strong> ${donation.itemName}<br>
+              <strong>Quantity:</strong> ${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}<br>
+              <strong>Tracking ID:</strong> ${donation.trackingId}<br>
+              <strong>Delivered to:</strong> ${receiverName}<br>
+              <strong>Delivered by:</strong> ${driverName}
+            </div>
+            
+            <p>Thank you for your generous contribution to reducing food waste and helping those in need!</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Delivery confirmed email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending delivery confirmed email to donor ${donor.email}:`, error.message);
+  }
+};
+
+/**
+ * Send delivery confirmed email to receiver
+ */
+const sendDeliveryConfirmedEmailToReceiver = async (donation, receiver, driver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping delivery confirmed email to receiver.');
+    return;
+  }
+
+  try {
+    const receiverName = getUserDisplayName(receiver);
+    const driverName = driver?.driverName || 'Driver';
+    const donor = await require('../models/User').findById(donation.donorId);
+    const donorName = donor ? getUserDisplayName(donor) : 'Donor';
+    
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: receiver.email,
+      subject: '✅ Your Food Donation Has Arrived!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .success-icon {
+              font-size: 48px;
+              margin-bottom: 20px;
+            }
+            .info-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background: #1b4332;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              margin-top: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="success-icon">🎉</div>
+            <h1 style="margin: 0;">Delivery Complete!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${receiverName},</p>
+            
+            <p>Your food donation has been successfully delivered!</p>
+            
+            <div class="info-box">
+              <strong>Donation Details:</strong><br>
+              <strong>Item:</strong> ${donation.itemName}<br>
+              <strong>Quantity:</strong> ${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}<br>
+              <strong>Tracking ID:</strong> ${donation.trackingId}<br>
+              <strong>From:</strong> ${donorName}<br>
+              <strong>Delivered by:</strong> ${driverName}
+            </div>
+            
+            <p>Please ensure the food is stored properly according to the storage recommendations.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Delivery confirmed email sent to receiver: ${receiver.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending delivery confirmed email to receiver ${receiver.email}:`, error.message);
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendPendingApprovalEmail,
@@ -1330,4 +1543,6 @@ module.exports = {
   sendDonationClaimedEmail,
   sendPickupConfirmedEmailToDonor,
   sendPickupConfirmedEmailToReceiver,
+  sendDeliveryConfirmedEmailToDonor,
+  sendDeliveryConfirmedEmailToReceiver,
 };

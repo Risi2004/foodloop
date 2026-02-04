@@ -825,6 +825,521 @@ router.get('/my-claims', authenticateUser, async (req, res) => {
 });
 
 /**
+ * GET /api/donations/active-deliveries
+ * Get all active deliveries for the authenticated driver (status: 'picked_up')
+ * Requires authentication (Driver role)
+ */
+router.get('/active-deliveries', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can view active deliveries',
+      });
+    }
+
+    const driverId = req.user.id;
+    const currentDate = new Date();
+
+    // Fetch donations that are picked up by this driver
+    const donations = await Donation.find({
+      assignedDriverId: driverId,
+      status: 'picked_up',
+      expiryDate: { $gt: currentDate }, // Only non-expired donations
+    })
+      .populate('donorId', 'address email donorType username businessName')
+      .populate('assignedReceiverId', 'address email receiverName receiverType')
+      .sort({ actualPickupDate: -1 }) // Most recently picked up first
+      .lean();
+
+    // Import distance service
+    const { calculateDistance, formatDistance } = require('../utils/distanceService');
+    const { geocodeAddress } = require('../services/geocodingService');
+
+    // Get driver's current location
+    const driver = await User.findById(driverId).select('driverLatitude driverLongitude');
+    const driverLat = driver?.driverLatitude;
+    const driverLng = driver?.driverLongitude;
+
+    // Format deliveries and calculate distances
+    const formattedDeliveries = await Promise.all(
+      donations.map(async (donation) => {
+        const donor = donation.donorId;
+        const receiver = donation.assignedReceiverId;
+
+        // Get donor name
+        const donorName = donor?.donorType === 'Business' 
+          ? donor.businessName 
+          : donor?.username || donor?.email || 'Anonymous';
+
+        // Get receiver name
+        const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
+
+        // Get receiver coordinates (geocode receiver address)
+        let receiverLat = null;
+        let receiverLng = null;
+        if (receiver?.address) {
+          const receiverCoords = await geocodeAddress(receiver.address);
+          if (receiverCoords) {
+            receiverLat = receiverCoords.lat;
+            receiverLng = receiverCoords.lng;
+          }
+        }
+
+        // Calculate distance from driver to receiver
+        let driverToReceiverDistance = null;
+        if (driverLat && driverLng && receiverLat && receiverLng) {
+          driverToReceiverDistance = calculateDistance(driverLat, driverLng, receiverLat, receiverLng);
+        }
+
+        // Calculate time until expiry
+        const expiryDate = new Date(donation.expiryDate);
+        const timeUntilExpiry = expiryDate - currentDate;
+        const hoursUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60 * 60));
+        const minutesUntilExpiry = Math.floor((timeUntilExpiry % (1000 * 60 * 60)) / (1000 * 60));
+
+        let expiryText = 'Expired';
+        if (timeUntilExpiry > 0) {
+          if (hoursUntilExpiry > 0) {
+            expiryText = `Expires in ${hoursUntilExpiry} ${hoursUntilExpiry === 1 ? 'hour' : 'hours'}`;
+            if (minutesUntilExpiry > 0 && hoursUntilExpiry < 24) {
+              expiryText += ` ${minutesUntilExpiry} ${minutesUntilExpiry === 1 ? 'min' : 'mins'}`;
+            }
+          } else {
+            expiryText = `Expires in ${minutesUntilExpiry} ${minutesUntilExpiry === 1 ? 'min' : 'mins'}`;
+          }
+        }
+
+        return {
+          id: donation._id.toString(),
+          trackingId: donation.trackingId,
+          // Food details
+          itemName: donation.itemName,
+          foodCategory: donation.foodCategory,
+          quantity: donation.quantity,
+          imageUrl: donation.imageUrl,
+          expiryDate: donation.expiryDate,
+          expiryText: expiryText,
+          storageRecommendation: donation.storageRecommendation,
+          // Donor details
+          donorId: donation.donorId?._id?.toString(),
+          donorName: donorName,
+          donorAddress: donation.donorAddress || donor?.address || '',
+          donorEmail: donation.donorEmail || donor?.email,
+          donorType: donor?.donorType,
+          donorLatitude: donation.donorLatitude,
+          donorLongitude: donation.donorLongitude,
+          // Receiver details
+          receiverId: donation.assignedReceiverId?._id?.toString(),
+          receiverName: receiverName,
+          receiverAddress: receiver?.address || '',
+          receiverEmail: receiver?.email,
+          receiverType: receiver?.receiverType,
+          receiverLatitude: receiverLat,
+          receiverLongitude: receiverLng,
+          // Distances
+          driverToReceiverDistance: driverToReceiverDistance,
+          driverToReceiverDistanceFormatted: formatDistance(driverToReceiverDistance),
+          // Pickup information
+          actualPickupDate: donation.actualPickupDate,
+          // Timestamps
+          createdAt: donation.createdAt,
+          updatedAt: donation.updatedAt,
+        };
+      })
+    );
+
+    console.log(`[Donations] Returning ${formattedDeliveries.length} active deliveries for driver ${driverId}`);
+
+    res.status(200).json({
+      success: true,
+      deliveries: formattedDeliveries,
+      count: formattedDeliveries.length,
+      driverLocation: driverLat && driverLng ? {
+        latitude: driverLat,
+        longitude: driverLng,
+      } : null,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching active deliveries:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch active deliveries',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/driver-statistics
+ * Get driver statistics (deliveries completed, distance travelled, etc.)
+ * Requires authentication (Driver role)
+ */
+router.get('/driver-statistics', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can view their statistics',
+      });
+    }
+
+    const driverId = req.user.id;
+    const now = new Date();
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Get all delivered donations for this driver
+    const allDelivered = await Donation.find({
+      assignedDriverId: driverId,
+      status: 'delivered',
+    })
+      .populate('donorId', 'address')
+      .populate('assignedReceiverId', 'address')
+      .lean();
+
+    // Get current month deliveries
+    const currentMonthDelivered = allDelivered.filter(d => 
+      new Date(d.updatedAt) >= startOfCurrentMonth
+    );
+
+    // Get last month deliveries
+    const lastMonthDelivered = allDelivered.filter(d => {
+      const updatedDate = new Date(d.updatedAt);
+      return updatedDate >= startOfLastMonth && updatedDate < endOfLastMonth;
+    });
+
+    // Import distance and geocoding services
+    const { calculateDistance, formatDistance } = require('../utils/distanceService');
+    const { geocodeAddress } = require('../services/geocodingService');
+
+    // Calculate total distance travelled
+    let totalDistance = 0;
+    for (const donation of allDelivered) {
+      let donorLat = donation.donorLatitude;
+      let donorLng = donation.donorLongitude;
+      let receiverLat = null;
+      let receiverLng = null;
+
+      // Get donor coordinates
+      if (!donorLat || !donorLng) {
+        if (donation.donorAddress || donation.donorId?.address) {
+          const coords = await geocodeAddress(donation.donorAddress || donation.donorId?.address);
+          if (coords) {
+            donorLat = coords.lat;
+            donorLng = coords.lng;
+          }
+        }
+      }
+
+      // Get receiver coordinates
+      if (donation.assignedReceiverId?.address) {
+        const coords = await geocodeAddress(donation.assignedReceiverId.address);
+        if (coords) {
+          receiverLat = coords.lat;
+          receiverLng = coords.lng;
+        }
+      }
+
+      // Calculate distance if both coordinates available
+      if (donorLat && donorLng && receiverLat && receiverLng) {
+        const distance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+        totalDistance += distance;
+      }
+    }
+
+    // Calculate current month distance
+    let currentMonthDistance = 0;
+    for (const donation of currentMonthDelivered) {
+      let donorLat = donation.donorLatitude;
+      let donorLng = donation.donorLongitude;
+      let receiverLat = null;
+      let receiverLng = null;
+
+      if (!donorLat || !donorLng) {
+        if (donation.donorAddress || donation.donorId?.address) {
+          const coords = await geocodeAddress(donation.donorAddress || donation.donorId?.address);
+          if (coords) {
+            donorLat = coords.lat;
+            donorLng = coords.lng;
+          }
+        }
+      }
+
+      if (donation.assignedReceiverId?.address) {
+        const coords = await geocodeAddress(donation.assignedReceiverId.address);
+        if (coords) {
+          receiverLat = coords.lat;
+          receiverLng = coords.lng;
+        }
+      }
+
+      if (donorLat && donorLng && receiverLat && receiverLng) {
+        const distance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+        currentMonthDistance += distance;
+      }
+    }
+
+    // Calculate last month distance
+    let lastMonthDistance = 0;
+    for (const donation of lastMonthDelivered) {
+      let donorLat = donation.donorLatitude;
+      let donorLng = donation.donorLongitude;
+      let receiverLat = null;
+      let receiverLng = null;
+
+      if (!donorLat || !donorLng) {
+        if (donation.donorAddress || donation.donorId?.address) {
+          const coords = await geocodeAddress(donation.donorAddress || donation.donorId?.address);
+          if (coords) {
+            donorLat = coords.lat;
+            donorLng = coords.lng;
+          }
+        }
+      }
+
+      if (donation.assignedReceiverId?.address) {
+        const coords = await geocodeAddress(donation.assignedReceiverId.address);
+        if (coords) {
+          receiverLat = coords.lat;
+          receiverLng = coords.lng;
+        }
+      }
+
+      if (donorLat && donorLng && receiverLat && receiverLng) {
+        const distance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+        lastMonthDistance += distance;
+      }
+    }
+
+    // Calculate trends
+    const deliveriesTrend = lastMonthDelivered.length > 0
+      ? ((currentMonthDelivered.length - lastMonthDelivered.length) / lastMonthDelivered.length * 100).toFixed(0)
+      : (currentMonthDelivered.length > 0 ? 100 : 0);
+
+    const distanceTrend = lastMonthDistance > 0
+      ? ((currentMonthDistance - lastMonthDistance) / lastMonthDistance * 100).toFixed(0)
+      : (currentMonthDistance > 0 ? 100 : 0);
+
+    // Calculate impact progress
+    const totalDeliveries = allDelivered.length;
+    let badgeLevel = 'Beginner';
+    let nextBadgeTarget = 10;
+    let progressPercentage = 0;
+
+    if (totalDeliveries >= 51) {
+      badgeLevel = 'Champion';
+      nextBadgeTarget = 100;
+      progressPercentage = 100;
+    } else if (totalDeliveries >= 26) {
+      badgeLevel = 'Hero';
+      nextBadgeTarget = 51;
+      progressPercentage = ((totalDeliveries - 25) / 25 * 100).toFixed(0);
+    } else if (totalDeliveries >= 11) {
+      badgeLevel = 'Helper';
+      nextBadgeTarget = 26;
+      progressPercentage = ((totalDeliveries - 10) / 15 * 100).toFixed(0);
+    } else {
+      badgeLevel = 'Beginner';
+      nextBadgeTarget = 11;
+      progressPercentage = (totalDeliveries / 10 * 100).toFixed(0);
+    }
+
+    const remainingForNextBadge = Math.max(0, nextBadgeTarget - totalDeliveries);
+
+    console.log(`[Donations] Returning statistics for driver ${driverId}`);
+
+    res.status(200).json({
+      success: true,
+      statistics: {
+        totalDeliveriesCompleted: totalDeliveries,
+        totalDistanceTravelled: totalDistance,
+        totalDistanceTravelledFormatted: formatDistance(totalDistance),
+        currentMonthDeliveries: currentMonthDelivered.length,
+        currentMonthDistance: currentMonthDistance,
+        currentMonthDistanceFormatted: formatDistance(currentMonthDistance),
+        deliveriesTrend: parseFloat(deliveriesTrend),
+        distanceTrend: parseFloat(distanceTrend),
+        impactProgress: {
+          badgeLevel,
+          progressPercentage: parseFloat(progressPercentage),
+          currentCount: totalDeliveries,
+          nextBadgeTarget,
+          remainingForNextBadge,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching driver statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch driver statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/driver-completed
+ * Get all completed deliveries for the authenticated driver
+ * Requires authentication (Driver role)
+ */
+router.get('/driver-completed', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can view their completed deliveries',
+      });
+    }
+
+    const driverId = req.user.id;
+
+    // Fetch all delivered donations for this driver
+    const donations = await Donation.find({
+      assignedDriverId: driverId,
+      status: 'delivered',
+    })
+      .populate('donorId', 'address email donorType username businessName')
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .sort({ updatedAt: -1 }) // Most recently delivered first
+      .lean();
+
+    // Format donations for frontend
+    const formattedDonations = donations.map(donation => {
+      const donor = donation.donorId;
+      const receiver = donation.assignedReceiverId;
+
+      const donorName = donor?.donorType === 'Business' 
+        ? donor.businessName 
+        : donor?.username || donor?.email || 'Anonymous';
+
+      const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
+
+      return {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+        donorName,
+        donorAddress: donation.donorAddress || donor?.address || '',
+        receiverName,
+        receiverAddress: receiver?.address || '',
+        deliveredAt: donation.updatedAt, // Use updatedAt as delivery date
+        createdAt: donation.createdAt,
+      };
+    });
+
+    console.log(`[Donations] Returning ${formattedDonations.length} completed deliveries for driver ${driverId}`);
+
+    res.status(200).json({
+      success: true,
+      deliveries: formattedDonations,
+      count: formattedDonations.length,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching driver completed deliveries:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch completed deliveries',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/my-donations
+ * Get all donations created by the authenticated donor
+ * Requires authentication (Donor role)
+ */
+router.get('/my-donations', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Donor
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only donors can view their donations',
+      });
+    }
+
+    const donorId = req.user.id;
+
+    // Fetch all donations created by this donor
+    const donations = await Donation.find({
+      donorId: donorId,
+    })
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType')
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    // Format donations for frontend
+    const formattedDonations = donations.map(donation => {
+      const receiver = donation.assignedReceiverId;
+      const driver = donation.assignedDriverId;
+
+      return {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        // Food details
+        itemName: donation.itemName,
+        foodCategory: donation.foodCategory,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+        expiryDate: donation.expiryDate,
+        storageRecommendation: donation.storageRecommendation,
+        // Receiver details (if assigned)
+        assignedReceiverId: donation.assignedReceiverId?._id?.toString(),
+        receiverName: receiver?.receiverName,
+        receiverType: receiver?.receiverType,
+        receiverEmail: receiver?.email,
+        receiverAddress: receiver?.address || '',
+        // Driver details (if assigned)
+        assignedDriverId: donation.assignedDriverId?._id?.toString(),
+        driverName: driver?.driverName,
+        vehicleNumber: driver?.vehicleNumber,
+        vehicleType: driver?.vehicleType,
+        // Status and assignment
+        status: donation.status,
+        // Pickup information
+        preferredPickupDate: donation.preferredPickupDate,
+        preferredPickupTimeFrom: donation.preferredPickupTimeFrom,
+        preferredPickupTimeTo: donation.preferredPickupTimeTo,
+        actualPickupDate: donation.actualPickupDate,
+        // AI analysis data
+        aiQualityScore: donation.aiQualityScore,
+        aiFreshness: donation.aiFreshness,
+        aiConfidence: donation.aiConfidence,
+        aiDetectedItems: donation.aiDetectedItems || [],
+        // Timestamps
+        createdAt: donation.createdAt,
+        updatedAt: donation.updatedAt,
+      };
+    });
+
+    console.log(`[Donations] Returning ${formattedDonations.length} donations for donor ${donorId}`);
+
+    res.status(200).json({
+      success: true,
+      donations: formattedDonations,
+      count: formattedDonations.length,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching donor donations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch your donations',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
  * GET /api/donations/available-pickups
  * Get all available pickups for drivers
  * Returns donations with status 'assigned' that have been claimed by receivers
@@ -1139,6 +1654,243 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to confirm pickup',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/:id/tracking
+ * Get real-time tracking data for a donation
+ * Returns driver location, donation status, and location coordinates
+ * No authentication required - donors and receivers need to track
+ */
+router.get('/:id/tracking', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the donation
+    const donation = await Donation.findById(id)
+      .populate('donorId', 'address email donorType username businessName')
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType driverLatitude driverLongitude')
+      .lean();
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Get driver location if driver is assigned
+    let driverLocation = null;
+    if (donation.assignedDriverId) {
+      const driver = donation.assignedDriverId;
+      if (driver.driverLatitude && driver.driverLongitude) {
+        driverLocation = {
+          latitude: driver.driverLatitude,
+          longitude: driver.driverLongitude,
+        };
+      }
+    }
+
+    // Get donor location
+    const donorLocation = donation.donorLatitude && donation.donorLongitude
+      ? {
+          latitude: donation.donorLatitude,
+          longitude: donation.donorLongitude,
+        }
+      : null;
+
+    // Get receiver location (geocode if needed)
+    let receiverLocation = null;
+    if (donation.assignedReceiverId) {
+      const receiver = donation.assignedReceiverId;
+      if (receiver.address) {
+        const { geocodeAddress } = require('../services/geocodingService');
+        const coords = await geocodeAddress(receiver.address);
+        if (coords) {
+          receiverLocation = {
+            latitude: coords.lat,
+            longitude: coords.lng,
+          };
+        }
+      }
+    }
+
+    // Format response
+    const trackingData = {
+      donation: {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        status: donation.status,
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+      },
+      donor: {
+        id: donation.donorId?._id?.toString(),
+        name: donation.donorId?.donorType === 'Business'
+          ? donation.donorId?.businessName
+          : donation.donorId?.username || donation.donorId?.email || 'Anonymous',
+        address: donation.donorAddress || donation.donorId?.address || '',
+        location: donorLocation,
+      },
+      receiver: donation.assignedReceiverId ? {
+        id: donation.assignedReceiverId._id?.toString(),
+        name: donation.assignedReceiverId.receiverName || donation.assignedReceiverId.email || 'Receiver',
+        address: donation.assignedReceiverId.address || '',
+        location: receiverLocation,
+      } : null,
+      driver: donation.assignedDriverId ? {
+        id: donation.assignedDriverId._id?.toString(),
+        name: donation.assignedDriverId.driverName || 'Driver',
+        vehicleNumber: donation.assignedDriverId.vehicleNumber,
+        vehicleType: donation.assignedDriverId.vehicleType,
+        location: driverLocation,
+      } : null,
+      timestamps: {
+        createdAt: donation.createdAt,
+        actualPickupDate: donation.actualPickupDate,
+        updatedAt: donation.updatedAt,
+      },
+    };
+
+    console.log(`[Donations] Returning tracking data for donation ${id}`);
+
+    res.status(200).json({
+      success: true,
+      tracking: trackingData,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching tracking data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch tracking data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/donations/:id/confirm-delivery
+ * Confirm delivery of a donation to receiver
+ * Requires authentication (Driver role)
+ * Changes status from 'picked_up' to 'delivered'
+ */
+router.post('/:id/confirm-delivery', authenticateUser, async (req, res) => {
+  try {
+    // Check if user is a Driver
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can confirm delivery',
+      });
+    }
+
+    const { id } = req.params;
+    const driverId = req.user.id;
+
+    // Find the donation
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Check if driver is assigned to this donation
+    if (donation.assignedDriverId?.toString() !== driverId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not assigned to this donation',
+      });
+    }
+
+    // Check if donation is in 'picked_up' status
+    if (donation.status !== 'picked_up') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot confirm delivery. Current status: ${donation.status}. Delivery can only be confirmed for donations that have been picked up.`,
+      });
+    }
+
+    // Check if donation has a receiver assigned
+    if (!donation.assignedReceiverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has not been assigned to a receiver',
+      });
+    }
+
+    // Update donation: change status to 'delivered'
+    donation.status = 'delivered';
+    await donation.save();
+
+    console.log('[Donations] Delivery confirmed successfully:', {
+      donationId: donation._id,
+      trackingId: donation.trackingId,
+      driverId: driverId,
+      receiverId: donation.assignedReceiverId,
+      status: donation.status,
+    });
+
+    // Fetch donor, receiver, and driver details for emails
+    const donor = await User.findById(donation.donorId).select('-password');
+    const receiver = await User.findById(donation.assignedReceiverId).select('-password');
+    const driver = await User.findById(driverId).select('-password');
+
+    if (!donor || !receiver || !driver) {
+      console.error('[Donations] Missing user data for email notifications');
+    }
+
+    // Send email notifications (async, don't block response)
+    const { 
+      sendDeliveryConfirmedEmailToDonor, 
+      sendDeliveryConfirmedEmailToReceiver 
+    } = require('../utils/emailService');
+
+    // Send email to donor
+    if (donor) {
+      sendDeliveryConfirmedEmailToDonor(donation, donor, receiver, driver)
+        .catch(error => {
+          console.error('[Donations] Error sending delivery confirmation email to donor:', error.message);
+        });
+    }
+
+    // Send email to receiver
+    if (receiver) {
+      sendDeliveryConfirmedEmailToReceiver(donation, receiver, driver)
+        .catch(error => {
+          console.error('[Donations] Error sending delivery confirmation email to receiver:', error.message);
+        });
+    }
+
+    // Populate donation details for response
+    await donation.populate('donorId', 'address email donorType username businessName');
+    await donation.populate('assignedReceiverId', 'receiverName receiverType email address');
+    await donation.populate('assignedDriverId', 'driverName vehicleNumber vehicleType');
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery confirmed successfully. Emails have been sent to donor and receiver.',
+      donation: {
+        id: donation._id,
+        trackingId: donation.trackingId,
+        status: donation.status,
+        assignedDriverId: donation.assignedDriverId?._id?.toString(),
+        driverName: donation.assignedDriverId?.driverName,
+        assignedReceiverId: donation.assignedReceiverId?._id?.toString(),
+        receiverName: donation.assignedReceiverId?.receiverName,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error confirming delivery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm delivery',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

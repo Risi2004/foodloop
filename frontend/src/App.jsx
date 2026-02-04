@@ -22,6 +22,7 @@ import DriverNotifications from "./pages/afterLogin/driver/notifications/DriverN
 import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/ReceiverNotifications";
 import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
 import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
+import DeliveryConfirmation from "./pages/afterLogin/driver/delivery/DeliveryConfirmation";
 import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
 import EditProfile from "./pages/afterLogin/driver/editProfile/EditProfile";
 import MyPickups from "./pages/afterLogin/driver/myPickups/MyPickups";
@@ -34,6 +35,7 @@ import AdminMessagesPage from "./pages/afterLogin/admin/messagesPage/AdminMessag
 import DonorProfile from "./pages/afterLogin/donor/profile/DonorProfile";
 import DonorEditProfile from "./pages/afterLogin/donor/editProfile/DonorEditProfile";
 import DonorMyDontaion from "./pages/afterLogin/donor/myDonation/DonorMyDonation";
+import DonorMyDonationDashboard from "./pages/afterLogin/donor/myDonation/DonorMyDonationDashboard";
 import DonorTrackingPage from "./pages/afterLogin/donor/trackingPage/DonorTrackingPage";
 import DigitalReceipt from "./pages/afterLogin/donor/digitalReceipt/DigitalReceipt";
 import IndividualEditProfile from "./pages/afterLogin/donor/individualEditProfile/IndividualEditProfile";
@@ -70,7 +72,8 @@ function App() {
           <Route path="notifications" element={<DonorNotifications />} />
           <Route path="profile" element={<DonorProfile />} />
           <Route path="edit-profile" element={<DonorEditProfile />} />
-          <Route path="my-donation" element={<DonorMyDontaion />} />
+          <Route path="my-donation" element={<DonorMyDonationDashboard />} />
+          <Route path="new-donation" element={<DonorMyDontaion />} />
           <Route path="track-order" element={<DonorTrackingPage />} />
           <Route path="digital-receipt" element={<DigitalReceipt />} />
           <Route path="individual-edit-profile" element={<IndividualEditProfile />} />
@@ -98,6 +101,7 @@ function App() {
           <Route path="terms-&-conditions" element={<DriverTermsAndConditions />} />
           <Route path="notifications" element={<DriverNotifications />} />
           <Route path="delivery" element={<Delivery />} />
+          <Route path="delivery-confirmation" element={<DeliveryConfirmation />} />
           <Route path="profile" element={<DriverProfile />} />
           <Route path="edit-profile" element={<EditProfile />} />
           <Route path="my-pickups" element={<MyPickups />} />

@@ -1,0 +1,137 @@
+.donation-sidebar {
+  width: 350px;
+  /* Slightly wider */
+  min-width: 350px;
+  background: transparent;
+  /* Transparent to show main page bg */
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  border-right: none;
+  margin-right: 20px;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.sidebar-title {
+  color: #ffffff;
+  /* White title */
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: normal;
+  margin: 0;
+}
+
+.sidebar-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0;
+}
+
+.impact-section {
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+  /* Green gradient */
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 20px;
+}
+
+.impact-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  /* Center content */
+}
+
+.heart-icon {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.impact-message {
+  color: #ffffff;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 16px;
+  /* Slightly larger */
+  line-height: 24px;
+  text-align: center;
+  margin: 0;
+}
+
+.impact-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: transparent;
+  /* No background for items */
+  border-radius: 8px;
+  align-items: center;
+}
+
+.stat-value {
+  color: #ffffff;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: normal;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Inter-Medium", sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.new-donation-button {
+  background: #25d366;
+  /* Bright green */
+  color: #000000;
+  font-family: "Inter-Bold", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  display: block;
+  margin-top: 20px;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+}
+
+.new-donation-button:hover {
+  background: #20b055;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+}
+
+.new-donation-button:active {
+  background: #1a9447;
+  transform: translateY(0);
+}

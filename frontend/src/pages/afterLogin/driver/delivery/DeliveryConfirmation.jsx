@@ -2,16 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import DriverNavbar from "../../../../components/afterLogin/dashboard/driverSection/navbar/DriverNavbar";
 import DriverFooter from "../../../../components/afterLogin/dashboard/driverSection/footer/DriverFooter";
-import './Pickup.css'
+import './DeliveryConfirmation.css';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import DriverDetails from "../../../../components/afterLogin/driver/pickup/driverDetails/DriverDetails";
-import Food from "../../../../components/afterLogin/driver/pickup/Food/Food";
-import LiveJourney from "../../../../components/afterLogin/driver/pickup/liveJourney/LiveJourney";
-import { confirmPickup, getDonationTracking } from '../../../../services/donationApi';
+import { confirmDelivery, getDonationTracking } from '../../../../services/donationApi';
 import { startLocationTracking, stopLocationTracking } from '../../../../services/locationService';
 import { updateDriverLocation } from '../../../../services/api';
 import { generatePathWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
@@ -34,10 +31,10 @@ const ZoomHandler = () => {
             <button className="zoom-btn zoom-in" onClick={() => map.zoomIn()}>+</button>
             <button className="zoom-btn zoom-out" onClick={() => map.zoomOut()}>-</button>
         </div>
-    )
-}
+    );
+};
 
-function Pickup() {
+function DeliveryConfirmation() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const donationId = searchParams.get('donationId');
@@ -49,7 +46,6 @@ function Pickup() {
     const [error, setError] = useState(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [demoProgress, setDemoProgress] = useState({ currentIndex: 0, total: 0 });
-    const locationUpdateIntervalRef = useRef(null);
 
     // Fetch donation data
     useEffect(() => {
@@ -70,7 +66,7 @@ function Pickup() {
                     setError('Failed to load donation data');
                 }
             } catch (err) {
-                console.error('[Pickup] Error fetching donation data:', err);
+                console.error('[DeliveryConfirmation] Error fetching donation data:', err);
                 setError(err.message || 'Failed to load donation data');
             } finally {
                 setLoading(false);
@@ -87,7 +83,7 @@ function Pickup() {
         // Start continuous location tracking
         const watchId = startLocationTracking(async (location, error) => {
             if (error) {
-                console.error('[Pickup] Location tracking error:', error);
+                console.error('[DeliveryConfirmation] Location tracking error:', error);
                 return;
             }
 
@@ -98,7 +94,7 @@ function Pickup() {
                 try {
                     await updateDriverLocation(location.latitude, location.longitude);
                 } catch (err) {
-                    console.error('[Pickup] Error updating driver location on server:', err);
+                    console.error('[DeliveryConfirmation] Error updating driver location on server:', err);
                 }
             }
         });
@@ -106,9 +102,6 @@ function Pickup() {
         // Cleanup on unmount
         return () => {
             stopLocationTracking();
-            if (locationUpdateIntervalRef.current) {
-                clearInterval(locationUpdateIntervalRef.current);
-            }
         };
     }, [donationId, isDemoMode]);
 
@@ -127,7 +120,7 @@ function Pickup() {
                         try {
                             await updateDriverLocation(location.latitude, location.longitude);
                         } catch (err) {
-                            console.error('[Pickup] Error updating driver location:', err);
+                            console.error('[DeliveryConfirmation] Error updating driver location:', err);
                         }
                     }
                 });
@@ -142,26 +135,35 @@ function Pickup() {
             // Stop real GPS tracking
             stopLocationTracking();
 
-            // First, get driver's current location from server (from tracking data)
+            // First, get driver's current location from server
+            // Since pickup is confirmed, driver should be at donor location
             let startLocation = null;
             
-            // Priority 1: Use driver location from tracking data
-            if (donationData?.driver?.location) {
+            // Priority 1: Use donor location as starting point (since pickup is confirmed, driver is at donor location)
+            if (donationData?.donor?.location) {
+                startLocation = {
+                    lat: donationData.donor.location.latitude,
+                    lng: donationData.donor.location.longitude
+                };
+                console.log('[DeliveryConfirmation] Using donor location as starting point (pickup confirmed):', startLocation);
+            }
+            // Priority 2: Use driver location from tracking data
+            else if (donationData?.driver?.location) {
                 startLocation = {
                     lat: donationData.driver.location.latitude,
                     lng: donationData.driver.location.longitude
                 };
-                console.log('[Pickup] Using driver location from tracking data:', startLocation);
+                console.log('[DeliveryConfirmation] Using driver location from tracking data:', startLocation);
             }
-            // Priority 2: Use current driverLocation state if available
+            // Priority 3: Use current driverLocation state if available
             else if (driverLocation && driverLocation.length === 2) {
                 startLocation = {
                     lat: driverLocation[0],
                     lng: driverLocation[1]
                 };
-                console.log('[Pickup] Using driver location from state:', startLocation);
+                console.log('[DeliveryConfirmation] Using driver location from state:', startLocation);
             }
-            // Priority 3: Try to get from browser geolocation as fallback
+            // Priority 4: Try to get from browser geolocation as fallback
             else {
                 try {
                     const location = await new Promise((resolve, reject) => {
@@ -179,18 +181,18 @@ function Pickup() {
                         );
                     });
                     startLocation = location;
-                    console.log('[Pickup] Using driver location from browser geolocation:', startLocation);
+                    console.log('[DeliveryConfirmation] Using driver location from browser geolocation:', startLocation);
                 } catch (err) {
-                    console.warn('[Pickup] Could not get driver location from geolocation:', err);
+                    console.warn('[DeliveryConfirmation] Could not get driver location from geolocation:', err);
                 }
             }
             
-            const endLocation = donationData?.donor?.location
-                ? { lat: donationData.donor.location.latitude, lng: donationData.donor.location.longitude }
+            const endLocation = donationData?.receiver?.location
+                ? { lat: donationData.receiver.location.latitude, lng: donationData.receiver.location.longitude }
                 : null;
 
             if (!startLocation || !endLocation) {
-                alert(`Cannot start demo mode: Missing location data.\nStart: ${startLocation ? 'OK' : 'Missing'}\nEnd (Donor): ${endLocation ? 'OK' : 'Missing'}`);
+                alert(`Cannot start demo mode: Missing location data.\nStart: ${startLocation ? 'OK' : 'Missing'}\nEnd (Receiver): ${endLocation ? 'OK' : 'Missing'}`);
                 return;
             }
 
@@ -201,10 +203,10 @@ function Pickup() {
             try {
                 await updateDriverLocation(startLocation.lat, startLocation.lng);
             } catch (err) {
-                console.error('[Pickup] Error updating starting location:', err);
+                console.error('[DeliveryConfirmation] Error updating starting location:', err);
             }
 
-            // Generate waypoints from driver location to donor location
+            // Generate waypoints from driver location to receiver location
             const waypoints = generatePathWaypoints(
                 startLocation.lat,
                 startLocation.lng,
@@ -218,7 +220,7 @@ function Pickup() {
                 return;
             }
 
-            console.log(`[Pickup] Starting demo mode: ${waypoints.length} waypoints from driver to donor`);
+            console.log(`[DeliveryConfirmation] Starting demo mode: ${waypoints.length} waypoints from driver to receiver`);
 
             // Start simulation
             const success = simulateMovement(
@@ -232,12 +234,12 @@ function Pickup() {
                     try {
                         await updateDriverLocation(waypoint.latitude, waypoint.longitude);
                     } catch (err) {
-                        console.error('[Pickup] Error updating driver location in demo mode:', err);
+                        console.error('[DeliveryConfirmation] Error updating driver location in demo mode:', err);
                     }
 
                     // If reached destination, show message
                     if (waypoint.index === waypoint.total - 1) {
-                        console.log('[Pickup] Demo mode: Reached donor location');
+                        console.log('[DeliveryConfirmation] Demo mode: Reached receiver location');
                     }
                 },
                 2500 // 2.5 seconds interval
@@ -260,71 +262,33 @@ function Pickup() {
         };
     }, [isDemoMode]);
 
-    // Get coordinates from donation data
-    const pickupLocation = donationData?.donor?.location
-        ? [donationData.donor.location.latitude, donationData.donor.location.longitude]
-        : [6.868, 79.918]; // Default fallback
-
-    const dropoffLocation = donationData?.receiver?.location
-        ? [donationData.receiver.location.latitude, donationData.receiver.location.longitude]
-        : [6.850, 79.930]; // Default fallback
-
-    const currentLocation = driverLocation || (donationData?.driver?.location
-        ? [donationData.driver.location.latitude, donationData.driver.location.longitude]
-        : [6.860, 79.925]); // Default fallback
-
-    // Build route path
-    const routePath = [
-        pickupLocation,
-        currentLocation,
-        dropoffLocation
-    ];
-
-    const handleConfirmPickup = async () => {
+    const handleConfirmDelivery = async () => {
         if (!donationId) {
             alert('Donation ID is missing');
             return;
         }
 
         if (isConfirmed) {
-            alert('Pickup already confirmed');
+            alert('Delivery already confirmed');
             return;
         }
 
         setIsConfirming(true);
         try {
-            const response = await confirmPickup(donationId);
+            const response = await confirmDelivery(donationId);
             if (response.success) {
                 setIsConfirmed(true);
-                
-                // Update driver location to donor location after pickup confirmation
-                if (donationData?.donor?.location) {
-                    const donorLat = donationData.donor.location.latitude;
-                    const donorLng = donationData.donor.location.longitude;
-                    
-                    // Update local state
-                    setDriverLocation([donorLat, donorLng]);
-                    
-                    // Update server location
-                    try {
-                        await updateDriverLocation(donorLat, donorLng);
-                        console.log('[Pickup] Driver location updated to donor location after pickup confirmation');
-                    } catch (err) {
-                        console.error('[Pickup] Error updating driver location to donor location:', err);
-                    }
-                }
-                
-                alert('Pickup confirmed! Emails have been sent to donor and receiver.');
-                // Redirect to delivery confirmation page after a delay
+                alert('Delivery confirmed! Emails have been sent to donor and receiver.');
+                // Redirect after a delay
                 setTimeout(() => {
-                    navigate(`/driver/delivery-confirmation?donationId=${donationId}`);
+                    navigate('/driver/delivery');
                 }, 2000);
             } else {
-                alert(response.message || 'Failed to confirm pickup');
+                alert(response.message || 'Failed to confirm delivery');
             }
         } catch (error) {
-            console.error('Error confirming pickup:', error);
-            alert(error.response?.data?.message || error.message || 'Failed to confirm pickup. Please try again.');
+            console.error('Error confirming delivery:', error);
+            alert(error.response?.data?.message || error.message || 'Failed to confirm delivery. Please try again.');
         } finally {
             setIsConfirming(false);
         }
@@ -342,7 +306,7 @@ function Pickup() {
         return (
             <>
                 <DriverNavbar />
-                <div className='pickup' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
+                <div className='delivery-confirmation' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <div className="loading-spinner" style={{
                             width: '40px',
@@ -371,7 +335,7 @@ function Pickup() {
         return (
             <>
                 <DriverNavbar />
-                <div className='pickup' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px', padding: '20px' }}>
+                <div className='delivery-confirmation' style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px', padding: '20px' }}>
                     <div style={{ textAlign: 'center' }}>
                         <p style={{ color: '#d32f2f', fontSize: '16px', marginBottom: '16px' }}>⚠️ {error}</p>
                         <button 
@@ -395,14 +359,22 @@ function Pickup() {
         );
     }
 
-    // Custom icons
-    const donorIcon = new L.DivIcon({
-        className: 'custom-icon',
-        html: `<div style="background-color: #4CAF50; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-    });
+    // Get coordinates from donation data
+    const receiverLocation = donationData?.receiver?.location
+        ? [donationData.receiver.location.latitude, donationData.receiver.location.longitude]
+        : [6.850, 79.930]; // Default fallback
 
+    const currentLocation = driverLocation || (donationData?.driver?.location
+        ? [donationData.driver.location.latitude, donationData.driver.location.longitude]
+        : [6.860, 79.925]); // Default fallback
+
+    // Build route path
+    const routePath = [
+        currentLocation,
+        receiverLocation
+    ];
+
+    // Custom icons
     const receiverIcon = new L.DivIcon({
         className: 'custom-icon',
         html: `<div style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
@@ -420,8 +392,8 @@ function Pickup() {
     return (
         <>
             <DriverNavbar />
-            <div className='pickup'>
-                <div className='pickup__s1' style={{ position: 'relative' }}>
+            <div className='delivery-confirmation'>
+                <div className='delivery-confirmation__s1' style={{ position: 'relative' }}>
                     {/* Demo Mode Toggle Button */}
                     <button
                         onClick={handleDemoModeToggle}
@@ -491,15 +463,8 @@ function Pickup() {
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <Marker position={pickupLocation} icon={donorIcon}>
-                            <Popup>
-                                <strong>Pickup Location</strong><br/>
-                                {donationData?.donor?.name || 'Donor'}<br/>
-                                {donationData?.donor?.address || ''}
-                            </Popup>
-                        </Marker>
                         {donationData?.receiver && (
-                            <Marker position={dropoffLocation} icon={receiverIcon}>
+                            <Marker position={receiverLocation} icon={receiverIcon}>
                                 <Popup>
                                     <strong>Delivery Location</strong><br/>
                                     {donationData.receiver.name || 'Receiver'}<br/>
@@ -519,10 +484,29 @@ function Pickup() {
                         <ZoomHandler />
                     </MapContainer>
                 </div>
-                <div className='pickup__s2'>
-                    <DriverDetails />
-                    <Food />
-                    <LiveJourney />
+                <div className='delivery-confirmation__s2'>
+                    <div style={{ 
+                        padding: '20px', 
+                        background: 'white', 
+                        borderRadius: '12px', 
+                        marginBottom: '20px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}>
+                        <h2 style={{ margin: '0 0 10px 0', color: '#1F4E36' }}>Delivery Details</h2>
+                        {donationData && (
+                            <>
+                                <p><strong>Item:</strong> {donationData.donation.itemName}</p>
+                                <p><strong>Quantity:</strong> {donationData.donation.quantity} servings</p>
+                                <p><strong>Tracking ID:</strong> {donationData.donation.trackingId}</p>
+                                {donationData.receiver && (
+                                    <>
+                                        <p><strong>Receiver:</strong> {donationData.receiver.name}</p>
+                                        <p><strong>Address:</strong> {donationData.receiver.address}</p>
+                                    </>
+                                )}
+                            </>
+                        )}
+                    </div>
                     <div style={{ 
                         padding: '20px', 
                         background: 'white', 
@@ -538,7 +522,7 @@ function Pickup() {
                                     fontWeight: 'bold',
                                     marginBottom: '10px'
                                 }}>
-                                    ✓ Pickup Confirmed!
+                                    ✓ Delivery Confirmed!
                                 </div>
                                 <p style={{ color: '#6b7280', fontSize: '14px' }}>
                                     Emails have been sent to the donor and receiver. Redirecting...
@@ -546,7 +530,7 @@ function Pickup() {
                             </div>
                         ) : (
                             <button
-                                onClick={handleConfirmPickup}
+                                onClick={handleConfirmDelivery}
                                 disabled={isConfirming || !donationId}
                                 style={{
                                     width: '100%',
@@ -562,15 +546,15 @@ function Pickup() {
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                                 }}
                             >
-                                {isConfirming ? 'Confirming Pickup...' : 'Confirm Pickup'}
+                                {isConfirming ? 'Confirming Delivery...' : 'Confirm Delivery'}
                             </button>
                         )}
                     </div>
                 </div>
-            </div >
+            </div>
             <DriverFooter />
         </>
-    )
+    );
 }
 
-export default Pickup;
+export default DeliveryConfirmation;

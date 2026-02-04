@@ -4,7 +4,33 @@ import dotIcon from "../../../../assets/icons/afterLogin/driver/dot.svg";
 import scheduleIcon from "../../../../assets/icons/afterLogin/driver/schedule.svg"
 import './InTransitDeliveryCard.css';
 
-function InTransitDeliveryCard() {
+function InTransitDeliveryCard({ donation }) {
+    if (!donation) {
+        return null;
+    }
+
+    // Format quantity display
+    const formatQuantity = (quantity) => {
+        if (!quantity) return 'N/A';
+        return `${quantity} ${quantity === 1 ? 'serving' : 'servings'}`;
+    };
+
+    // Calculate estimated delivery time (simple calculation based on distance)
+    const calculateEstimatedTime = (distance) => {
+        if (!distance) return 'Calculating...';
+        // Assume average speed of 30 km/h in city
+        const timeInMinutes = Math.round((distance / 30) * 60);
+        if (timeInMinutes < 1) return 'Less than 1 min';
+        if (timeInMinutes === 1) return '1 min';
+        return `${timeInMinutes} min`;
+    };
+
+    const itemName = donation.itemName || 'Food Item';
+    const quantity = donation.quantity || 0;
+    const receiverName = donation.receiverName || 'Receiver';
+    const distance = donation.driverToReceiverDistanceFormatted || '0 km';
+    const estimatedTime = calculateEstimatedTime(donation.driverToReceiverDistance);
+
     return (
         <div className='transit__delivery__card'>
             <div className='transit__delivery__card__s1'>
@@ -15,18 +41,20 @@ function InTransitDeliveryCard() {
                     </div>
                     <div className='transit__delivery__card__s1__sub2'>
                         <img src={swapIcon} alt="" />
-                        <Link><h4>Follow Map</h4></Link>
+                        <Link to={`/driver/delivery-confirmation?donationId=${donation.id}`}>
+                            <h4>Follow Map</h4>
+                        </Link>
                     </div>
                 </div>
                 <div className='transit__delivery__card__s1__sub3'>
-                    <h3>Fresh Bakers</h3>
-                    <p>0.5 km Away</p>
+                    <h3>{receiverName}</h3>
+                    <p>{distance} Away</p>
                 </div>
                 <div className='transit__delivery__card__s1__sub4'>
-                    <p>Assorted Pastries • 4.2 kg</p>
+                    <p>{itemName} • {formatQuantity(quantity)}</p>
                     <div className='transit__delivery__card__s1__sub4__sub'>
                         <img src={scheduleIcon} alt="Schedule-Icon" />
-                        <p style={{color:"#EF4444"}}>Delivered in 15 min</p>
+                        <p style={{color:"#EF4444"}}>Delivered in {estimatedTime}</p>
                     </div>
                 </div>
             </div>

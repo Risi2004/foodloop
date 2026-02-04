@@ -1,4 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './TrackingMap.css';
@@ -17,18 +18,18 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Custom Icons
-const startIcon = new L.DivIcon({
+const donorIcon = new L.DivIcon({
     className: 'custom-icon',
-    html: `<div style="background-color: #4CAF50; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8]
+    html: `<div style="background-color: #4CAF50; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
 });
 
-const endIcon = new L.DivIcon({
+const receiverIcon = new L.DivIcon({
     className: 'custom-icon',
-    html: `<div style="background-color: #F44336; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8]
+    html: `<div style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
 });
 
 const driverIcon = new L.DivIcon({
@@ -38,48 +39,133 @@ const driverIcon = new L.DivIcon({
     iconAnchor: [20, 20]
 });
 
-function TrackingMap() {
-    // Approximate coordinates for the locations
-    const startPos = [6.865, 79.930]; // Thalapathpitiya
-    const driverPos = [6.855, 79.928]; // Pamunuwa
-    const endPos = [6.848, 79.926];   // Maharagama
+// Component to update map center when driver location changes
+function MapUpdater({ driverLocation, donorLocation, receiverLocation }) {
+    const map = useMap();
+    
+    useEffect(() => {
+        if (driverLocation) {
+            map.setView(driverLocation, map.getZoom());
+        } else if (donorLocation) {
+            map.setView(donorLocation, map.getZoom());
+        }
+    }, [driverLocation, donorLocation, map]);
 
-    const polyline = [startPos, [6.860, 79.929], driverPos, [6.852, 79.927], endPos];
+    return null;
+}
+
+function TrackingMap({ trackingData, driverLocation: liveDriverLocation }) {
+    // Default center (Sri Lanka center)
+    const defaultCenter = [7.0873, 80.0144];
+
+    // Get locations from tracking data
+    const donorLocation = trackingData?.donor?.location
+        ? [trackingData.donor.location.latitude, trackingData.donor.location.longitude]
+        : null;
+
+    const receiverLocation = trackingData?.receiver?.location
+        ? [trackingData.receiver.location.latitude, trackingData.receiver.location.longitude]
+        : null;
+
+    // Use live driver location if available, otherwise use from tracking data
+    const driverLocation = liveDriverLocation 
+        ? [liveDriverLocation.latitude, liveDriverLocation.longitude]
+        : (trackingData?.driver?.location
+            ? [trackingData.driver.location.latitude, trackingData.driver.location.longitude]
+            : null);
+
+    // Determine map center
+    let mapCenter = defaultCenter;
+    if (driverLocation) {
+        mapCenter = driverLocation;
+    } else if (donorLocation) {
+        mapCenter = donorLocation;
+    }
+
+    // Build route polyline based on status
+    let polyline = [];
+    const status = trackingData?.donation?.status;
+
+    if (status === 'assigned' && donorLocation && driverLocation) {
+        // Going to donor
+        polyline = [driverLocation, donorLocation];
+    } else if (status === 'picked_up' && receiverLocation && driverLocation) {
+        // Going to receiver
+        polyline = [driverLocation, receiverLocation];
+    } else if (status === 'delivered' && donorLocation && receiverLocation) {
+        // Completed route
+        polyline = [donorLocation, receiverLocation];
+    } else if (donorLocation && receiverLocation && driverLocation) {
+        // Show all points
+        polyline = [donorLocation, driverLocation, receiverLocation];
+    }
 
     return (
         <div className="tracking-map-container">
             <MapContainer
-                center={driverPos}
+                center={mapCenter}
                 zoom={14}
                 scrollWheelZoom={true}
                 className="map-container"
                 zoomControl={false}
+                key={driverLocation ? driverLocation.join(',') : 'default'}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-                {/* Route Line */}
-                <Polyline
-                    positions={polyline}
-                    pathOptions={{ color: '#2196f3', weight: 4, dashArray: '10, 10', opacity: 0.7 }}
+                <MapUpdater 
+                    driverLocation={driverLocation}
+                    donorLocation={donorLocation}
+                    receiverLocation={receiverLocation}
                 />
 
-                {/* Start Marker */}
-                <Marker position={startPos} icon={startIcon}>
-                    <Popup className="custom-popup">Thalapathpitiya</Popup>
-                </Marker>
+                {/* Route Line */}
+                {polyline.length > 0 && (
+                    <Polyline
+                        positions={polyline}
+                        pathOptions={{ 
+                            color: status === 'delivered' ? '#10b981' : '#2196f3', 
+                            weight: 4, 
+                            dashArray: status === 'delivered' ? '0' : '10, 10', 
+                            opacity: 0.7 
+                        }}
+                    />
+                )}
+
+                {/* Donor Marker */}
+                {donorLocation && (
+                    <Marker position={donorLocation} icon={donorIcon}>
+                        <Popup>
+                            <strong>Pickup Location</strong><br/>
+                            {trackingData?.donor?.name || 'Donor'}<br/>
+                            {trackingData?.donor?.address || ''}
+                        </Popup>
+                    </Marker>
+                )}
 
                 {/* Driver Marker */}
-                <Marker position={driverPos} icon={driverIcon}>
-                    <Popup>Current Location: Pamunuwa</Popup>
-                </Marker>
+                {driverLocation && (
+                    <Marker position={driverLocation} icon={driverIcon}>
+                        <Popup>
+                            <strong>Driver Location</strong><br/>
+                            {trackingData?.driver?.name || 'Driver'}<br/>
+                            {trackingData?.driver?.vehicleNumber ? `Vehicle: ${trackingData.driver.vehicleNumber}` : ''}
+                        </Popup>
+                    </Marker>
+                )}
 
-                {/* End Marker */}
-                <Marker position={endPos} icon={endIcon}>
-                    <Popup>Maharagama</Popup>
-                </Marker>
+                {/* Receiver Marker */}
+                {receiverLocation && (
+                    <Marker position={receiverLocation} icon={receiverIcon}>
+                        <Popup>
+                            <strong>Delivery Location</strong><br/>
+                            {trackingData?.receiver?.name || 'Receiver'}<br/>
+                            {trackingData?.receiver?.address || ''}
+                        </Popup>
+                    </Marker>
+                )}
 
                 <ZoomControl />
             </MapContainer>
