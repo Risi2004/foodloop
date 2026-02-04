@@ -1,4 +1,4 @@
-import { getAuthHeaders } from '../utils/auth';
+import { getAuthHeaders, isTokenExpired, clearAuth } from '../utils/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -53,13 +53,26 @@ export const analyzeFoodImage = async (imageUrl) => {
 
     const data = await response.json();
 
+    // Check if response is successful (even if predictions are null)
+    if (response.ok && data.success) {
+      // Success - return data even if predictions are null (AI unavailable but image uploaded)
+      return data;
+    }
+
     if (!response.ok) {
       // Extract user-friendly error message
       let errorMessage = data.message || 'Failed to analyze image';
       
+      // For AI-generated image errors, use a simple message
+      if (data.message && (data.message.includes('AI-generated') || 
+                           data.message.includes('ai-generated') ||
+                           data.message.includes('synthetic') ||
+                           data.message.includes('real photo'))) {
+        errorMessage = 'AI-generated images are not allowed. Please upload a real photo of food.';
+      }
       // For non-food item errors, use a simple message
-      if (data.message && (data.message.includes('not related to food') || 
-                           data.message.includes('does not contain food'))) {
+      else if (data.message && (data.message.includes('not related to food') || 
+                                 data.message.includes('does not contain food'))) {
         errorMessage = 'This image is not related to food items. Please upload an image of food only.';
       }
       
@@ -132,9 +145,68 @@ export const uploadAndAnalyzeImage = async (file) => {
  * @param {Object} donationData - Donation data to submit
  * @returns {Promise} Response with created donation
  */
+/**
+ * Get all available donations for receivers
+ * @returns {Promise} Response with available donations array
+ */
+export const getAvailableDonations = async () => {
+  try {
+    console.log('[DonationAPI] Fetching available donations...');
+    
+    const response = await fetch(`${API_URL}/api/donations/available`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to fetch available donations');
+      error.response = { data };
+      throw error;
+    }
+
+    console.log(`[DonationAPI] Successfully fetched ${data.count || 0} donations`);
+    return data;
+  } catch (error) {
+    console.error('[DonationAPI] Error fetching available donations:', error);
+    if (error.response) {
+      throw error;
+    }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
 export const submitDonation = async (donationData) => {
   try {
     console.log('[DonationAPI] Submitting donation:', donationData);
+    
+    // Check if token is expired before making the request
+    if (isTokenExpired()) {
+      console.warn('[DonationAPI] Token is expired, clearing auth');
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { 
+        data: { 
+          message: 'Your session has expired. Please log in again.',
+          code: 'TOKEN_EXPIRED'
+        } 
+      };
+      throw error;
+    }
+    
+    // Include donor coordinates if provided
+    const requestBody = {
+      ...donationData,
+      ...(donationData.donorLatitude && donationData.donorLongitude && {
+        donorLatitude: donationData.donorLatitude,
+        donorLongitude: donationData.donorLongitude,
+      }),
+    };
     
     const headers = getAuthHeaders();
     headers['Content-Type'] = 'application/json';
@@ -142,12 +214,26 @@ export const submitDonation = async (donationData) => {
     const response = await fetch(`${API_URL}/api/donations`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(donationData),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
+      // Handle token expiration error
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        console.warn('[DonationAPI] Token expired or invalid, clearing auth');
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { 
+          data: { 
+            message: 'Your session has expired. Please log in again.',
+            code: 'TOKEN_EXPIRED'
+          } 
+        };
+        throw error;
+      }
+      
       const error = new Error(data.message || 'Failed to submit donation');
       error.response = { data };
       throw error;

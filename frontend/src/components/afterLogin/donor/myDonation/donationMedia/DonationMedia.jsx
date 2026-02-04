@@ -78,13 +78,17 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
             }
 
             // Always pass predictions if they exist, even if incomplete
+            // If predictions are null but imageUrl exists, AI was unavailable but image uploaded successfully
             if (onAnalysisComplete) {
                 if (result.predictions) {
                     console.log('[DonationMedia] Passing predictions to form:', result.predictions);
                     onAnalysisComplete(result.predictions);
+                } else if (result.imageUrl) {
+                    console.warn('[DonationMedia] No predictions in result, but image uploaded successfully');
+                    // Image uploaded but AI unavailable - user can fill form manually
+                    onAnalysisComplete(null);
                 } else {
-                    console.warn('[DonationMedia] No predictions in result, but analysis completed');
-                    // Still notify that analysis is complete (even if empty)
+                    console.warn('[DonationMedia] No predictions and no image URL');
                     onAnalysisComplete(null);
                 }
             }
@@ -110,6 +114,14 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
                 errorMessage = error.message;
             }
             
+            // Check if it's an AI-generated image error
+            const isAiGeneratedError = errorMessage.includes('AI-generated') || 
+                                      errorMessage.includes('ai-generated') ||
+                                      errorMessage.includes('synthetic') ||
+                                      errorMessage.includes('fake') ||
+                                      errorMessage.includes('computer-generated') ||
+                                      errorMessage.includes('real photo');
+            
             // Check if it's a validation error (non-food items)
             const isValidationError = errorMessage.includes('not related to food') || 
                                      errorMessage.includes('does not contain food') || 
@@ -118,17 +130,55 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
                                      errorMessage.includes('must contain food') ||
                                      errorMessage.includes('non-food');
             
-            // Show user-friendly error message
+            // Check if it's a temporary AI service error (allow user to proceed)
+            const isTemporaryError = errorMessage.includes('temporarily unavailable') ||
+                                    errorMessage.includes('AI service') ||
+                                    errorMessage.includes('timeout') ||
+                                    errorMessage.includes('not available') ||
+                                    errorMessage.includes('rate limit') ||
+                                    errorMessage.includes('quota');
+            
+            // If it's a temporary error and we have an image URL, allow user to proceed
+            // Check if the response actually succeeded but just has no predictions
+            if (error.response?.data?.success && error.response?.data?.imageUrl) {
+                console.log('[DonationMedia] AI unavailable but image uploaded, allowing user to proceed');
+                setImageUrl(error.response.data.imageUrl);
+                if (onImageUploaded) {
+                    onImageUploaded(error.response.data.imageUrl);
+                }
+                if (onAnalysisComplete) {
+                    onAnalysisComplete(null); // No AI predictions, but image is uploaded
+                }
+                // Show info message instead of error
+                if (onError) {
+                    onError('ℹ️ Image uploaded successfully. AI analysis is temporarily unavailable. Please fill the form manually.');
+                }
+                setUploading(false);
+                setAnalyzing(false);
+                return; // Exit early, don't show error
+            }
+            
+            // Show user-friendly error message for actual errors
             if (onError) {
-                if (isValidationError) {
+                if (isAiGeneratedError) {
+                    // Simple, clear message for AI-generated images
+                    onError('⚠️ AI-generated images are not allowed. Please upload a real photo of food.');
+                } else if (isValidationError) {
                     // Simple, clear message for non-food items
                     onError('⚠️ This image is not related to food items. Please upload an image of food only.');
+                } else if (isTemporaryError) {
+                    // Inform user but allow them to proceed if image was uploaded
+                    onError('ℹ️ AI analysis is temporarily unavailable. You can still fill the form manually.');
                 } else {
                     onError(errorMessage);
                 }
             } else {
-                if (isValidationError) {
+                if (isAiGeneratedError) {
+                    alert('⚠️ AI-generated images are not allowed. Please upload a real photo of food.');
+                } else if (isValidationError) {
                     alert('⚠️ This image is not related to food items. Please upload an image of food only.');
+                } else if (isTemporaryError) {
+                    alert('ℹ️ AI analysis is temporarily unavailable. You can still fill the form manually.');
                 } else {
                     alert(`Error: ${errorMessage}. You can still fill the form manually.`);
                 }

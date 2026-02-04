@@ -596,6 +596,130 @@ const sendActivationEmail = async (user) => {
   }
 };
 
+/**
+ * Send donation live confirmation email
+ * Sent when a donation is successfully posted
+ */
+const sendDonationLiveEmail = async (donation, user) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation live email.');
+    return;
+  }
+
+  try {
+    const displayName = getUserDisplayName(user);
+    const expiryDate = new Date(donation.expiryDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    
+    const pickupDate = new Date(donation.preferredPickupDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: '🎉 Your Donation is Now Live!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Donation Live</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Your Donation is Live!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello ${displayName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Great news! Your donation has been successfully posted and is now live on FoodLoop.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+              <h2 style="color: #10b981; margin-top: 0; font-size: 20px;">Donation Details</h2>
+              
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Tracking ID:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.trackingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Item Name:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.itemName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Category:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.foodCategory}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Quantity:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Expiry Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${expiryDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #111827;">${pickupDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Pickup Window:</td>
+                  <td style="padding: 8px 0; color: #111827;">${donation.preferredPickupTimeFrom} - ${donation.preferredPickupTimeTo}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Status:</td>
+                  <td style="padding: 8px 0; color: #10b981; font-weight: bold;">${donation.status.charAt(0).toUpperCase() + donation.status.slice(1)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                <strong>📋 What's Next?</strong><br>
+                Your donation is now visible to receivers. Once a receiver accepts your donation, a driver will be assigned for pickup.
+                You can track the status of your donation using the tracking ID above.
+              </p>
+            </div>
+            
+            <p style="font-size: 16px; margin-top: 30px;">
+              Thank you for your generous contribution to reducing food waste and helping those in need!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+              Best regards,<br>
+              <strong>The FoodLoop Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Donation live email sent to ${user.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending donation live email to ${user.email}:`, error.message);
+    // Don't throw error - email failure shouldn't break donation creation
+  }
+};
+
 module.exports = {
   sendWelcomeEmail,
   sendPendingApprovalEmail,
@@ -603,4 +727,5 @@ module.exports = {
   sendRejectionEmail,
   sendDeactivationEmail,
   sendActivationEmail,
+  sendDonationLiveEmail,
 };

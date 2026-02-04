@@ -61,12 +61,53 @@ const donationSchema = new mongoose.Schema({
   
   // Pickup information
   preferredPickupDate: {
+    type: Date,
+    required: true,
+  },
+  preferredPickupTimeFrom: {
     type: String,
     required: true,
-    enum: ['today', 'tomorrow'],
+  },
+  preferredPickupTimeTo: {
+    type: String,
+    required: true,
   },
   actualPickupDate: {
     type: Date,
+    default: null,
+  },
+  
+  // Product type and expiry
+  productType: {
+    type: String,
+    enum: ['cooked', 'packed'],
+    default: null,
+  },
+  expiryDate: {
+    type: Date,
+    required: true,
+  },
+  expiryDateFromPackage: {
+    type: Date,
+    default: null,
+  },
+  
+  // Donor information (stored for quick access)
+  donorAddress: {
+    type: String,
+    required: true,
+  },
+  donorEmail: {
+    type: String,
+    required: true,
+  },
+  // Donor location coordinates (optional - for map display)
+  donorLatitude: {
+    type: Number,
+    default: null,
+  },
+  donorLongitude: {
+    type: Number,
     default: null,
   },
   
@@ -108,7 +149,7 @@ const donationSchema = new mongoose.Schema({
 });
 
 // Generate tracking ID before saving
-donationSchema.pre('save', async function(next) {
+donationSchema.pre('save', async function() {
   if (this.isNew && !this.trackingId) {
     // Generate tracking ID: FL-YYYYMMDD-XXXX
     const date = new Date();
@@ -129,7 +170,6 @@ donationSchema.pre('save', async function(next) {
   }
   
   this.updatedAt = Date.now();
-  next();
 });
 
 // Index for efficient queries

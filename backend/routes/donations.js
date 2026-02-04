@@ -6,6 +6,10 @@ const { analyzeFoodImage } = require('../services/aiService');
 const { AI_SERVICE_URL } = require('../config/env');
 const { authenticateUser } = require('../middleware/auth');
 const Donation = require('../models/Donation');
+const User = require('../models/User');
+const { calculateExpiryDate } = require('../services/expiryService');
+const { sendDonationLiveEmail } = require('../utils/emailService');
+const { geocodeAddress } = require('../services/geocodingService');
 
 // Apply file upload middleware for image uploads
 router.use(express.json());
@@ -123,7 +127,20 @@ router.post('/analyze-image', handleFileUpload, async (req, res) => {
     console.error('[Donations] Error analyzing image:', error.message);
     console.error('[Donations] Error stack:', error.stack);
     
-    // Handle validation errors (non-food items detected)
+    // Handle validation errors (AI-generated images or non-food items detected)
+    if (error.message.includes('AI-generated') || 
+        error.message.includes('ai-generated') ||
+        error.message.includes('synthetic') ||
+        error.message.includes('fake') ||
+        error.message.includes('computer-generated')) {
+      return res.status(400).json({
+        success: false,
+        message: 'AI-generated images are not allowed. Please upload a real photo of food.',
+        errors: [{ field: 'image', message: 'AI-generated images are not allowed. Please upload a real photo of food.' }],
+      });
+    }
+    
+    // Handle non-food items errors
     if (error.message.includes('does not contain food') || 
         error.message.includes('Non-food items') || 
         error.message.includes('No food items') ||
@@ -135,12 +152,22 @@ router.post('/analyze-image', handleFileUpload, async (req, res) => {
       });
     }
     
-    // Handle AI service errors gracefully
-    if (error.message.includes('AI service') || error.message.includes('timeout') || error.message.includes('not available')) {
-      return res.status(503).json({
-        success: false,
-        message: 'AI service is temporarily unavailable. Please fill the form manually.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    // Handle temporary AI service errors - allow users to proceed without AI verification
+    // This includes rate limits, timeouts, and service unavailability
+    if (error.message.includes('rate limit') || 
+        error.message.includes('quota') || 
+        error.message.includes('429') ||
+        error.message.includes('AI service') || 
+        error.message.includes('timeout') || 
+        error.message.includes('not available') ||
+        error.message.includes('temporarily unavailable')) {
+      // Return success with image URL but no predictions - user can fill form manually
+      console.log('[Donations] AI service unavailable, allowing user to proceed with image upload');
+      return res.status(200).json({
+        success: true,
+        predictions: null, // No AI predictions available
+        imageUrl: imageUrl, // Image was uploaded successfully
+        message: 'Image uploaded successfully. AI analysis is temporarily unavailable. Please fill the form manually.',
       });
     }
 
@@ -230,10 +257,17 @@ router.post('/', authenticateUser, async (req, res) => {
       storageRecommendation,
       imageUrl,
       preferredPickupDate,
+      preferredPickupTimeFrom,
+      preferredPickupTimeTo,
       aiConfidence,
       aiQualityScore,
       aiFreshness,
       aiDetectedItems,
+      productType,
+      expiryDateFromPackage,
+      userProvidedExpiryDate,
+      donorLatitude,
+      donorLongitude,
     } = req.body;
 
     // Validate required fields
@@ -244,6 +278,8 @@ router.post('/', authenticateUser, async (req, res) => {
       storageRecommendation,
       imageUrl,
       preferredPickupDate,
+      preferredPickupTimeFrom,
+      preferredPickupTimeTo,
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -278,11 +314,17 @@ router.post('/', authenticateUser, async (req, res) => {
       });
     }
 
-    const validPickupDates = ['today', 'tomorrow'];
-    if (!validPickupDates.includes(preferredPickupDate)) {
+    // Validate pickup date (should be a valid date string)
+    let pickupDate;
+    try {
+      pickupDate = new Date(preferredPickupDate);
+      if (isNaN(pickupDate.getTime())) {
+        throw new Error('Invalid date');
+      }
+    } catch (error) {
       return res.status(400).json({
         success: false,
-        errors: [{ field: 'preferredPickupDate', message: 'Invalid pickup date preference' }],
+        errors: [{ field: 'preferredPickupDate', message: 'Invalid pickup date format' }],
       });
     }
 
@@ -294,6 +336,94 @@ router.post('/', authenticateUser, async (req, res) => {
       });
     }
 
+    // Fetch donor details (address, email) from User model
+    const donor = await User.findById(req.user.id);
+    if (!donor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donor not found',
+      });
+    }
+
+    // Validate donor has required fields
+    if (!donor.address) {
+      return res.status(400).json({
+        success: false,
+        message: 'Donor address is missing. Please update your profile with an address.',
+      });
+    }
+
+    if (!donor.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Donor email is missing. Please update your profile.',
+      });
+    }
+
+    // Determine product type (from AI or default to 'cooked')
+    const finalProductType = productType === 'packed' ? 'packed' : 'cooked';
+    
+    // Parse expiry date from package (if provided)
+    let parsedExpiryFromPackage = null;
+    if (expiryDateFromPackage) {
+      try {
+        parsedExpiryFromPackage = new Date(expiryDateFromPackage);
+        if (isNaN(parsedExpiryFromPackage.getTime())) {
+          parsedExpiryFromPackage = null;
+        }
+      } catch (error) {
+        parsedExpiryFromPackage = null;
+      }
+    }
+    
+    // Use user-provided expiry if AI didn't detect it and user provided one
+    if (!parsedExpiryFromPackage && userProvidedExpiryDate) {
+      try {
+        parsedExpiryFromPackage = new Date(userProvidedExpiryDate);
+        if (isNaN(parsedExpiryFromPackage.getTime())) {
+          parsedExpiryFromPackage = null;
+        }
+      } catch (error) {
+        parsedExpiryFromPackage = null;
+      }
+    }
+
+    // Calculate expiry date
+    const expiryDate = calculateExpiryDate({
+      productType: finalProductType,
+      expiryDateFromPackage: parsedExpiryFromPackage,
+      userProvidedExpiryDate: userProvidedExpiryDate ? new Date(userProvidedExpiryDate) : null,
+      createdAt: new Date(),
+    });
+
+    // Determine coordinates: Use donor-confirmed coordinates if provided, otherwise geocode address
+    let finalLatitude = null;
+    let finalLongitude = null;
+
+    if (donorLatitude && donorLongitude) {
+      // Validate coordinates are within Sri Lanka bounds
+      if (donorLatitude >= 5 && donorLatitude <= 10 && 
+          donorLongitude >= 79 && donorLongitude <= 82) {
+        finalLatitude = donorLatitude;
+        finalLongitude = donorLongitude;
+        console.log(`[Donations] Using donor-confirmed coordinates: [${finalLatitude}, ${finalLongitude}]`);
+      } else {
+        console.warn(`[Donations] Donor-provided coordinates [${donorLatitude}, ${donorLongitude}] are outside Sri Lanka bounds, will geocode address instead`);
+      }
+    }
+
+    // If no valid donor coordinates, geocode the address
+    if (!finalLatitude || !finalLongitude) {
+      if (donor.address) {
+        const geocodedCoords = await geocodeAddress(donor.address);
+        if (geocodedCoords) {
+          finalLatitude = geocodedCoords.lat;
+          finalLongitude = geocodedCoords.lng;
+          console.log(`[Donations] Geocoded address to coordinates: [${finalLatitude}, ${finalLongitude}]`);
+        }
+      }
+    }
+
     // Create donation
     const donation = new Donation({
       donorId: req.user.id,
@@ -302,7 +432,16 @@ router.post('/', authenticateUser, async (req, res) => {
       quantity,
       storageRecommendation,
       imageUrl,
-      preferredPickupDate,
+      preferredPickupDate: pickupDate,
+      preferredPickupTimeFrom,
+      preferredPickupTimeTo,
+      productType: finalProductType,
+      expiryDate,
+      expiryDateFromPackage: parsedExpiryFromPackage,
+      donorAddress: donor.address,
+      donorEmail: donor.email,
+      donorLatitude: finalLatitude,
+      donorLongitude: finalLongitude,
       aiConfidence: aiConfidence || null,
       aiQualityScore: aiQualityScore || null,
       aiFreshness: aiFreshness || null,
@@ -317,7 +456,17 @@ router.post('/', authenticateUser, async (req, res) => {
       trackingId: donation.trackingId,
       donorId: donation.donorId,
       itemName: donation.itemName,
+      productType: donation.productType,
+      expiryDate: donation.expiryDate,
     });
+
+    // Send email notification (async, don't block response)
+    try {
+      await sendDonationLiveEmail(donation, donor);
+    } catch (emailError) {
+      console.error('[Donations] Error sending donation email:', emailError.message);
+      // Don't fail donation creation if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -329,14 +478,140 @@ router.post('/', authenticateUser, async (req, res) => {
         itemName: donation.itemName,
         quantity: donation.quantity,
         status: donation.status,
+        expiryDate: donation.expiryDate,
         createdAt: donation.createdAt,
       },
     });
   } catch (error) {
     console.error('[Donations] Error creating donation:', error);
+    console.error('[Donations] Error stack:', error.stack);
+    console.error('[Donations] Request body:', JSON.stringify(req.body, null, 2));
     res.status(500).json({
       success: false,
       message: 'Failed to create donation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/available
+ * Get all available donations for receivers
+ * Returns donations with status 'pending' or 'approved' that haven't expired
+ * No authentication required - receivers need to see available donations
+ */
+router.get('/available', async (req, res) => {
+  try {
+    const currentDate = new Date();
+    
+    // Fetch donations with status 'pending' or 'approved' that haven't expired
+    const donations = await Donation.find({
+      status: { $in: ['pending', 'approved'] },
+      expiryDate: { $gt: currentDate }, // Only non-expired donations
+    })
+      .populate('donorId', 'address email donorType username businessName')
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    // Format donations and geocode addresses
+    const formattedDonations = await Promise.all(
+      donations.map(async (donation) => {
+        const donor = donation.donorId;
+        const donorName = donor?.donorType === 'Business' 
+          ? donor.businessName 
+          : donor?.username || donor?.email || 'Anonymous';
+
+        const donorAddress = donation.donorAddress || donor?.address || '';
+        
+        // Get coordinates (re-geocode if coordinates seem incorrect, otherwise use stored)
+        let coordinates = null;
+        
+        // Check if stored coordinates are valid and within Sri Lanka bounds
+        const hasStoredCoords = donation.donorLatitude && donation.donorLongitude;
+        const coordsInBounds = hasStoredCoords && 
+          donation.donorLatitude >= 5 && donation.donorLatitude <= 10 &&
+          donation.donorLongitude >= 79 && donation.donorLongitude <= 82;
+        
+        if (hasStoredCoords && coordsInBounds) {
+          // Use stored coordinates if they're valid
+          coordinates = {
+            lat: donation.donorLatitude,
+            lng: donation.donorLongitude,
+          };
+          console.log(`[Donations] Using stored coordinates for donation ${donation._id}: [${coordinates.lat}, ${coordinates.lng}]`);
+        } else if (donorAddress) {
+          // Re-geocode if no stored coordinates or if stored coordinates are invalid
+          if (hasStoredCoords && !coordsInBounds) {
+            console.log(`[Donations] Stored coordinates for donation ${donation._id} seem invalid, re-geocoding...`);
+          }
+          
+          // Geocode the address
+          coordinates = await geocodeAddress(donorAddress);
+          
+          // Save coordinates back to database (async, don't block response)
+          if (coordinates) {
+            Donation.findByIdAndUpdate(
+              donation._id,
+              {
+                donorLatitude: coordinates.lat,
+                donorLongitude: coordinates.lng,
+              },
+              { new: true }
+            ).catch(err => {
+              console.error(`[Donations] Error saving coordinates for donation ${donation._id}:`, err);
+            });
+          } else {
+            console.warn(`[Donations] Failed to geocode address for donation ${donation._id}: ${donorAddress}`);
+          }
+        }
+
+        return {
+          id: donation._id.toString(),
+          trackingId: donation.trackingId,
+          // Food details
+          itemName: donation.itemName,
+          foodCategory: donation.foodCategory,
+          quantity: donation.quantity,
+          imageUrl: donation.imageUrl,
+          expiryDate: donation.expiryDate,
+          storageRecommendation: donation.storageRecommendation,
+          // Donor details
+          donorId: donation.donorId?._id?.toString(),
+          donorAddress: donorAddress,
+          donorEmail: donation.donorEmail || donor?.email,
+          donorName: donorName,
+          donorType: donor?.donorType,
+          // Coordinates for map
+          position: coordinates ? [coordinates.lat, coordinates.lng] : null,
+          // Pickup information
+          preferredPickupDate: donation.preferredPickupDate,
+          preferredPickupTimeFrom: donation.preferredPickupTimeFrom,
+          preferredPickupTimeTo: donation.preferredPickupTimeTo,
+          // AI analysis data
+          aiQualityScore: donation.aiQualityScore,
+          aiFreshness: donation.aiFreshness,
+          aiConfidence: donation.aiConfidence,
+          aiDetectedItems: donation.aiDetectedItems || [],
+          // Timestamps
+          createdAt: donation.createdAt,
+          updatedAt: donation.updatedAt,
+        };
+      })
+    );
+
+    console.log(`[Donations] Returning ${formattedDonations.length} available donations`);
+
+    res.status(200).json({
+      success: true,
+      donations: formattedDonations,
+      count: formattedDonations.length,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching available donations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch available donations',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

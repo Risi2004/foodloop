@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submitDonation } from '../../../../../services/donationApi';
+import { clearAuth, getUser } from '../../../../../utils/auth';
+import LocationMapModal from '../locationMapModal/LocationMapModal';
 import './DonationForm.css';
 
 function DonationForm({ aiPredictions, imageUrl, error }) {
@@ -11,13 +13,86 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
     const [itemName, setItemName] = useState('Vegetable Curry with Rice');
     const [quantity, setQuantity] = useState(15);
     const [storage, setStorage] = useState('hot'); // hot, cold, dry
-    const [pickup, setPickup] = useState('today'); // today, tomorrow
+    // Pickup date and time
+    const [pickupDate, setPickupDate] = useState(() => {
+        // Default to today's date in YYYY-MM-DD format
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    });
+    const [pickupTimeFrom, setPickupTimeFrom] = useState('16:00'); // 4:00 PM
+    const [pickupTimeTo, setPickupTimeTo] = useState('17:30'); // 5:30 PM
     const [aiConfidence, setAiConfidence] = useState(null);
     const [aiQualityScore, setAiQualityScore] = useState(null);
     const [isAiFilled, setIsAiFilled] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
+    const [safetyConfirmed, setSafetyConfirmed] = useState(false);
+    const [userProvidedExpiryDate, setUserProvidedExpiryDate] = useState('');
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [selectedLatitude, setSelectedLatitude] = useState(null);
+    const [selectedLongitude, setSelectedLongitude] = useState(null);
+    const [donorAddress, setDonorAddress] = useState('');
+    
+    // Validation: Check if form is valid and can be submitted
+    const isFormValid = () => {
+        // Check all required fields
+        const hasImage = !!imageUrl;
+        const hasFoodCategory = !!foodCategory && foodCategory.trim() !== '';
+        const hasItemName = !!itemName && itemName.trim() !== '';
+        const hasQuantity = quantity > 0;
+        const hasStorage = !!storage;
+        const hasPickupDate = !!pickupDate;
+        const hasPickupTimeFrom = !!pickupTimeFrom;
+        const hasPickupTimeTo = !!pickupTimeTo;
+        const hasSafetyConfirm = safetyConfirmed;
+        
+        // Validate time range (From should be before To)
+        const isTimeRangeValid = hasPickupTimeFrom && hasPickupTimeTo && pickupTimeFrom < pickupTimeTo;
+        
+        // Check quality score (must be >= 80% or 0.8)
+        const qualityScore = aiQualityScore || aiPredictions?.qualityScore;
+        const hasValidQuality = qualityScore === null || qualityScore === undefined || qualityScore >= 0.8;
+        
+        // Check if expiry date is provided (required for all products)
+        const hasExpiryDate = !!userProvidedExpiryDate;
+        
+        return hasImage && hasFoodCategory && hasItemName && hasQuantity && 
+               hasStorage && hasPickupDate && hasPickupTimeFrom && hasPickupTimeTo && 
+               isTimeRangeValid && hasSafetyConfirm && hasValidQuality && hasExpiryDate;
+    };
+    
+    // Get reason why button is disabled
+    const getDisabledReason = () => {
+        const reasons = [];
+        
+        if (!imageUrl) reasons.push('Please upload an image');
+        if (!foodCategory || foodCategory.trim() === '') reasons.push('Food category is required');
+        if (!itemName || itemName.trim() === '') reasons.push('Item name is required');
+        if (quantity <= 0) reasons.push('Quantity must be greater than 0');
+        if (!storage) reasons.push('Storage instruction is required');
+        if (!pickupDate) reasons.push('Pickup date is required');
+        if (!pickupTimeFrom) reasons.push('Pickup start time is required');
+        if (!pickupTimeTo) reasons.push('Pickup end time is required');
+        if (pickupTimeFrom && pickupTimeTo && pickupTimeFrom >= pickupTimeTo) {
+            reasons.push('End time must be after start time');
+        }
+        
+        // Check expiry date (required for all products)
+        if (!userProvidedExpiryDate) {
+            reasons.push('Expiry date is required');
+        }
+        
+        if (!safetyConfirmed) reasons.push('Please confirm safety standards');
+        
+        const qualityScore = aiQualityScore || aiPredictions?.qualityScore;
+        if (qualityScore !== null && qualityScore !== undefined && qualityScore < 0.8) {
+            const qualityPercent = Math.round(qualityScore * 100);
+            reasons.push(`Food quality score is ${qualityPercent}% (minimum 80% required)`);
+        }
+        
+        return reasons.length > 0 ? reasons.join(', ') : null;
+    };
 
     // Auto-fill form when AI predictions are received
     useEffect(() => {
@@ -57,6 +132,40 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 console.log('[DonationForm] Setting qualityScore:', aiPredictions.qualityScore);
                 setAiQualityScore(aiPredictions.qualityScore);
             }
+            
+            // Auto-calculate and set expiry date based on product type
+            if (!userProvidedExpiryDate) {
+                const productType = aiPredictions.productType || 'cooked';
+                
+                if (productType === 'packed' && aiPredictions.expiryDateFromPackage) {
+                    // For packed products: use AI-detected expiry date from package
+                    try {
+                        const expiryDate = new Date(aiPredictions.expiryDateFromPackage);
+                        const formattedDate = expiryDate.toISOString().split('T')[0];
+                        setUserProvidedExpiryDate(formattedDate);
+                        console.log('[DonationForm] Auto-filled expiry date from AI (packed product):', formattedDate);
+                    } catch (error) {
+                        console.error('[DonationForm] Error formatting expiry date from package:', error);
+                    }
+                } else if (productType === 'cooked') {
+                    // For cooked products: calculate 2 days from today
+                    const today = new Date();
+                    const expiryDate = new Date(today);
+                    expiryDate.setDate(expiryDate.getDate() + 2); // Add 2 days
+                    const formattedDate = expiryDate.toISOString().split('T')[0];
+                    setUserProvidedExpiryDate(formattedDate);
+                    console.log('[DonationForm] Auto-calculated expiry date for cooked product (2 days):', formattedDate);
+                } else {
+                    // For other product types or if no product type detected: default to 3 days
+                    const today = new Date();
+                    const expiryDate = new Date(today);
+                    expiryDate.setDate(expiryDate.getDate() + 3); // Add 3 days as default
+                    const formattedDate = expiryDate.toISOString().split('T')[0];
+                    setUserProvidedExpiryDate(formattedDate);
+                    console.log('[DonationForm] Auto-calculated expiry date (default 3 days):', formattedDate);
+                }
+            }
+            
             setIsAiFilled(true);
             console.log('[DonationForm] Form filled successfully with AI predictions');
         } else if (aiPredictions && isEditing) {
@@ -70,6 +179,14 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
     const handleQuantityChange = (delta) => {
         setQuantity(prev => Math.max(1, prev + delta));
     };
+
+    // Get donor address on component mount
+    useEffect(() => {
+        const user = getUser();
+        if (user && user.address) {
+            setDonorAddress(user.address);
+        }
+    }, []);
 
     // Handle edit all fields
     const handleEditAll = () => {
@@ -88,6 +205,25 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             return;
         }
 
+        // Get donor address if not already set
+        if (!donorAddress) {
+            const user = getUser();
+            if (user && user.address) {
+                setDonorAddress(user.address);
+            }
+        }
+
+        // Open location confirmation modal
+        setShowLocationModal(true);
+    };
+
+    // Handle location confirmation from modal
+    const handleLocationConfirm = async (lat, lng, address) => {
+        setShowLocationModal(false);
+        setSelectedLatitude(lat);
+        setSelectedLongitude(lng);
+
+        // Now submit the donation with coordinates
         setIsSubmitting(true);
         setSubmitError(null);
 
@@ -101,14 +237,24 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 quantity: Number(quantity),
                 storageRecommendation: storageCapitalized,
                 imageUrl,
-                preferredPickupDate: pickup,
+                preferredPickupDate: pickupDate, // ISO date string
+                preferredPickupTimeFrom: pickupTimeFrom,
+                preferredPickupTimeTo: pickupTimeTo,
                 aiConfidence: aiConfidence || aiPredictions?.confidence || null,
                 aiQualityScore: aiPredictions?.qualityScore || null,
                 aiFreshness: aiPredictions?.freshness || null,
                 aiDetectedItems: aiPredictions?.detectedItems || [],
+                // Product type and expiry from AI
+                productType: aiPredictions?.productType || null,
+                expiryDateFromPackage: aiPredictions?.expiryDateFromPackage || null,
+                // User-provided expiry (always use user input if provided, otherwise use AI-detected)
+                userProvidedExpiryDate: userProvidedExpiryDate || aiPredictions?.expiryDateFromPackage || null,
+                // Donor-confirmed coordinates
+                donorLatitude: lat,
+                donorLongitude: lng,
             };
 
-            console.log('[DonationForm] Submitting donation:', donationData);
+            console.log('[DonationForm] Submitting donation with coordinates:', donationData);
 
             const response = await submitDonation(donationData);
 
@@ -121,14 +267,43 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             }
         } catch (error) {
             console.error('[DonationForm] Error submitting donation:', error);
-            const errorMessage = error.response?.data?.message || 
-                                error.response?.data?.errors?.[0]?.message ||
-                                error.message || 
-                                'Failed to submit donation. Please try again.';
+            console.error('[DonationForm] Error response:', error.response?.data);
+            
+            // Handle token expiration - redirect to login
+            if (error.response?.data?.code === 'TOKEN_EXPIRED' || 
+                error.response?.data?.message?.includes('expired') ||
+                error.response?.data?.message?.includes('session')) {
+                clearAuth();
+                alert('Your session has expired. Please log in again to continue.');
+                navigate('/login');
+                return;
+            }
+            
+            // Extract detailed error message
+            let errorMessage = 'Failed to submit donation. Please try again.';
+            
+            if (error.response?.data) {
+                // Check for validation errors array
+                if (error.response.data.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+                    errorMessage = error.response.data.errors.map(err => err.message || `${err.field}: ${err.message}`).join(', ');
+                } else if (error.response.data.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.response.data.error) {
+                    errorMessage = error.response.data.error;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
             setSubmitError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    // Handle modal close
+    const handleLocationModalClose = () => {
+        setShowLocationModal(false);
     };
 
     return (
@@ -173,7 +348,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             {/* Core Details Form */}
             <div className="form-grid">
                 <div className="form-group">
-                    <label>Food Category</label>
+                    <label>Food Category <span className="required-asterisk">*</span></label>
                     <div className="input-with-icon">
                         <input 
                             type="text" 
@@ -183,13 +358,14 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                                 setIsEditing(true);
                             }}
                             readOnly={!isEditing && isAiFilled}
+                            required
                         />
                         {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
                     </div>
                 </div>
 
                 <div className="form-group">
-                    <label>Item Name</label>
+                    <label>Item Name <span className="required-asterisk">*</span></label>
                     <div className="input-with-icon">
                         <input 
                             type="text" 
@@ -199,13 +375,14 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                                 setIsEditing(true);
                             }}
                             readOnly={!isEditing && isAiFilled}
+                            required
                         />
                         {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
                     </div>
                 </div>
 
                 <div className="form-group">
-                    <label>Quantity / Servings</label>
+                    <label>Quantity / Servings <span className="required-asterisk">*</span></label>
                     <div className="quantity-control">
                         <button 
                             className="qty-btn minus" 
@@ -244,7 +421,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 </div>
 
                 <div className="form-group">
-                    <label>Storage Instructions</label>
+                    <label>Storage Instructions <span className="required-asterisk">*</span></label>
                     <div className="toggle-group">
                         <button
                             className={`toggle-btn hot ${storage === 'hot' ? 'active' : ''}`}
@@ -279,34 +456,45 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             {/* Logistics Content */}
             <div className="logistics-grid">
                 <div className="pickup-column">
-                    <label>Pickup Window</label>
-                    <div className="pickup-toggles">
-                        <button
-                            className={`pickup-btn ${pickup === 'today' ? 'active' : ''}`}
-                            onClick={() => setPickup('today')}
-                        >
-                            <div className="pickup-btn-content">
-                                <span className="day-label">Today</span>
-                                <span className="time-label">4:00 PM - 5:30 PM</span>
+                    <label>Pickup Window <span className="required-asterisk">*</span></label>
+                    <div className="pickup-datetime-container">
+                        <div className="pickup-date-wrapper">
+                            <div className="pickup-input-group">
+                                <span className="pickup-icon">📅</span>
+                                <input
+                                    type="date"
+                                    className="pickup-date-input"
+                                    value={pickupDate}
+                                    onChange={(e) => setPickupDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    required
+                                />
                             </div>
-                            <div className="pickup-icons">
-                                <span className="calendar-icon">📅</span>
-                                <span className="clock-icon">🕒</span>
+                        </div>
+                        <div className="pickup-time-wrapper">
+                            <div className="pickup-input-group">
+                                <span className="pickup-icon">🕒</span>
+                                <label className="pickup-time-label">From</label>
+                                <input
+                                    type="time"
+                                    className="pickup-time-input"
+                                    value={pickupTimeFrom}
+                                    onChange={(e) => setPickupTimeFrom(e.target.value)}
+                                    required
+                                />
                             </div>
-                        </button>
-                        <button
-                            className={`pickup-btn ${pickup === 'tomorrow' ? 'active' : ''}`}
-                            onClick={() => setPickup('tomorrow')}
-                        >
-                            <div className="pickup-btn-content">
-                                <span className="day-label">Tomorrow</span>
-                                <span className="time-label">10:00 AM - 12:00 PM</span>
+                            <div className="pickup-input-group">
+                                <span className="pickup-icon">🕒</span>
+                                <label className="pickup-time-label">To</label>
+                                <input
+                                    type="time"
+                                    className="pickup-time-input"
+                                    value={pickupTimeTo}
+                                    onChange={(e) => setPickupTimeTo(e.target.value)}
+                                    required
+                                />
                             </div>
-                            <div className="pickup-icons">
-                                <span className="calendar-icon">📅</span>
-                                <span className="clock-icon">🕒</span>
-                            </div>
-                        </button>
+                        </div>
                     </div>
                 </div>
 
@@ -321,20 +509,66 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 </div>
             </div>
 
+            {/* Expiry Date Input (always visible) */}
+            <div className="form-section-header" style={{ marginTop: '20px' }}>
+                <div className="section-title">
+                    <span className="magic-wand-icon">📅</span>
+                    <h2>Expiry Date</h2>
+                </div>
+            </div>
+            <div className="form-grid">
+                <div className="form-group">
+                    <label>Expiry Date <span className="required-asterisk">*</span></label>
+                    <div className="input-with-icon">
+                        <input
+                            type="date"
+                            value={userProvidedExpiryDate}
+                            onChange={(e) => setUserProvidedExpiryDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            required
+                        />
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                        {aiPredictions?.productType === 'packed' 
+                            ? 'Enter the expiry date from the package label (or use AI-detected date if available)'
+                            : 'Enter the expiry date for this food item'}
+                        {aiPredictions?.expiryDateFromPackage && (
+                            <span style={{ display: 'block', marginTop: '4px', color: '#10b981' }}>
+                                💡 AI detected expiry: {new Date(aiPredictions.expiryDateFromPackage).toLocaleDateString()}
+                            </span>
+                        )}
+                    </p>
+                </div>
+            </div>
+
             {/* Footer */}
             <div className="form-footer">
                 <div className="checkbox-group">
-                    <input type="checkbox" id="safety-confirm" />
+                    <input 
+                        type="checkbox" 
+                        id="safety-confirm" 
+                        checked={safetyConfirmed}
+                        onChange={(e) => setSafetyConfirmed(e.target.checked)}
+                        required
+                    />
                     <label htmlFor="safety-confirm">I confirm that all detected AI details are accurate and the food meets safety standards.</label>
                 </div>
 
-                <button 
-                    className="post-donation-btn" 
-                    onClick={handlePostDonation}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? 'Submitting...' : 'Post Donation ▶'}
-                </button>
+                <div className="post-button-wrapper">
+                    <button 
+                        className={`post-donation-btn ${!isFormValid() ? 'disabled' : ''}`}
+                        onClick={handlePostDonation}
+                        disabled={isSubmitting || !isFormValid()}
+                        title={!isFormValid() ? getDisabledReason() : ''}
+                    >
+                        {isSubmitting ? 'Submitting...' : 'Post Donation ▶'}
+                    </button>
+                    {!isFormValid() && (
+                        <div className="disabled-tooltip">
+                            {getDisabledReason()}
+                        </div>
+                    )}
+                </div>
 
                 <div className="progress-status">
                     <div className="progress-text">
@@ -346,6 +580,14 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                     </div>
                 </div>
             </div>
+
+            {/* Location Confirmation Modal */}
+            <LocationMapModal
+                isOpen={showLocationModal}
+                onClose={handleLocationModalClose}
+                onConfirm={handleLocationConfirm}
+                defaultAddress={donorAddress}
+            />
         </div>
     );
 }

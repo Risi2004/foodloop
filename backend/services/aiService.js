@@ -49,14 +49,24 @@ const analyzeFoodImage = async (imageUrl) => {
         
         console.error(`[AI Service] Error response (${response.status}):`, errorData);
         
-        // Handle validation errors (non-food items detected)
+        // Handle validation errors (AI-generated images or non-food items detected)
         if (response.status === 400 && errorData.detail) {
           const detail = typeof errorData.detail === 'string' 
             ? { message: errorData.detail } 
             : errorData.detail;
           
-          // Check if it's a non-food item error
           const message = detail.message || detail.error || '';
+          
+          // Check if it's an AI-generated image error
+          if (message.includes('AI-generated') || 
+              message.includes('ai-generated') ||
+              message.includes('synthetic') ||
+              message.includes('fake') ||
+              message.includes('computer-generated')) {
+            throw new Error('AI-generated images are not allowed. Please upload a real photo of food.');
+          }
+          
+          // Check if it's a non-food item error
           if (message.includes('does not contain food') || 
               message.includes('not related to food') ||
               message.includes('Non-food items')) {
@@ -66,7 +76,13 @@ const analyzeFoodImage = async (imageUrl) => {
           throw new Error(message || 'Invalid image content');
         }
         
-        throw new Error(errorData.detail?.message || errorData.message || `AI service returned error: ${response.status}`);
+        // Check for rate limit errors
+        const errorMessage = errorData.detail?.message || errorData.message || '';
+        if (response.status === 503 && (errorMessage.includes('quota') || errorMessage.includes('rate limit'))) {
+          throw new Error('AI service rate limit exceeded. Please try again later or upgrade your API plan.');
+        }
+        
+        throw new Error(errorMessage || `AI service returned error: ${response.status}`);
       }
 
       const data = await response.json();

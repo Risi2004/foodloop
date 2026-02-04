@@ -122,12 +122,16 @@ async def predict_food(request: ImageRequest):
         return predictions
         
     except ValueError as e:
-        # Validation error - non-food items detected
+        # Validation error - non-food items or AI-generated images detected
         error_message = str(e)
         print(f"❌ Validation error: {error_message}")
         
+        # Check if it's an AI-generated image error
+        if "ai-generated" in error_message.lower() or "synthetic" in error_message.lower() or "fake" in error_message.lower():
+            user_message = "AI-generated images are not allowed. Please upload a real photo of food."
+            suggestion = "Please upload a real photograph of food. AI-generated, synthetic, or computer-generated images are not accepted."
         # Check if it's a non-food item error
-        if "does not contain food" in error_message.lower() or "non-food" in error_message.lower():
+        elif "does not contain food" in error_message.lower() or "non-food" in error_message.lower():
             user_message = "This image does not contain food items. Please upload an image of food only."
             suggestion = "Accepted items: cooked meals, raw ingredients, beverages, snacks, desserts. Not allowed: cleaning products, medicines, electronics, or other non-food items."
         else:
@@ -143,6 +147,20 @@ async def predict_food(request: ImageRequest):
             }
         )
     except Exception as e:
+        error_message = str(e)
+        
+        # Check if it's a rate limit/quota error
+        if "quota" in error_message.lower() or "rate limit" in error_message.lower() or "429" in error_message:
+            print(f"❌ Rate limit error: {error_message}")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "API quota exceeded",
+                    "message": "Gemini API rate limit exceeded. You have reached your daily quota. Please try again later or upgrade your API plan.",
+                    "suggestion": "Please wait a few hours or upgrade your Gemini API plan. For more information, visit: https://ai.google.dev/gemini-api/docs/rate-limits"
+                }
+            )
+        
         # Other errors - return mock predictions for graceful degradation
         print(f"⚠️  Error in prediction: {e}")
         print("⚠️  Returning mock predictions as fallback")
