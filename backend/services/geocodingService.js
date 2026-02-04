@@ -126,6 +126,49 @@ const geocodeAddresses = async (addresses) => {
 };
 
 /**
+ * Calculate distance between two coordinates using Haversine formula
+ * @param {number} lat1 - Latitude of first point
+ * @param {number} lng1 - Longitude of first point
+ * @param {number} lat2 - Latitude of second point
+ * @param {number} lng2 - Longitude of second point
+ * @returns {number} Distance in kilometers
+ */
+const calculateDistance = (lat1, lng1, lat2, lng2) => {
+  // Validate inputs
+  if (typeof lat1 !== 'number' || typeof lng1 !== 'number' ||
+      typeof lat2 !== 'number' || typeof lng2 !== 'number') {
+    console.warn('[Distance] Invalid coordinates provided');
+    return 0;
+  }
+
+  // Check if coordinates are valid (not NaN, not Infinity)
+  if (isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2) ||
+      !isFinite(lat1) || !isFinite(lng1) || !isFinite(lat2) || !isFinite(lng2)) {
+    console.warn('[Distance] Invalid coordinate values (NaN or Infinity)');
+    return 0;
+  }
+
+  // Earth's radius in kilometers
+  const R = 6371;
+
+  // Convert degrees to radians
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+
+  // Haversine formula
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  // Round to 2 decimal places
+  return Math.round(distance * 100) / 100;
+};
+
+/**
  * Clear the geocoding cache
  */
 const clearCache = () => {
@@ -136,5 +179,6 @@ const clearCache = () => {
 module.exports = {
   geocodeAddress,
   geocodeAddresses,
+  calculateDistance,
   clearCache,
 };

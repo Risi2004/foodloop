@@ -44,7 +44,9 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 16px;
     box-sizing: border-box;
-    width: fit-content;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .form h2 {
@@ -65,6 +67,7 @@ line-height: 20px; /* 62.5% */
 .inputs {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 16px;
     width: 100%;
     padding: 0;
@@ -79,8 +82,10 @@ line-height: 20px; /* 62.5% */
     gap: 6px;
     align-items: center;
     justify-content: flex-start;
-    flex-shrink: 0;
+    flex: 1 1 calc(33.333% - 12px);
+    min-width: 280px;
     position: relative;
+    box-sizing: border-box;
 }
 
 .point {
@@ -128,8 +133,8 @@ line-height: 20px; /* 62.5% */
     gap: 5px;
     align-items: flex-start;
     justify-content: center;
-    flex-shrink: 0;
-    width: 373px;
+    flex: 1;
+    min-width: 0;
     position: relative;
 }
 
@@ -157,8 +162,10 @@ line-height: 20px; /* 62.5% */
     gap: 10px;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
     position: relative;
+    box-sizing: border-box;
 }
 
 ._0-8-mi-to-recipient {
@@ -169,7 +176,8 @@ line-height: 20px; /* 62.5% */
     line-height: 20px;
     font-weight: 700;
     position: relative;
-    width: 333px;
+    width: 100%;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -177,6 +185,7 @@ line-height: 20px; /* 62.5% */
     outline: none;
     background: transparent;
     padding: 0;
+    box-sizing: border-box;
 }
 
 ._0-8-mi-to-recipient::placeholder {
@@ -189,9 +198,11 @@ line-height: 20px; /* 62.5% */
     gap: 6px;
     align-items: center;
     justify-content: flex-start;
-    flex-shrink: 0;
+    flex: 1 1 calc(33.333% - 12px);
+    min-width: 280px;
     position: relative;
     padding: 10px;
+    box-sizing: border-box;
 }
 
 .frame-104 {
@@ -752,6 +763,300 @@ background: linear-gradient(180deg, #FFF 0%, #013211 100%);
     height: 45px;
     object-fit: contain;
     flex-shrink: 0;
+}
+
+/* Responsive Styles */
+@media (max-width: 1200px) {
+    .receipt-form {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .receipt-form h1 {
+        font-size: 48px;
+        line-height: 48px;
+        height: auto;
+        margin-bottom: 0;
+    }
+
+    .form {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .infotop {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .donor-information,
+    .handling-organizatio {
+        width: 100%;
+    }
+
+    .handling-organizatio {
+        align-items: flex-start;
+    }
+
+    .handling-organizatio2,
+    .community-harvest-ng,
+    .delivered-oct-24-2 {
+        text-align: left;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .cards {
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .card {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .receipt-form {
+        padding: 10px;
+        width: 95%;
+    }
+
+    .receipt-form h1 {
+        font-size: 36px;
+        line-height: 40px;
+        height: auto;
+    }
+
+    .form {
+        padding: 20px;
+        gap: 20px;
+    }
+
+    .form h2 {
+        font-size: 24px;
+    }
+
+    .inputs {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .current-loc,
+    .frame-194 {
+        width: 100%;
+        padding: 8px;
+    }
+
+    .div {
+        width: 100%;
+        flex: 1;
+    }
+
+    .frame-193 {
+        width: 100%;
+    }
+
+    ._0-8-mi-to-recipient {
+        width: 100%;
+        font-size: 14px;
+    }
+
+    .infotop {
+        padding: 10px;
+        gap: 16px;
+    }
+
+    .donor-information2,
+    .handling-organizatio2 {
+        font-size: 14px;
+    }
+
+    .sarah-jenkins,
+    .community-harvest-ng {
+        font-size: 24px;
+        line-height: 28px;
+    }
+
+    .sarah-j-impact-com,
+    .delivered-oct-24-2 {
+        font-size: 16px;
+    }
+
+    .info .div {
+        width: 100%;
+    }
+
+    .info ._0-8-mi-to-recipient {
+        width: 100%;
+    }
+
+    .cards {
+        flex-direction: column;
+        gap: 16px;
+        padding: 10px;
+    }
+
+    .card {
+        width: 100%;
+        flex: 1 1 auto;
+    }
+
+    .cardtxt h3 {
+        font-size: 18px;
+    }
+
+    .cardtxt p {
+        font-size: 36px;
+    }
+
+    .cardtxt p span {
+        font-size: 20px;
+    }
+
+    .delivery-section {
+        padding: 10px;
+    }
+
+    .delivery-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .delivery-head h2 {
+        font-size: 24px;
+        text-align: left !important;
+    }
+
+    .delivery-body {
+        flex-direction: column;
+    }
+
+    .food-card {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .food-card > img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .driver-row {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .driver-row dd {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    .driver-right--stack {
+        width: 100%;
+    }
+
+    .info-actions {
+        padding: 10px;
+    }
+
+    .save-btn {
+        width: 100%;
+        min-width: auto;
+        font-size: 20px;
+        padding: 12px 20px;
+        height: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .receipt-form {
+        width: 100%;
+        padding: 8px;
+    }
+
+    .receipt-form h1 {
+        font-size: 28px;
+        line-height: 32px;
+    }
+
+    .form {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .form h2 {
+        font-size: 20px;
+    }
+
+    .point,
+    .frame-104 {
+        width: 40px;
+        height: 40px;
+    }
+
+    .breakable,
+    .people {
+        width: 18px;
+        height: 18px;
+    }
+
+    .current-location {
+        font-size: 13px;
+    }
+
+    .frame-193 {
+        padding: 12px 8px;
+    }
+
+    ._0-8-mi-to-recipient {
+        font-size: 13px;
+    }
+
+    .sarah-jenkins,
+    .community-harvest-ng {
+        font-size: 20px;
+        line-height: 24px;
+    }
+
+    .sarah-j-impact-com,
+    .delivered-oct-24-2 {
+        font-size: 14px;
+    }
+
+    .cardtxt h3 {
+        font-size: 16px;
+    }
+
+    .cardtxt p {
+        font-size: 32px;
+    }
+
+    .cardtxt p span {
+        font-size: 18px;
+    }
+
+    .delivery-head h2 {
+        font-size: 20px;
+    }
+
+    .food-card h3 {
+        font-size: 16px;
+    }
+
+    .food-card header p {
+        font-size: 12px;
+    }
+
+    .save-btn {
+        font-size: 18px;
+        padding: 10px 16px;
+    }
 }
 
 @media (max-width: 1100px) {

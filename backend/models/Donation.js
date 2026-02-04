@@ -175,7 +175,7 @@ donationSchema.pre('save', async function() {
 // Index for efficient queries
 donationSchema.index({ donorId: 1, createdAt: -1 });
 donationSchema.index({ status: 1 });
-donationSchema.index({ trackingId: 1 });
+// trackingId index is already created by unique: true in field definition
 
 const Donation = mongoose.model('Donation', donationSchema);
 

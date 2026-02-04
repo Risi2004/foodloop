@@ -8,8 +8,15 @@ const { authenticateUser } = require('../middleware/auth');
 const Donation = require('../models/Donation');
 const User = require('../models/User');
 const { calculateExpiryDate } = require('../services/expiryService');
-const { sendDonationLiveEmail, sendNewDonationNotificationToReceivers } = require('../utils/emailService');
-const { geocodeAddress } = require('../services/geocodingService');
+const { 
+  sendDonationLiveEmail, 
+  sendNewDonationNotificationToReceivers,
+  sendReceiptEmailToDonor,
+  sendReceiptEmailToDriver,
+} = require('../utils/emailService');
+const { geocodeAddress, calculateDistance } = require('../services/geocodingService');
+const ImpactReceipt = require('../models/ImpactReceipt');
+const { generateImpactReceiptPDF } = require('../services/pdfService');
 
 // Apply file upload middleware for image uploads
 router.use(express.json());
@@ -697,11 +704,23 @@ router.post('/:id/claim', authenticateUser, async (req, res) => {
     // Fetch donor details for email
     const donor = await User.findById(donation.donorId).select('-password');
 
-    // Send email notification to donor (async, don't block response)
-    const { sendDonationClaimedEmail } = require('../utils/emailService');
+    // Send email notifications (async, don't block response)
+    const { 
+      sendDonationClaimedEmail,
+      sendDonationAvailableNotificationToDrivers 
+    } = require('../utils/emailService');
+    
+    // Send email to donor
     sendDonationClaimedEmail(donation, donor, receiver)
       .catch(error => {
         console.error('[Donations] Error sending claim notification email to donor:', error.message);
+        // Don't fail claim if email fails
+      });
+
+    // Send email to all active drivers about the new pickup opportunity
+    sendDonationAvailableNotificationToDrivers(donation, donor, receiver)
+      .catch(error => {
+        console.error('[Donations] Error sending donation available notification to drivers:', error.message);
         // Don't fail claim if email fails
       });
 
@@ -1891,6 +1910,557 @@ router.post('/:id/confirm-delivery', authenticateUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to confirm delivery',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/:id/receipt-details
+ * Get donation details for receipt creation
+ * Requires authentication (Receiver role)
+ */
+router.get('/:id/receipt-details', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const receiverId = req.user.id;
+
+    // Check if user is a Receiver
+    if (req.user.role !== 'Receiver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only receivers can access receipt details',
+      });
+    }
+
+    // Find the donation
+    const donation = await Donation.findById(id)
+      .populate('donorId', 'email donorType username businessName address')
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType')
+      .lean();
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Verify donation is assigned to the authenticated receiver
+    if (!donation.assignedReceiverId || 
+        donation.assignedReceiverId._id.toString() !== receiverId) {
+      return res.status(403).json({
+        success: false,
+        message: 'This donation is not assigned to you',
+      });
+    }
+
+    // Verify donation status is 'delivered'
+    if (donation.status !== 'delivered') {
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt can only be created for delivered donations',
+        status: donation.status,
+      });
+    }
+
+    // Get donor information
+    const donor = donation.donorId;
+    const donorName = donor?.donorType === 'Business'
+      ? donor?.businessName
+      : donor?.username || donor?.email || 'Anonymous';
+
+    // Get receiver information
+    const receiver = donation.assignedReceiverId;
+    const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
+
+    // Get driver information
+    const driver = donation.assignedDriverId;
+    const driverName = driver?.driverName || 'Driver';
+
+    // Calculate distance if coordinates are available
+    let distanceTraveled = 0;
+    if (donation.donorLatitude && donation.donorLongitude && receiver?.address) {
+      // Try to get receiver coordinates by geocoding address
+      const receiverCoords = await geocodeAddress(receiver.address);
+      if (receiverCoords) {
+        distanceTraveled = calculateDistance(
+          donation.donorLatitude,
+          donation.donorLongitude,
+          receiverCoords.lat,
+          receiverCoords.lng
+        );
+      }
+    }
+
+    // Format delivery date
+    const deliveryDate = donation.updatedAt || donation.actualPickupDate || donation.createdAt;
+    const formattedDeliveryDate = new Date(deliveryDate).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    // Check if receipt already exists
+    const existingReceipt = await ImpactReceipt.findOne({ donationId: id }).lean();
+
+    // Format response
+    const receiptDetails = {
+      donation: {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+        foodCategory: donation.foodCategory,
+        storageRecommendation: donation.storageRecommendation,
+      },
+      donor: {
+        id: donor?._id?.toString(),
+        name: donorName,
+        email: donor?.email || '',
+        address: donation.donorAddress || donor?.address || '',
+        type: donor?.donorType || 'Individual',
+      },
+      receiver: {
+        id: receiver?._id?.toString(),
+        name: receiverName,
+        type: receiver?.receiverType || '',
+        address: receiver?.address || '',
+      },
+      driver: driver ? {
+        id: driver._id?.toString(),
+        name: driverName,
+        vehicleNumber: driver.vehicleNumber || '',
+        vehicleType: driver.vehicleType || '',
+      } : null,
+      deliveryDate: formattedDeliveryDate,
+      deliveryDateRaw: deliveryDate,
+      distanceTraveled: distanceTraveled,
+    };
+
+    // If receipt exists, include it in the response
+    if (existingReceipt) {
+      receiptDetails.existingReceipt = {
+        dropLocation: existingReceipt.dropLocation,
+        peopleFed: existingReceipt.peopleFed,
+        weightPerServing: existingReceipt.weightPerServing,
+        distanceTraveled: existingReceipt.distanceTraveled,
+        methaneSaved: existingReceipt.methaneSaved,
+        createdAt: existingReceipt.createdAt,
+      };
+    }
+
+    console.log(`[Donations] Returning receipt details for donation ${id}`);
+
+    res.status(200).json({
+      success: true,
+      receiptDetails,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching receipt details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch receipt details',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/donations/:id/create-receipt
+ * Create an impact receipt for a delivered donation
+ * Requires authentication (Receiver role)
+ */
+router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const receiverId = req.user.id;
+    const { dropLocation, peopleFed, weightPerServing } = req.body;
+
+    // Check if user is a Receiver
+    if (req.user.role !== 'Receiver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only receivers can create receipts',
+      });
+    }
+
+    // Validate required fields
+    if (!dropLocation || typeof dropLocation !== 'string' || dropLocation.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        errors: [{ field: 'dropLocation', message: 'Drop location is required' }],
+      });
+    }
+
+    if (!peopleFed || typeof peopleFed !== 'number' || peopleFed < 1) {
+      return res.status(400).json({
+        success: false,
+        errors: [{ field: 'peopleFed', message: 'People fed must be a number greater than 0' }],
+      });
+    }
+
+    if (!weightPerServing || typeof weightPerServing !== 'number' || weightPerServing < 0.001) {
+      return res.status(400).json({
+        success: false,
+        errors: [{ field: 'weightPerServing', message: 'Weight per serving must be a number greater than or equal to 0.001 kg' }],
+      });
+    }
+
+    // Find the donation
+    const donation = await Donation.findById(id)
+      .populate('assignedReceiverId', 'address')
+      .lean();
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Verify donation is assigned to the authenticated receiver
+    if (!donation.assignedReceiverId || 
+        donation.assignedReceiverId._id.toString() !== receiverId) {
+      return res.status(403).json({
+        success: false,
+        message: 'This donation is not assigned to you',
+      });
+    }
+
+    // Verify donation status is 'delivered'
+    if (donation.status !== 'delivered') {
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt can only be created for delivered donations',
+        status: donation.status,
+      });
+    }
+
+    // Check if receipt already exists - if it does, return it in the response
+    const existingReceipt = await ImpactReceipt.findOne({ donationId: id }).lean();
+    
+    // If receipt exists, include it in the response
+    if (existingReceipt) {
+      receiptDetails.existingReceipt = {
+        dropLocation: existingReceipt.dropLocation,
+        peopleFed: existingReceipt.peopleFed,
+        weightPerServing: existingReceipt.weightPerServing,
+        distanceTraveled: existingReceipt.distanceTraveled,
+        methaneSaved: existingReceipt.methaneSaved,
+        createdAt: existingReceipt.createdAt,
+      };
+    }
+
+    // Calculate distance if coordinates are available
+    let distanceTraveled = 0;
+    if (donation.donorLatitude && donation.donorLongitude && donation.assignedReceiverId?.address) {
+      const receiverCoords = await geocodeAddress(donation.assignedReceiverId.address);
+      if (receiverCoords) {
+        distanceTraveled = calculateDistance(
+          donation.donorLatitude,
+          donation.donorLongitude,
+          receiverCoords.lat,
+          receiverCoords.lng
+        );
+      }
+    }
+
+    // Calculate methane saved using formula: CH₄ = MSW × 0.05
+    // Where MSW = (quantity × weightPerServing) in tons
+    // Formula breakdown: CH₄ = (quantity × weightPerServing / 1000) × 0.05
+    // Constants: DOC = 0.15, DOC_f = 0.5, F = 0.5, 16/12 = 1.333...
+    // Simplified: CH₄ = MSW × 0.15 × 0.5 × 0.5 × (16/12) = MSW × 0.05
+    const quantity = donation.quantity || 0;
+    const totalWeightKg = quantity * weightPerServing; // Total weight in kg
+    const totalWeightTons = totalWeightKg / 1000; // Convert to tons
+    const methaneSaved = totalWeightTons * 0.05; // Apply formula
+
+    // Create impact receipt
+    const impactReceipt = new ImpactReceipt({
+      donationId: id,
+      receiverId: receiverId,
+      dropLocation: dropLocation.trim(),
+      peopleFed: Math.round(peopleFed),
+      weightPerServing: Math.round(weightPerServing * 1000) / 1000, // Round to 3 decimal places (grams precision)
+      distanceTraveled: distanceTraveled,
+      methaneSaved: Math.round(methaneSaved * 100) / 100, // Round to 2 decimal places
+    });
+
+    await impactReceipt.save();
+
+    console.log(`[Donations] Created impact receipt for donation ${id}`);
+    console.log(`[Donations] Receipt details:`, {
+      peopleFed: impactReceipt.peopleFed,
+      weightPerServing: impactReceipt.weightPerServing,
+      distanceTraveled: impactReceipt.distanceTraveled,
+      methaneSaved: impactReceipt.methaneSaved,
+      quantity: donation.quantity,
+    });
+
+    // Generate PDF and send emails asynchronously (don't block response)
+    (async () => {
+      try {
+        // Fetch full donation data with populated fields
+        const fullDonation = await Donation.findById(id)
+          .populate('donorId', 'email donorType username businessName address role')
+          .populate('assignedReceiverId', 'receiverName receiverType email address role')
+          .populate('assignedDriverId', 'driverName vehicleNumber vehicleType email role')
+          .lean();
+
+        if (!fullDonation) {
+          console.error(`[Donations] Donation ${id} not found for PDF generation`);
+          return;
+        }
+
+        // Format donation data for PDF
+        const donorName = fullDonation.donorId?.donorType === 'Business'
+          ? fullDonation.donorId?.businessName
+          : fullDonation.donorId?.username || fullDonation.donorId?.email || 'Anonymous';
+
+        const receiverName = fullDonation.assignedReceiverId?.receiverName || fullDonation.assignedReceiverId?.email || 'Receiver';
+        const driverName = fullDonation.assignedDriverId?.driverName || 'Driver';
+
+        const deliveryDate = new Date(fullDonation.updatedAt || fullDonation.actualPickupDate || fullDonation.createdAt)
+          .toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+
+        const donationDataForPDF = {
+          trackingId: fullDonation.trackingId,
+          donor: {
+            name: donorName,
+            username: fullDonation.donorId?.username || '',
+            businessName: fullDonation.donorId?.businessName || '',
+            email: fullDonation.donorId?.email || '',
+            address: fullDonation.donorAddress || fullDonation.donorId?.address || '',
+            donorType: fullDonation.donorId?.donorType || 'Individual',
+            type: fullDonation.donorId?.donorType || 'Individual',
+          },
+          receiver: {
+            name: receiverName,
+            receiverName: receiverName,
+            receiverType: fullDonation.assignedReceiverId?.receiverType || '',
+            type: fullDonation.assignedReceiverId?.receiverType || '',
+            address: fullDonation.assignedReceiverId?.address || '',
+          },
+          driver: fullDonation.assignedDriverId ? {
+            name: driverName,
+            driverName: driverName,
+            vehicleNumber: fullDonation.assignedDriverId.vehicleNumber || '',
+            vehicleType: fullDonation.assignedDriverId.vehicleType || '',
+          } : null,
+          donation: {
+            itemName: fullDonation.itemName,
+            quantity: fullDonation.quantity,
+            foodCategory: fullDonation.foodCategory,
+            storageRecommendation: fullDonation.storageRecommendation,
+          },
+          deliveryDate: deliveryDate,
+          donorAddress: fullDonation.donorAddress || fullDonation.donorId?.address || '',
+        };
+
+        // Refresh receipt from database to ensure we have all saved values
+        const savedReceipt = await ImpactReceipt.findById(impactReceipt._id).lean();
+        
+        console.log(`[Donations] Generating PDF for receipt ${impactReceipt._id}`);
+        console.log(`[Donations] Saved receipt methaneSaved:`, savedReceipt?.methaneSaved);
+        
+        const pdfBuffer = await generateImpactReceiptPDF(savedReceipt, donationDataForPDF);
+        console.log(`[Donations] PDF generated successfully for receipt ${impactReceipt._id}`);
+
+        // Send emails with PDF attachment
+        if (fullDonation.donorId && fullDonation.donorId.email) {
+          try {
+            await sendReceiptEmailToDonor(
+              savedReceipt,
+              {
+                ...donationDataForPDF,
+                itemName: fullDonation.itemName,
+                receiver: donationDataForPDF.receiver,
+              },
+              fullDonation.donorId,
+              pdfBuffer
+            );
+            console.log(`[Donations] Receipt email sent to donor: ${fullDonation.donorId.email}`);
+          } catch (emailError) {
+            console.error(`[Donations] Error sending receipt email to donor:`, emailError.message);
+            // Continue with driver email even if donor email fails
+          }
+        }
+
+        if (fullDonation.assignedDriverId && fullDonation.assignedDriverId.email) {
+          try {
+            await sendReceiptEmailToDriver(
+              savedReceipt,
+              {
+                ...donationDataForPDF,
+                itemName: fullDonation.itemName,
+                receiver: donationDataForPDF.receiver,
+              },
+              fullDonation.assignedDriverId,
+              pdfBuffer
+            );
+            console.log(`[Donations] Receipt email sent to driver: ${fullDonation.assignedDriverId.email}`);
+          } catch (emailError) {
+            console.error(`[Donations] Error sending receipt email to driver:`, emailError.message);
+            // Don't fail receipt creation if email fails
+          }
+        }
+      } catch (error) {
+        console.error(`[Donations] Error generating PDF or sending emails for receipt:`, error);
+        // Don't fail receipt creation if PDF/email generation fails
+      }
+    })();
+
+    res.status(201).json({
+      success: true,
+      message: 'Impact receipt created successfully. PDF and emails are being generated.',
+      receipt: {
+        id: impactReceipt._id.toString(),
+        donationId: impactReceipt.donationId.toString(),
+        dropLocation: impactReceipt.dropLocation,
+        peopleFed: impactReceipt.peopleFed,
+        weightPerServing: impactReceipt.weightPerServing,
+        distanceTraveled: impactReceipt.distanceTraveled,
+        methaneSaved: impactReceipt.methaneSaved,
+        createdAt: impactReceipt.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error creating impact receipt:', error);
+    
+    // Handle duplicate key error (shouldn't happen due to check, but just in case)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Receipt already exists for this donation',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create impact receipt',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/:id/receipt-pdf
+ * Get PDF receipt for a donation
+ * Requires authentication (Receiver role)
+ */
+router.get('/:id/receipt-pdf', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const receiverId = req.user.id;
+
+    // Check if user is a Receiver
+    if (req.user.role !== 'Receiver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only receivers can access receipt PDFs',
+      });
+    }
+
+    // Find the receipt
+    const receipt = await ImpactReceipt.findOne({ donationId: id })
+      .populate('donationId')
+      .lean();
+
+    if (!receipt) {
+      return res.status(404).json({
+        success: false,
+        message: 'Receipt not found for this donation',
+      });
+    }
+
+    // Verify receipt belongs to the authenticated receiver
+    if (receipt.receiverId.toString() !== receiverId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this receipt',
+      });
+    }
+
+    // Find the donation with all populated data
+    const donation = await Donation.findById(id)
+      .populate('donorId', 'email donorType username businessName address')
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType')
+      .lean();
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    // Format donation data for PDF
+    const donorName = donation.donorId?.donorType === 'Business'
+      ? donation.donorId?.businessName
+      : donation.donorId?.username || donation.donorId?.email || 'Anonymous';
+
+    const receiverName = donation.assignedReceiverId?.receiverName || donation.assignedReceiverId?.email || 'Receiver';
+    const driverName = donation.assignedDriverId?.driverName || 'Driver';
+
+    const deliveryDate = new Date(donation.updatedAt || donation.actualPickupDate || donation.createdAt)
+      .toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+
+    const donationData = {
+      trackingId: donation.trackingId,
+      donor: {
+        name: donorName,
+        email: donation.donorId?.email || '',
+        address: donation.donorAddress || donation.donorId?.address || '',
+        donorType: donation.donorId?.donorType || 'Individual',
+      },
+      receiver: {
+        receiverName: receiverName,
+        receiverType: donation.assignedReceiverId?.receiverType || '',
+        address: donation.assignedReceiverId?.address || '',
+      },
+      driver: donation.assignedDriverId ? {
+        driverName: driverName,
+        vehicleNumber: donation.assignedDriverId.vehicleNumber || '',
+        vehicleType: donation.assignedDriverId.vehicleType || '',
+      } : null,
+      donation: {
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        foodCategory: donation.foodCategory,
+        storageRecommendation: donation.storageRecommendation,
+      },
+      deliveryDate: deliveryDate,
+    };
+
+    // Generate PDF
+    const pdfBuffer = await generateImpactReceiptPDF(receipt, donationData);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="impact-receipt-${donation.trackingId || id}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    console.log(`[Donations] Generated PDF receipt for donation ${id}`);
+
+    // Send PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[Donations] Error generating PDF receipt:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate PDF receipt',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

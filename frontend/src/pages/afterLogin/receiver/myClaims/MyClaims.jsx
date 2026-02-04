@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import "./MyClaims.css";
 import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
 import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
@@ -12,8 +12,10 @@ const Myclaims = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch claimed donations
+    // Fetch claimed donations - only on initial load
     useEffect(() => {
+        let isMounted = true;
+
         const fetchClaims = async () => {
             try {
                 setLoading(true);
@@ -22,6 +24,8 @@ const Myclaims = () => {
                 
                 const response = await getMyClaims();
                 
+                if (!isMounted) return;
+                
                 if (response.success && response.donations) {
                     console.log(`[MyClaims] Loaded ${response.donations.length} claimed donations`);
                     setDonations(response.donations);
@@ -29,27 +33,25 @@ const Myclaims = () => {
                     setDonations([]);
                 }
             } catch (err) {
+                if (!isMounted) return;
                 console.error('[MyClaims] Error fetching claims:', err);
                 setError(err.message || 'Failed to load your claims');
                 setDonations([]);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
-        // Initial fetch
+        // Initial fetch only
         fetchClaims();
 
-        // Poll for updates every 5 seconds to catch status changes
-        const intervalId = setInterval(() => {
-            fetchClaims();
-        }, 5000);
-
-        // Cleanup interval on unmount
+        // Cleanup on unmount
         return () => {
-            clearInterval(intervalId);
+            isMounted = false;
         };
-    }, []);
+    }, []); // Only run once on mount
 
     // Filter donations by status
     const lookingForDriver = donations.filter(d => d.status === 'assigned');

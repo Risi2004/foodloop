@@ -876,3 +876,212 @@ export const submitDonation = async (donationData) => {
     throw wrappedError;
   }
 };
+
+/**
+ * Get donation details for receipt creation
+ * @param {string} donationId - Donation ID to get receipt details for
+ * @returns {Promise} Response with receipt details
+ */
+export const getDonationReceiptDetails = async (donationId) => {
+  try {
+    console.log('[DonationAPI] Fetching receipt details for donation:', donationId);
+    
+    // Check if token is expired before making the request
+    if (isTokenExpired()) {
+      console.warn('[DonationAPI] Token is expired, clearing auth');
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { 
+        data: { 
+          message: 'Your session has expired. Please log in again.',
+          code: 'TOKEN_EXPIRED'
+        } 
+      };
+      throw error;
+    }
+    
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/receipt-details`, {
+      method: 'GET',
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Handle token expiration error
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        console.warn('[DonationAPI] Token expired or invalid, clearing auth');
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { 
+          data: { 
+            message: 'Your session has expired. Please log in again.',
+            code: 'TOKEN_EXPIRED'
+          } 
+        };
+        throw error;
+      }
+      
+      const error = new Error(data.message || 'Failed to fetch receipt details');
+      error.response = { data };
+      throw error;
+    }
+
+    console.log('[DonationAPI] Receipt details fetched successfully');
+    return data;
+  } catch (error) {
+    console.error('[DonationAPI] Error fetching receipt details:', error);
+    if (error.response) {
+      throw error;
+    }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Create an impact receipt for a donation
+ * @param {string} donationId - Donation ID to create receipt for
+ * @param {Object} receiptData - Receipt data (dropLocation, peopleFed, methaneSaved)
+ * @returns {Promise} Response with created receipt
+ */
+export const createImpactReceipt = async (donationId, receiptData) => {
+  try {
+    console.log('[DonationAPI] Creating impact receipt for donation:', donationId);
+    
+    // Check if token is expired before making the request
+    if (isTokenExpired()) {
+      console.warn('[DonationAPI] Token is expired, clearing auth');
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { 
+        data: { 
+          message: 'Your session has expired. Please log in again.',
+          code: 'TOKEN_EXPIRED'
+        } 
+      };
+      throw error;
+    }
+    
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/create-receipt`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(receiptData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Handle token expiration error
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        console.warn('[DonationAPI] Token expired or invalid, clearing auth');
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { 
+          data: { 
+            message: 'Your session has expired. Please log in again.',
+            code: 'TOKEN_EXPIRED'
+          } 
+        };
+        throw error;
+      }
+      
+      // Handle validation errors
+      if (data.errors && Array.isArray(data.errors)) {
+        const error = new Error(data.message || 'Validation error');
+        error.response = { data };
+        throw error;
+      }
+      
+      const error = new Error(data.message || 'Failed to create impact receipt');
+      error.response = { data };
+      throw error;
+    }
+
+    console.log('[DonationAPI] Impact receipt created successfully');
+    return data;
+  } catch (error) {
+    console.error('[DonationAPI] Error creating impact receipt:', error);
+    if (error.response) {
+      throw error;
+    }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Get PDF receipt for a donation
+ * @param {string} donationId - Donation ID to get PDF receipt for
+ * @returns {Promise<Blob>} PDF blob
+ */
+export const getReceiptPDF = async (donationId) => {
+  try {
+    console.log('[DonationAPI] Fetching PDF receipt for donation:', donationId);
+    
+    // Check if token is expired before making the request
+    if (isTokenExpired()) {
+      console.warn('[DonationAPI] Token is expired, clearing auth');
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { 
+        data: { 
+          message: 'Your session has expired. Please log in again.',
+          code: 'TOKEN_EXPIRED'
+        } 
+      };
+      throw error;
+    }
+    
+    const headers = getAuthHeaders();
+    // Don't set Content-Type for blob response
+
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/receipt-pdf`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch PDF' }));
+      
+      // Handle token expiration error
+      if (response.status === 401 && (errorData.message?.includes('token') || errorData.message?.includes('expired') || errorData.message?.includes('Invalid'))) {
+        console.warn('[DonationAPI] Token expired or invalid, clearing auth');
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { 
+          data: { 
+            message: 'Your session has expired. Please log in again.',
+            code: 'TOKEN_EXPIRED'
+          } 
+        };
+        throw error;
+      }
+      
+      const error = new Error(errorData.message || 'Failed to fetch PDF receipt');
+      error.response = { data: errorData };
+      throw error;
+    }
+
+    // Get PDF as blob
+    const blob = await response.blob();
+    console.log('[DonationAPI] PDF receipt fetched successfully');
+    return blob;
+  } catch (error) {
+    console.error('[DonationAPI] Error fetching PDF receipt:', error);
+    if (error.response) {
+      throw error;
+    }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};

@@ -916,6 +916,164 @@ const sendNewDonationNotificationToReceivers = async (donation, donor) => {
 };
 
 /**
+ * Send donation available notification email to a single driver
+ * Sent when a receiver claims a donation, notifying drivers that a pickup is available
+ */
+const sendDonationAvailableNotificationToDriver = async (donation, donor, receiver, driver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation available notification email to driver.');
+    return;
+  }
+
+  try {
+    const driverName = driver?.driverName || driver?.email || 'Driver';
+    const donorName = getUserDisplayName(donor);
+    const receiverName = getUserDisplayName(receiver);
+    
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: driver.email,
+      subject: '🚚 New Pickup Available - FoodLoop Delivery',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .info-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background: #1b4332;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              margin-top: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">🚚 New Pickup Available!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${driverName},</p>
+            
+            <p>A new food donation pickup is now available for delivery!</p>
+            
+            <div class="info-box">
+              <strong>Donation Details:</strong><br>
+              <strong>Item:</strong> ${donation.itemName}<br>
+              <strong>Quantity:</strong> ${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}<br>
+              <strong>Tracking ID:</strong> ${donation.trackingId}<br>
+              <strong>From:</strong> ${donorName}<br>
+              <strong>To:</strong> ${receiverName}<br>
+              <strong>Pickup Address:</strong> ${donation.donorAddress || 'See details in app'}
+            </div>
+            
+            <p>Log in to your driver portal to view this pickup and accept the delivery.</p>
+            
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/driver/delivery" class="button">
+              View Available Pickups
+            </a>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Donation available notification sent to driver: ${driver.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending donation available notification to driver ${driver.email}:`, error.message);
+    throw error; // Re-throw so Promise.allSettled can catch it
+  }
+};
+
+/**
+ * Send donation available notification emails to all active drivers
+ * Sent when a receiver claims a donation
+ */
+const sendDonationAvailableNotificationToDrivers = async (donation, donor, receiver) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation available notification emails to drivers.');
+    return;
+  }
+
+  try {
+    // Import User model here to avoid circular dependencies
+    const User = require('../models/User');
+    
+    // Fetch all drivers with status 'completed' (approved drivers)
+    const drivers = await User.find({
+      role: 'Driver',
+      status: 'completed',
+    }).select('email driverName');
+
+    if (!drivers || drivers.length === 0) {
+      console.log('[Donations] No approved drivers found. Skipping email notifications.');
+      return;
+    }
+
+    console.log(`[Donations] Sending donation available notification to ${drivers.length} driver(s)...`);
+
+    // Send emails to all drivers asynchronously (don't wait for all to complete)
+    // Use Promise.allSettled to handle individual failures gracefully
+    const emailPromises = drivers.map(driver => 
+      sendDonationAvailableNotificationToDriver(donation, donor, receiver, driver)
+    );
+
+    const results = await Promise.allSettled(emailPromises);
+    
+    // Count successful and failed emails
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+
+    console.log(`[Donations] Driver email notifications sent: ${successful} successful, ${failed} failed`);
+    
+    if (failed > 0) {
+      console.warn(`[Donations] ${failed} driver email notification(s) failed, but donation was still claimed successfully.`);
+    }
+  } catch (error) {
+    console.error('[Donations] Error sending donation available notifications to drivers:', error.message);
+    // Don't throw error - email failure shouldn't break donation claim
+  }
+};
+
+/**
  * Send donation claimed notification email to donor
  * Sent when a receiver claims their donation
  */
@@ -1530,7 +1688,813 @@ const sendDeliveryConfirmedEmailToReceiver = async (donation, receiver, driver) 
   }
 };
 
+/**
+ * Send donation expiry warning email to donor
+ * Sent 1-2 hours before donation expires
+ */
+const sendDonationExpiryWarningEmail = async (donation, donor) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation expiry warning email.');
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const expiryDate = new Date(donation.expiryDate);
+    const expiryTime = expiryDate.toLocaleString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: '⚠️ Your Donation Will Expire Soon',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .warning-box {
+              background: #fef3c7;
+              border-left: 4px solid #f59e0b;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .info-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">⚠️ Expiry Warning</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${donorName},</p>
+            
+            <div class="warning-box">
+              <strong>⚠️ Important:</strong> Your donation will expire soon!
+            </div>
+            
+            <div class="info-box">
+              <strong>Donation Details:</strong><br>
+              <strong>Item:</strong> ${donation.itemName}<br>
+              <strong>Quantity:</strong> ${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}<br>
+              <strong>Tracking ID:</strong> ${donation.trackingId || 'N/A'}<br>
+              <strong>Expires:</strong> ${expiryTime}
+            </div>
+            
+            <p>Your donation is expiring soon. If it hasn't been claimed or picked up yet, it will be automatically removed from the platform after the expiry time.</p>
+            
+            <p>Please check the status of your donation in your dashboard. If you'd like to extend the expiry or make any changes, please contact us.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Donation expiry warning email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending donation expiry warning email to donor ${donor.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send donation deleted email to donor
+ * Sent after donation is automatically deleted due to expiration
+ */
+const sendDonationDeletedEmail = async (donation, donor) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping donation deleted email.');
+    return;
+  }
+
+  try {
+    const donorName = getUserDisplayName(donor);
+    const expiryDate = new Date(donation.expiryDate);
+    const expiryTime = expiryDate.toLocaleString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: 'Your Donation Has Been Removed - Expired',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .info-box {
+              background: #fee2e2;
+              border-left: 4px solid #ef4444;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .encouragement-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Donation Removed</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${donorName},</p>
+            
+            <p>We wanted to inform you that your donation has been automatically removed from the platform due to expiration.</p>
+            
+            <div class="info-box">
+              <strong>Removed Donation Details:</strong><br>
+              <strong>Item:</strong> ${donation.itemName}<br>
+              <strong>Quantity:</strong> ${donation.quantity} ${donation.quantity === 1 ? 'serving' : 'servings'}<br>
+              <strong>Tracking ID:</strong> ${donation.trackingId || 'N/A'}<br>
+              <strong>Expired On:</strong> ${expiryTime}<br>
+              <strong>Status:</strong> ${donation.status}
+            </div>
+            
+            <p><strong>Reason for Removal:</strong> The donation reached its expiry date and was automatically removed to maintain food safety standards.</p>
+            
+            <div class="encouragement-box">
+              <strong>💚 Thank You for Your Contribution!</strong><br>
+              We appreciate your effort to reduce food waste. Even though this donation expired, your willingness to help makes a difference. We encourage you to create a new donation when you have food available.
+            </div>
+            
+            <p>If you have any questions or concerns, please don't hesitate to contact us.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Donation deleted email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending donation deleted email to donor ${donor.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send impact receipt email to donor with PDF attachment
+ * @param {Object} receipt - Impact receipt data
+ * @param {Object} donation - Donation data
+ * @param {Object} donor - Donor user data
+ * @param {Buffer} pdfBuffer - PDF buffer to attach
+ */
+const sendReceiptEmailToDonor = async (receipt, donation, donor, pdfBuffer) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping receipt email to donor.');
+    return;
+  }
+
+  try {
+    // Ensure donor has role for getUserDisplayName to work correctly
+    if (!donor.role) {
+      donor.role = 'Donor';
+    }
+    const donorName = getUserDisplayName(donor);
+    const itemName = donation.itemName || donation.donation?.itemName || 'Food Item';
+    const peopleFed = receipt.peopleFed || 0;
+    
+    // Ensure methaneSaved is properly accessed and formatted
+    let methaneSavedValue = receipt.methaneSaved;
+    if (typeof methaneSavedValue === 'undefined' || methaneSavedValue === null) {
+      methaneSavedValue = 0;
+    }
+    const methaneSaved = typeof methaneSavedValue === 'number' 
+      ? methaneSavedValue.toFixed(2) 
+      : parseFloat(methaneSavedValue || 0).toFixed(2);
+    
+    console.log(`[EmailService] Donor email - methaneSaved: ${methaneSaved} (from receipt: ${receipt.methaneSaved})`);
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: donor.email,
+      subject: 'Thank You! Your Donation Impact Receipt',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .impact-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .metrics {
+              display: flex;
+              justify-content: space-around;
+              margin: 20px 0;
+              flex-wrap: wrap;
+            }
+            .metric {
+              text-align: center;
+              padding: 10px;
+            }
+            .metric-value {
+              font-size: 24px;
+              font-weight: 700;
+              color: #1b4332;
+            }
+            .metric-label {
+              font-size: 12px;
+              color: #666;
+              margin-top: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Thank You for Your Donation!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${donorName},</p>
+            
+            <p>Thank you for your generous donation of <strong>${itemName}</strong>. Your contribution has made a significant impact in our community!</p>
+            
+            <div class="impact-box">
+              <strong>Your Impact:</strong><br>
+              Your donation has helped feed <strong>${peopleFed}</strong> ${peopleFed === 1 ? 'person' : 'people'} and saved <strong>${methaneSaved} KG</strong> of methane emissions from entering the atmosphere.
+            </div>
+            
+            <div class="metrics">
+              <div class="metric">
+                <div class="metric-value">${peopleFed}</div>
+                <div class="metric-label">People Fed</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">${methaneSaved} KG</div>
+                <div class="metric-label">Methane Saved</div>
+              </div>
+            </div>
+            
+            <p>We've attached your impact receipt for your records. This receipt contains all the details about your donation and the positive impact it has created.</p>
+            
+            <p>Your commitment to reducing food waste and helping those in need is truly appreciated. Together, we are making a difference!</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `impact-receipt-${donation.trackingId || donation.donationId || 'receipt'}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Receipt email sent to donor: ${donor.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending receipt email to donor ${donor.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send impact receipt email to driver with PDF attachment
+ * @param {Object} receipt - Impact receipt data
+ * @param {Object} donation - Donation data
+ * @param {Object} driver - Driver user data
+ * @param {Buffer} pdfBuffer - PDF buffer to attach
+ */
+const sendReceiptEmailToDriver = async (receipt, donation, driver, pdfBuffer) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping receipt email to driver.');
+    return;
+  }
+
+  try {
+    // Ensure driver has role for getUserDisplayName to work correctly
+    if (!driver.role) {
+      driver.role = 'Driver';
+    }
+    const driverName = getUserDisplayName(driver);
+    const itemName = donation.itemName || donation.donation?.itemName || 'Food Item';
+    const receiverName = donation.receiver?.receiverName || donation.receiver?.email || 'Receiver';
+    const distance = receipt.distanceTraveled?.toFixed(2) || '0.00';
+    const peopleFed = receipt.peopleFed || 0;
+    
+    // Ensure methaneSaved is properly accessed and formatted
+    let methaneSavedValue = receipt.methaneSaved;
+    if (typeof methaneSavedValue === 'undefined' || methaneSavedValue === null) {
+      methaneSavedValue = 0;
+    }
+    const methaneSaved = typeof methaneSavedValue === 'number' 
+      ? methaneSavedValue.toFixed(2) 
+      : parseFloat(methaneSavedValue || 0).toFixed(2);
+    
+    console.log(`[EmailService] Driver email - methaneSaved: ${methaneSaved} (from receipt: ${receipt.methaneSaved})`);
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: driver.email,
+      subject: 'Delivery Impact Receipt - Thank You!',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .impact-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+            }
+            .metrics {
+              display: flex;
+              justify-content: space-around;
+              margin: 20px 0;
+              flex-wrap: wrap;
+            }
+            .metric {
+              text-align: center;
+              padding: 10px;
+            }
+            .metric-value {
+              font-size: 24px;
+              font-weight: 700;
+              color: #1b4332;
+            }
+            .metric-label {
+              font-size: 12px;
+              color: #666;
+              margin-top: 5px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Thank You for Your Delivery Service!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${driverName},</p>
+            
+            <p>Thank you for your excellent delivery service! You played a crucial role in making this donation a success.</p>
+            
+            <div class="impact-box">
+              <strong>Your Delivery Impact:</strong><br>
+              You traveled <strong>${distance} KM</strong> to deliver <strong>${itemName}</strong> to <strong>${receiverName}</strong>, helping feed <strong>${peopleFed}</strong> ${peopleFed === 1 ? 'person' : 'people'}.
+            </div>
+            
+            <div class="metrics">
+              <div class="metric">
+                <div class="metric-value">${distance} KM</div>
+                <div class="metric-label">Distance Traveled</div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">${peopleFed}</div>
+                <div class="metric-label">People Fed</div>
+              </div>
+            </div>
+            
+            <p>Your dedication to reducing food waste and helping connect donors with those in need is greatly appreciated. Without your reliable delivery service, this impact would not have been possible.</p>
+            
+            <p>We've attached the impact receipt for your records. This receipt shows the complete impact of the delivery you completed.</p>
+            
+            <p>Thank you for being an essential part of the FoodLoop community!</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: [
+        {
+          filename: `impact-receipt-${donation.trackingId || donation.donationId || 'receipt'}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Receipt email sent to driver: ${driver.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending receipt email to driver ${driver.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send review submitted email to user
+ * @param {Object} user - User who submitted the review
+ * @param {Object} review - Review data
+ */
+const sendReviewSubmittedEmail = async (user, review) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping review submitted email.');
+    return;
+  }
+
+  try {
+    const userName = getUserDisplayName(user);
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: 'Thank You! Your Review is Under Review',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .review-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Thank You for Your Review!</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${userName},</p>
+            
+            <p>Thank you for taking the time to share your experience with FoodLoop! We truly value your feedback.</p>
+            
+            <div class="review-box">
+              "${review.reviewText}"
+            </div>
+            
+            <p><strong>Your review is currently under review.</strong></p>
+            <p>Our admin team will carefully review your submission to ensure it meets our community guidelines. This process typically takes 1-2 business days.</p>
+            
+            <p>Once approved, your review will appear on our home page for the entire FoodLoop community to see!</p>
+            
+            <p>We appreciate your patience during this review process.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Review submitted email sent to: ${user.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending review submitted email to ${user.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send review approved email to user
+ * @param {Object} user - User who submitted the review
+ * @param {Object} review - Review data
+ */
+const sendReviewApprovedEmail = async (user, review) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping review approved email.');
+    return;
+  }
+
+  try {
+    const userName = getUserDisplayName(user);
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: 'Great News! Your Review is Now Live',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .success-box {
+              background: #f0fdf4;
+              border-left: 4px solid #10b981;
+              padding: 15px;
+              margin: 20px 0;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Your Review is Now Live! 🎉</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${userName},</p>
+            
+            <p><strong>Great news!</strong> Your review has been approved and is now live on our home page!</p>
+            
+            <div class="success-box">
+              "${review.reviewText}"
+            </div>
+            
+            <p>Your feedback is now visible to the entire FoodLoop community, helping others learn about the positive impact of our platform.</p>
+            
+            <p>Thank you for being part of the FoodLoop community and for sharing your experience!</p>
+            
+            <p>You can view your review on our <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="color: #1b4332; text-decoration: none; font-weight: bold;">home page</a>.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Review approved email sent to: ${user.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending review approved email to ${user.email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send review rejected email to user
+ * @param {Object} user - User who submitted the review
+ * @param {Object} review - Review data
+ * @param {String} reason - Rejection reason
+ */
+const sendReviewRejectedEmail = async (user, review, reason) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping review rejected email.');
+    return;
+  }
+
+  try {
+    const userName = getUserDisplayName(user);
+
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: user.email,
+      subject: 'Review Update',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 10px 10px 0 0;
+            }
+            .content {
+              background: #ffffff;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+            }
+            .reason-box {
+              background: #fef2f2;
+              border-left: 4px solid #ef4444;
+              padding: 15px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 style="margin: 0;">Review Update</h1>
+          </div>
+          <div class="content">
+            <p>Dear ${userName},</p>
+            
+            <p>Thank you for taking the time to submit a review for FoodLoop.</p>
+            
+            <p>After careful review, we're sorry to inform you that your review could not be published at this time.</p>
+            
+            <div class="reason-box">
+              <strong>Reason:</strong><br>
+              ${reason}
+            </div>
+            
+            <p>We encourage you to submit a new review that aligns with our community guidelines. If you have any questions about this decision, please feel free to contact us.</p>
+            
+            <p>Thank you for your understanding and continued support of FoodLoop.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
+              This is an automated email. Please do not reply to this message.<br>
+              If you have any questions, contact us at <strong>foodloop.official27@gmail.com</strong>
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Review rejected email sent to: ${user.email}`);
+  } catch (error) {
+    console.error(`❌ Error sending review rejected email to ${user.email}:`, error.message);
+    throw error;
+  }
+};
+
 module.exports = {
+  getUserDisplayName,
   sendWelcomeEmail,
   sendPendingApprovalEmail,
   sendApprovalEmail,
@@ -1541,8 +2505,17 @@ module.exports = {
   sendNewDonationNotificationToReceivers,
   sendNewDonationNotificationToReceiver,
   sendDonationClaimedEmail,
+  sendDonationAvailableNotificationToDrivers,
+  sendDonationAvailableNotificationToDriver,
   sendPickupConfirmedEmailToDonor,
   sendPickupConfirmedEmailToReceiver,
   sendDeliveryConfirmedEmailToDonor,
   sendDeliveryConfirmedEmailToReceiver,
+  sendDonationExpiryWarningEmail,
+  sendDonationDeletedEmail,
+  sendReceiptEmailToDonor,
+  sendReceiptEmailToDriver,
+  sendReviewSubmittedEmail,
+  sendReviewApprovedEmail,
+  sendReviewRejectedEmail,
 };
