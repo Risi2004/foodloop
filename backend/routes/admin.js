@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const ContactMessage = require('../models/ContactMessage');
 const { authenticateAdmin } = require('../middleware/auth');
-const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail } = require('../utils/emailService');
+const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail, sendContactReplyEmail } = require('../utils/emailService');
 
 // Apply JSON body parser and admin authentication to all routes
 router.use(express.json());
@@ -233,6 +234,102 @@ router.get('/users', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/admin/messages
+ * List all contact messages (newest first)
+ */
+router.get('/messages', async (req, res) => {
+  try {
+    const messages = await ContactMessage.find({})
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const formatted = messages.map((m) => ({
+      id: m._id.toString(),
+      userId: m.userId ? m.userId.toString() : null,
+      name: m.name,
+      email: m.email,
+      contactNo: m.contactNo,
+      subject: m.subject,
+      message: m.message,
+      adminReply: m.adminReply,
+      repliedAt: m.repliedAt,
+      repliedBy: m.repliedBy ? m.repliedBy.toString() : null,
+      createdAt: m.createdAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formatted.length,
+      messages: formatted,
+    });
+  } catch (error) {
+    console.error('[Admin] Error fetching messages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch messages',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/admin/messages/:id/reply
+ * Reply to a contact message and send reply by email
+ * Body: { reply: string }
+ */
+router.post('/messages/:id/reply', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reply } = req.body;
+
+    if (!reply || typeof reply !== 'string' || !reply.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reply text is required',
+      });
+    }
+
+    const contactMessage = await ContactMessage.findById(id);
+    if (!contactMessage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    const adminId = req.user && req.user.id;
+    const updateData = {
+      adminReply: reply.trim(),
+      repliedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    if (adminId && adminId !== 'admin_static_id' && String(adminId).match(/^[0-9a-fA-F]{24}$/)) {
+      updateData.repliedBy = adminId;
+    }
+
+    await ContactMessage.findByIdAndUpdate(id, updateData);
+
+    try {
+      await sendContactReplyEmail(contactMessage.email, contactMessage.name, reply.trim());
+    } catch (emailError) {
+      console.error('[Admin] Error sending reply email:', emailError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Reply sent successfully',
+    });
+  } catch (error) {
+    console.error('[Admin] Error replying to message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send reply',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

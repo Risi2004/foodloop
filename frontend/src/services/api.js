@@ -60,6 +60,47 @@ export const login = async (email, password) => {
 };
 
 /**
+ * Request password reset; sends reset link to email if account exists
+ * @param {string} email - User email
+ * @returns {Promise} { success, message }
+ */
+export const requestPasswordReset = async (email) => {
+  const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email?.trim() }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || 'Failed to request reset');
+    err.response = { data };
+    throw err;
+  }
+  return data;
+};
+
+/**
+ * Reset password using token from email link
+ * @param {string} token - Reset token from URL
+ * @param {string} newPassword - New password
+ * @returns {Promise} { success, message }
+ */
+export const resetPassword = async (token, newPassword) => {
+  const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token?.trim(), newPassword: newPassword?.trim() }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || 'Failed to reset password');
+    err.response = { data };
+    throw err;
+  }
+  return data;
+};
+
+/**
  * Get all pending users (for admin)
  * @returns {Promise} Response with pending users array
  */

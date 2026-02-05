@@ -57,6 +57,7 @@
 
 #name,
 #email,
+#contactNo,
 #subject,
 #message {
     margin-top: 10px;
@@ -84,8 +85,8 @@
 .contact__s2__sub__sub input:focus,
 .contact__s2__sub input:focus,
 .contact__s2__sub textarea:focus,
-.contact__s2__sub2 input,
-.contact__s2__sub2 textarea {
+.contact__s2__sub2 input:focus,
+.contact__s2__sub2 textarea:focus {
     outline: none;
 }
 

@@ -9,6 +9,7 @@ const { PORT, NODE_ENV } = require('./config/env');
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const contactRoutes = require('./routes/contact');
 const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
@@ -18,6 +19,9 @@ const {
 } = require('./services/expiredDonationService');
 
 const app = express();
+
+// Trust proxy so req.ip reflects client IP when behind reverse proxy (e.g. Nginx, Render)
+app.set('trust proxy', 1);
 
 // Connect to MongoDB
 connectDB();
@@ -37,6 +41,9 @@ app.use('/api/auth', authRoutes);
 
 // Admin routes (protected by admin authentication middleware)
 app.use('/api/admin', adminRoutes);
+
+// Contact form (public submit)
+app.use('/api/contact', contactRoutes);
 
 // Donation routes (for image upload and AI analysis)
 app.use('/api/donations', donationRoutes);

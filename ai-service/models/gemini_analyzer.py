@@ -1,6 +1,6 @@
 """
 Google Gemini Vision API Food Analyzer
-Replaces YOLOv11 with Gemini AI for superior food recognition
+Food detection and quality assessment using Gemini AI.
 """
 import os
 import json

@@ -2493,6 +2493,267 @@ const sendReviewRejectedEmail = async (user, review, reason) => {
   }
 };
 
+/**
+ * Send confirmation email when user submits contact form
+ */
+const sendContactConfirmationEmail = async (email, name) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping contact confirmation email.');
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject: 'We received your message – FoodLoop',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop</h2>
+          </div>
+          <div class="content">
+            <p>Hi ${name || 'there'},</p>
+            <p>You have contacted admin. We will get back to you soon.</p>
+            <p>Thank you for reaching out.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated email from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Contact confirmation email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending contact confirmation email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send admin reply to user who submitted contact form
+ */
+const sendContactReplyEmail = async (email, name, replyText) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping contact reply email.');
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject: 'Re: Your message to FoodLoop',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .reply { background: #fff; border-left: 4px solid #1F4E36; padding: 16px; margin: 16px 0; white-space: pre-wrap; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop – Admin Reply</h2>
+          </div>
+          <div class="content">
+            <p>Hi ${name || 'there'},</p>
+            <p>Here is a reply from our team:</p>
+            <div class="reply">${(replyText || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}</div>
+            <p>Thank you for contacting FoodLoop.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated email from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Contact reply email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending contact reply email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send admin login notification email (time, location, device)
+ */
+const sendAdminLoginNotificationEmail = async (adminEmail, { time, location, device }) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping admin login notification.');
+    return;
+  }
+
+  try {
+    const safe = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: adminEmail,
+      subject: 'New admin login – FoodLoop',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .row { margin: 12px 0; }
+            .label { font-weight: 600; color: #1F4E36; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">Admin Login – FoodLoop</h2>
+          </div>
+          <div class="content">
+            <p>A login to your admin account was detected.</p>
+            <div class="row"><span class="label">Time:</span> ${safe(time)}</div>
+            <div class="row"><span class="label">Location:</span> ${safe(location)}</div>
+            <div class="row"><span class="label">Device:</span> ${safe(device)}</div>
+          </div>
+          <div class="footer">
+            <p>This is an automated security notification from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Admin login notification email sent to: ${adminEmail}`);
+  } catch (error) {
+    console.error(`❌ Error sending admin login notification to ${adminEmail}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send password reset link email
+ */
+const sendPasswordResetEmail = async (email, resetLink) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping password reset email.');
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject: 'Reset your FoodLoop password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #1F4E36; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0; font-weight: 700; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop – Password Reset</h2>
+          </div>
+          <div class="content">
+            <p>You requested a password reset. Click the link below to set a new password. This link expires in 1 hour.</p>
+            <p><a href="${(resetLink || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" class="button" style="color: #ffffff !important; font-weight: 700; text-decoration: none;">Reset password</a></p>
+            <p>If you did not request this, you can ignore this email.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated email from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Password reset email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending password reset email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send confirmation email after password has been changed (post-reset)
+ */
+const sendPasswordChangedEmail = async (email) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping password changed email.');
+    return;
+  }
+
+  try {
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject: 'Your FoodLoop password has been changed',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop – Password Changed</h2>
+          </div>
+          <div class="content">
+            <p>Your FoodLoop account password has been changed successfully.</p>
+            <p>If you did not make this change, please reset your password immediately using the "Forgot password" link on the login page, or contact us for assistance.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated security notification from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Password changed confirmation email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending password changed email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getUserDisplayName,
   sendWelcomeEmail,
@@ -2518,4 +2779,9 @@ module.exports = {
   sendReviewSubmittedEmail,
   sendReviewApprovedEmail,
   sendReviewRejectedEmail,
+  sendContactConfirmationEmail,
+  sendContactReplyEmail,
+  sendAdminLoginNotificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
 };

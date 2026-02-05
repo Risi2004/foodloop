@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-
 import LandingPage from "./pages/beforeLogin/landingPage/LandingPage";
 import DonorDashboard from "./pages/afterLogin/donor/dashboard/DonorDashboard"
 import LoginPage from "./pages/beforeLogin/loginPage/LoginPage";
+import ForgotPasswordPage from "./pages/beforeLogin/forgotPasswordPage/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/beforeLogin/resetPasswordPage/ResetPasswordPage";
 import SignupPage from "./pages/beforeLogin/signupPage/Signup";
 import ReceiverDashboard from "./pages/afterLogin/receiver/dashboard/ReceiverDashboard"
 import DriverDashboard from "./pages/afterLogin/driver/dashboard/DriverDashboard";
@@ -14,6 +16,7 @@ import DonorPrivacyPolicy from "./pages/afterLogin/donor/privacyPolicy/DonorPriv
 import DriverPrivacyPolicy from "./pages/afterLogin/driver/privacyPolicy/DriverPrivacyPolicy";
 import ReceiverPrivacyPolicy from "./pages/afterLogin/receiver/privacyPolicy/ReceiverPrivacyPolicy";
 import LandingPageTermsAndConditions from "./pages/beforeLogin/termsAndConditions/LandingPageTermsAndConditions";
+import ContactPage from "./pages/beforeLogin/contactPage/ContactPage";
 import DonorTermsAndConditions from "./pages/afterLogin/donor/termsAndConditions/DonorTermsAndConditions";
 import ReceiverTermsAndConditions from "./pages/afterLogin/receiver/termsAndConditions/ReceiverTermsAndConditions";
 import DriverTermsAndConditions from "./pages/afterLogin/driver/termsAndConditions/DriverTermsAndConditions";
@@ -57,9 +60,12 @@ function App() {
 
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/privacy-policy" element={<LandingPagePrivacyPolicy />} />
         <Route path="/terms-&-conditions" element={<LandingPageTermsAndConditions />} />
+        <Route path="/contact" element={<ContactPage />} />
 
         {/* After Signin - Protected Routes */}
 

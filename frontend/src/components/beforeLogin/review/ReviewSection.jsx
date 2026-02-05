@@ -67,10 +67,11 @@ function ReviewSection() {
     const leftReviews = reviews.slice(0, Math.ceil(reviews.length / 2));
     const rightReviews = reviews.slice(Math.ceil(reviews.length / 2));
 
-    // Duplicate for seamless scroll
-    const leftScrollItems = [...leftReviews, ...leftReviews];
-    const rightScrollItems = [...rightReviews, ...rightReviews];
-    const allScrollItems = [...reviews, ...reviews];
+    // Duplicate for seamless scroll only when enough reviews; otherwise show each once
+    const MIN_REVIEWS_FOR_LOOP = 4;
+    const leftScrollItems = reviews.length >= MIN_REVIEWS_FOR_LOOP ? [...leftReviews, ...leftReviews] : leftReviews;
+    const rightScrollItems = reviews.length >= MIN_REVIEWS_FOR_LOOP ? [...rightReviews, ...rightReviews] : rightReviews;
+    const allScrollItems = reviews.length >= MIN_REVIEWS_FOR_LOOP ? [...reviews, ...reviews] : reviews;
 
     return (
         <div className='review__section'>

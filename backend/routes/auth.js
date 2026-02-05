@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const { uploadFileToS3 } = require('../config/awsS3');
@@ -8,6 +9,9 @@ const { generateToken, verifyToken } = require('../utils/jwt');
 const {
   sendWelcomeEmail,
   sendPendingApprovalEmail,
+  sendAdminLoginNotificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
 } = require('../utils/emailService');
 const {
   donorIndividualValidation,
@@ -261,6 +265,36 @@ router.post('/login', express.json(), async (req, res) => {
       // Generate JWT token for admin
       const token = generateToken(adminUser);
 
+      // Fire-and-forget: send admin login notification email (time, location, device)
+      const time = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'medium' });
+      const device = (req.headers['user-agent'] || 'Unknown').slice(0, 200);
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'Unknown';
+      const isLocalIp = /^(::1|::ffff:127\.0\.0\.1|127\.0\.0\.1)$/.test((ip || '').trim());
+      (async () => {
+        let location;
+        if (isLocalIp) {
+          location = `Localhost / this device (no geographic location) – IP: ${ip}`;
+        } else {
+          location = `IP: ${ip}`;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const geoRes = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=city,country,regionName`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            const j = await geoRes.json();
+            if (j && (j.city || j.country)) {
+              const parts = [j.city, j.regionName, j.country].filter(Boolean);
+              location = `${parts.join(', ')} (IP: ${ip})`;
+            }
+          } catch (_) {}
+        }
+        try {
+          await sendAdminLoginNotificationEmail(ADMIN_EMAIL, { time, location, device });
+        } catch (e) {
+          console.error('[Auth] Admin login notification email error:', e);
+        }
+      })();
+
       // Return admin user response
       res.status(200).json({
         success: true,
@@ -318,6 +352,38 @@ router.post('/login', express.json(), async (req, res) => {
     // Generate JWT token
     const token = generateToken(user);
 
+    // If admin, fire-and-forget: send admin login notification email
+    if (user.role === 'Admin') {
+      const time = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Colombo', dateStyle: 'medium', timeStyle: 'medium' });
+      const device = (req.headers['user-agent'] || 'Unknown').slice(0, 200);
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'Unknown';
+      const isLocalIp = /^(::1|::ffff:127\.0\.0\.1|127\.0\.0\.1)$/.test((ip || '').trim());
+      (async () => {
+        let location;
+        if (isLocalIp) {
+          location = `Localhost / this device (no geographic location) – IP: ${ip}`;
+        } else {
+          location = `IP: ${ip}`;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const geoRes = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=city,country,regionName`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            const j = await geoRes.json();
+            if (j && (j.city || j.country)) {
+              const parts = [j.city, j.regionName, j.country].filter(Boolean);
+              location = `${parts.join(', ')} (IP: ${ip})`;
+            }
+          } catch (_) {}
+        }
+        try {
+          await sendAdminLoginNotificationEmail(user.email, { time, location, device });
+        } catch (e) {
+          console.error('[Auth] Admin login notification email error:', e);
+        }
+      })();
+    }
+
     // Prepare user response (without password)
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -330,6 +396,117 @@ router.post('/login', express.json(), async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Request password reset; send reset link by email if user exists (always return same message)
+ */
+router.post('/forgot-password', express.json(), async (req, res) => {
+  try {
+    const { email } = req.body;
+    const genericMessage = 'If an account exists for this email, you will receive a password reset link.';
+
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      user.resetToken = token;
+      user.resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour
+      await user.save();
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const resetLink = `${frontendUrl.replace(/\/$/, '')}/reset-password?token=${token}`;
+
+      (async () => {
+        try {
+          await sendPasswordResetEmail(user.email, resetLink);
+        } catch (e) {
+          console.error('[Auth] Forgot password email error:', e);
+        }
+      })();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: genericMessage,
+    });
+  } catch (error) {
+    console.error('[Auth] Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password using token from email link
+ */
+router.post('/reset-password', express.json(), async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || typeof token !== 'string' || !token.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is required',
+      });
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password is required and must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findOne({
+      resetToken: token.trim(),
+      resetTokenExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset link.',
+      });
+    }
+
+    user.password = newPassword.trim();
+    user.resetToken = undefined;
+    user.resetTokenExpires = undefined;
+    await user.save();
+
+    (async () => {
+      try {
+        await sendPasswordChangedEmail(user.email);
+      } catch (e) {
+        console.error('[Auth] Password changed email error:', e);
+      }
+    })();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in.',
+    });
+  } catch (error) {
+    console.error('[Auth] Reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

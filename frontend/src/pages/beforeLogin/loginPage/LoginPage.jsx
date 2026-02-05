@@ -174,7 +174,7 @@ function LoginPage() {
                         </div>
 
                         <div className="form__actions">
-                            <a href="#" className="forgot__password">Forgot Password?</a>
+                            <Link to="/forgot-password" className="forgot__password">Forgot Password?</Link>
                             <input type="checkbox" className="remember__me" />
                         </div>
 
