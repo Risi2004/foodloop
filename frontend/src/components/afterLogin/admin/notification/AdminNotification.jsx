@@ -1,69 +1,100 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getAdminNotifications, createNotification } from "../../../../services/notificationApi";
 import "./AdminNotification.css";
+
+const ROLE_OPTIONS = ['Donor', 'Receiver', 'Driver', 'All'];
 
 const AdminNotification = () => {
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "NEW UPDATE",
-      message: "Every driver can earn Bedge",
-      date: "Oct 24, 2023",
-      status: "ACTIVE",
-    },
-    {
-      id: 2,
-      title: "NEW UPDATE",
-      message: "Every driver can earn Bedge",
-      date: "Oct 24, 2023",
-      status: "ACTIVE",
-    },
-    {
-      id: 3,
-      title: "NEW UPDATE",
-      message: "Every driver can earn Bedge",
-      date: "Oct 24, 2023",
-      status: "ACTIVE",
-    },
-  ]);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
 
   const formatDate = (date) => {
+    if (!date) return "";
+    const d = typeof date === "string" ? new Date(date) : date;
     const months = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
+    const month = months[d.getMonth()];
+    const day = d.getDate();
+    const year = d.getFullYear();
     return `${month} ${day}, ${year}`;
   };
 
-  const handleSendNotification = () => {
-    if (notificationMessage.trim() === "") {
-      return; // Don't send empty notifications
+  const fetchNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getAdminNotifications();
+      setNotifications(res.notifications || []);
+    } catch (err) {
+      setError(err.message || "Failed to load notifications");
+      setNotifications([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const newNotification = {
-      id: notifications.length + 1,
-      title: "NEW UPDATE",
-      message: notificationMessage.trim(),
-      date: formatDate(new Date()),
-      status: "ACTIVE",
-    };
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
-    setNotifications([newNotification, ...notifications]); // Add new notification at the top
-    setNotificationMessage(""); // Clear the textarea
+  const toggleRole = (role) => {
+    setSelectedRoles((prev) => {
+      if (role === "All") {
+        return prev.includes("All") ? prev.filter((r) => r !== "All") : ["All"];
+      }
+      const next = prev.filter((r) => r !== "All");
+      if (next.includes(role)) {
+        return next.filter((r) => r !== role);
+      }
+      return [...next, role];
+    });
+  };
+
+  const handleSendNotification = async () => {
+    const message = notificationMessage.trim();
+    if (!message) return;
+    const roles = selectedRoles.length ? selectedRoles : null;
+    if (!roles || roles.length === 0) return;
+
+    setSending(true);
+    setError(null);
+    try {
+      await createNotification({
+        message,
+        title: notificationTitle.trim() || undefined,
+        roles,
+      });
+      await fetchNotifications();
+      setNotificationMessage("");
+      setNotificationTitle("");
+      setSelectedRoles([]);
+    } catch (err) {
+      setError(err.message || "Failed to send notification");
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleDeactivate = (id) => {
-    setNotifications(notifications.map(notif =>
-      notif.id === id ? { ...notif, status: "INACTIVE" } : notif
-    ));
+    // Optional: PATCH /api/admin/notifications/:id with status: 'inactive' when backend supports it
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, status: "inactive" } : n))
+    );
   };
 
   const handleDelete = (id) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
+    // Optional: DELETE when backend supports it; for now just remove from local state for UI consistency
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
+
+  const displayStatus = (status) => (status === "active" ? "ACTIVE" : "INACTIVE");
 
   return (
     <div className="frame-197">
@@ -76,6 +107,11 @@ const AdminNotification = () => {
       <div className="frame-107">
         <div className="recent-donations">Active notifications</div>
       </div>
+      {error && (
+        <div className="admin-notification-error" style={{ color: "#c00", marginBottom: "8px" }}>
+          {error}
+        </div>
+      )}
       <div className="frame-106">
         <div className="frame-108">
           <div className="recent-donations2">MESSAGE</div>
@@ -83,49 +119,78 @@ const AdminNotification = () => {
           <div className="recent-donations2">STATUS</div>
           <div className="recent-donations2">ACTION</div>
         </div>
-        {notifications.map((notification, index) => {
-          const className = index % 3 === 0 ? "frame-109" : index % 3 === 1 ? "frame-110" : "frame-111";
-          return (
-            <div key={notification.id} className={className}>
-              <div className="frame-203">
-                <div className="recent-donations3">{notification.title}</div>
-                <div className="recent-donations3">{notification.message}</div>
-              </div>
-              <div className="recent-donations4">{notification.date}</div>
-              <div className="frame-204">
-                <div className="verified">
-                  <div className="dot"></div>
-                  <div className="verified2">{notification.status}</div>
+        {loading ? (
+          <div className="recent-donations4">Loading...</div>
+        ) : (
+          notifications.map((notification, index) => {
+            const rowClass = index % 3 === 0 ? "frame-109" : index % 3 === 1 ? "frame-110" : "frame-111";
+            const dateStr = notification.createdAt
+              ? formatDate(notification.createdAt)
+              : "";
+            return (
+              <div key={notification.id} className={rowClass}>
+                <div className="frame-203">
+                  <div className="recent-donations3">{notification.title || "Update"}</div>
+                  <div className="recent-donations3">{notification.message}</div>
                 </div>
-              </div>
-              <div className="frame-205">
-                <div className="frame-208">
-                  <div
-                    className="deactivate"
-                    onClick={() => handleDeactivate(notification.id)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Deactivate
+                <div className="recent-donations4">{dateStr}</div>
+                <div className="frame-204">
+                  <div className="verified">
+                    <div className="dot"></div>
+                    <div className="verified2">{displayStatus(notification.status)}</div>
                   </div>
-                  <img
-                    className="cancel"
-                    src="/src/assets/Cancel.svg"
-                    alt="Cancel"
-                    onClick={() => handleDelete(notification.id)}
-                    style={{ cursor: "pointer" }}
-                  />
+                </div>
+                <div className="frame-205">
+                  <div className="frame-208">
+                    <div
+                      className="deactivate"
+                      onClick={() => handleDeactivate(notification.id)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      Deactivate
+                    </div>
+                    <img
+                      className="cancel"
+                      src="/src/assets/Cancel.svg"
+                      alt="Cancel"
+                      onClick={() => handleDelete(notification.id)}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
       <div className="enter">
         <div className="frame-206">
           <div className="frame-1072">
             <div className="recent-donations5">SEND NOTIFICATION</div>
           </div>
+          <div className="admin-notification-roles">
+            <span className="recent-donations5">Role</span>
+            <div className="admin-notification-checkboxes">
+              {ROLE_OPTIONS.map((role) => (
+                <label key={role} className="admin-notification-role-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedRoles.includes(role)}
+                    onChange={() => toggleRole(role)}
+                  />
+                  {role}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="search">
+            <input
+              type="text"
+              className="admin-notification-title-input"
+              placeholder="Title (optional)"
+              value={notificationTitle}
+              onChange={(e) => setNotificationTitle(e.target.value)}
+            />
             <textarea
               className="change-your-password-for-security-purpose"
               placeholder="Enter your notification message here..."
@@ -134,8 +199,23 @@ const AdminNotification = () => {
             />
           </div>
           <div className="frame-210">
-            <div className="frame-2082" onClick={handleSendNotification} style={{ cursor: "pointer" }}>
-              <div className="send">SEND</div>
+            <div
+              className="frame-2082"
+              onClick={
+                notificationMessage.trim() && selectedRoles.length
+                  ? handleSendNotification
+                  : undefined
+              }
+              style={{
+                cursor:
+                  notificationMessage.trim() && selectedRoles.length
+                    ? "pointer"
+                    : "not-allowed",
+                opacity:
+                  notificationMessage.trim() && selectedRoles.length ? 1 : 0.6,
+              }}
+            >
+              <div className="send">{sending ? "Sending..." : "SEND"}</div>
             </div>
           </div>
         </div>
@@ -145,5 +225,3 @@ const AdminNotification = () => {
 };
 
 export default AdminNotification;
-
-

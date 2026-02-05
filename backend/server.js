@@ -13,6 +13,7 @@ const contactRoutes = require('./routes/contact');
 const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
+const notificationRoutes = require('./routes/notifications');
 const {
   checkAndDeleteExpiredDonations,
   sendExpiryWarningEmails,
@@ -53,6 +54,9 @@ app.use('/api/users', userRoutes);
 
 // Review routes (for review submission and management)
 app.use('/api/reviews', reviewRoutes);
+
+// Notification routes (authenticated users; role-filtered list)
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

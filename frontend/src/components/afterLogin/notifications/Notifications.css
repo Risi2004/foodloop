@@ -118,3 +118,18 @@
   color: #13ec5b;
   width: 54.36px;
 }
+
+.notificationPanel__loading,
+.notificationPanel__empty {
+  color: #0d1b12;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 14px;
+  padding: 12px 0;
+  align-self: stretch;
+  text-align: center;
+}
+
+.notificationPanel__error {
+  align-self: stretch;
+  text-align: center;
+}

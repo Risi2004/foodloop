@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const ContactMessage = require('../models/ContactMessage');
+const Notification = require('../models/Notification');
 const { authenticateAdmin } = require('../middleware/auth');
-const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail, sendContactReplyEmail } = require('../utils/emailService');
+const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail, sendContactReplyEmail, sendNotificationEmail } = require('../utils/emailService');
 
 // Apply JSON body parser and admin authentication to all routes
 router.use(express.json());
@@ -330,6 +331,131 @@ router.post('/messages/:id/reply', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to send reply',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/admin/notifications
+ * Create a notification (admin only). Body: { message, title?, roles }
+ */
+router.post('/notifications', async (req, res) => {
+  try {
+    const { message, title, roles } = req.body;
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message is required',
+      });
+    }
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one role is required',
+      });
+    }
+
+    const validRoles = ['Donor', 'Receiver', 'Driver', 'All'];
+    const normalized = roles.map((r) => (typeof r === 'string' ? r.trim() : '')).filter(Boolean);
+    const invalid = normalized.filter((r) => !validRoles.includes(r));
+    if (invalid.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role(s). Use Donor, Receiver, Driver, or All',
+      });
+    }
+
+    const targetRoles = normalized.includes('All') ? ['All'] : [...new Set(normalized)];
+    const adminId = req.user && req.user.id;
+    const createdBy = adminId && adminId !== 'admin_static_id' && String(adminId).match(/^[0-9a-fA-F]{24}$/) ? adminId : null;
+
+    const notification = new Notification({
+      title: title && typeof title === 'string' ? title.trim() : 'Update',
+      message: message.trim(),
+      targetRoles,
+      status: 'active',
+      createdBy,
+    });
+
+    await notification.save();
+
+    // Send emails to relevant users (non-blocking)
+    (async () => {
+      try {
+        const rolesToMatch = targetRoles.includes('All')
+          ? ['Donor', 'Receiver', 'Driver']
+          : targetRoles;
+        const query = { role: { $in: rolesToMatch }, status: 'completed' };
+        const users = await User.find(query).select('email').lean();
+        const title = notification.title || 'Update';
+        const message = notification.message;
+        for (const u of users) {
+          if (u.email) {
+            try {
+              await sendNotificationEmail(u.email, title, message);
+            } catch (emailErr) {
+              console.error(`[Admin] Failed to send notification email to ${u.email}:`, emailErr.message);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Admin] Error sending notification emails:', err);
+      }
+    })();
+
+    res.status(201).json({
+      success: true,
+      message: 'Notification created',
+      notification: {
+        id: notification._id.toString(),
+        title: notification.title,
+        message: notification.message,
+        targetRoles: notification.targetRoles,
+        status: notification.status,
+        createdAt: notification.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Admin] Error creating notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create notification',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/admin/notifications
+ * List all notifications (admin only)
+ */
+router.get('/notifications', async (req, res) => {
+  try {
+    const notifications = await Notification.find({})
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const formatted = notifications.map((n) => ({
+      id: n._id.toString(),
+      title: n.title,
+      message: n.message,
+      targetRoles: n.targetRoles,
+      status: n.status,
+      createdAt: n.createdAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formatted.length,
+      notifications: formatted,
+    });
+  } catch (error) {
+    console.error('[Admin] Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

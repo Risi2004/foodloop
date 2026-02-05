@@ -55,18 +55,8 @@ const DonorMyDonationDashboard = () => {
             }
         };
 
-        // Initial fetch
+        // Load once when user comes to the page; reload only on manual refresh
         fetchDonations();
-
-        // Poll for updates every 5 seconds to catch status changes
-        const intervalId = setInterval(() => {
-            fetchDonations();
-        }, 5000);
-
-        // Cleanup interval on unmount
-        return () => {
-            clearInterval(intervalId);
-        };
     }, []);
 
     // Filter donations by status

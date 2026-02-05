@@ -2754,6 +2754,61 @@ const sendPasswordChangedEmail = async (email) => {
   }
 };
 
+/**
+ * Send admin notification email to a user (title + message)
+ */
+const sendNotificationEmail = async (email, title, message) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping notification email.');
+    return;
+  }
+
+  try {
+    const safe = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const subject = title && title.trim() ? `FoodLoop: ${safe(title)}` : 'FoodLoop – New notification';
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .message { background: #fff; border-left: 4px solid #1F4E36; padding: 16px; margin: 16px 0; white-space: pre-wrap; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop – Notification</h2>
+          </div>
+          <div class="content">
+            <p>You have a new notification from FoodLoop.</p>
+            ${title && title.trim() ? `<p><strong>${safe(title)}</strong></p>` : ''}
+            <div class="message">${safe(message)}</div>
+            <p>Log in to the app to see all your notifications.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated email from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Notification email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending notification email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getUserDisplayName,
   sendWelcomeEmail,
@@ -2784,4 +2839,5 @@ module.exports = {
   sendAdminLoginNotificationEmail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
+  sendNotificationEmail,
 };

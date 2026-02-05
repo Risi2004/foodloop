@@ -292,6 +292,56 @@
   justify-content: flex-start;
 }
 
+.admin-notification-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.admin-notification-roles .recent-donations5 {
+  font-size: 16px;
+  width: auto;
+}
+
+.admin-notification-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+}
+
+.admin-notification-role-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e9eaea;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-notification-role-label input {
+  cursor: pointer;
+}
+
+.admin-notification-title-input {
+  width: 100%;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #0f172a;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.admin-notification-title-input::placeholder {
+  color: #94a3b8;
+}
+
 .search {
   background: #ffffff;
   border-radius: 15px;
