@@ -20,6 +20,7 @@ const {
   driverValidation,
   handleValidationErrors,
 } = require('../middleware/validation');
+const { authenticateUser } = require('../middleware/auth');
 
 // Helper function to upload files to S3
 const uploadFiles = async (files) => {
@@ -507,6 +508,71 @@ router.post('/reset-password', express.json(), async (req, res) => {
     });
   } catch (error) {
     console.error('[Auth] Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/auth/change-password
+ * Change password for authenticated user (current + new password).
+ * Updates DB and sends "password changed" email.
+ */
+router.post('/change-password', express.json(), authenticateUser, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is required',
+      });
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword.trim());
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    user.password = newPassword.trim();
+    user.resetToken = undefined;
+    user.resetTokenExpires = undefined;
+    await user.save();
+
+    (async () => {
+      try {
+        await sendPasswordChangedEmail(user.email);
+      } catch (e) {
+        console.error('[Auth] Password changed email error:', e);
+      }
+    })();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully. A confirmation email has been sent.',
+    });
+  } catch (error) {
+    console.error('[Auth] Change password error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

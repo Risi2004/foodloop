@@ -101,6 +101,31 @@ export const resetPassword = async (token, newPassword) => {
 };
 
 /**
+ * Change password (authenticated user: current + new password).
+ * Backend updates DB and sends "password changed" email.
+ * @param {string} currentPassword
+ * @param {string} newPassword
+ * @returns {Promise} { success, message }
+ */
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await fetch(`${API_URL}/api/auth/change-password`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      currentPassword: currentPassword?.trim(),
+      newPassword: newPassword?.trim(),
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(data.message || 'Failed to change password');
+    err.response = { data };
+    throw err;
+  }
+  return data;
+};
+
+/**
  * Get all pending users (for admin)
  * @returns {Promise} Response with pending users array
  */
@@ -322,6 +347,33 @@ export const stopDemo = async () => {
     const data = await response.json();
     if (!response.ok) {
       const error = new Error(data.message || 'Failed to stop demo');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Update driver profile (driverName, contactNo, address, email, vehicleNumber, vehicleType)
+ * @param {Object} profile
+ * @returns {Promise<{ success: boolean, user: Object }>}
+ */
+export const updateDriverProfile = async (profile) => {
+  try {
+    const response = await fetch(`${API_URL}/api/users/me`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profile),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update profile');
       error.response = { data };
       throw error;
     }

@@ -60,34 +60,49 @@ function DeliveryConfirmation() {
     const [demoRouteWaypoints, setDemoRouteWaypoints] = useState([]);
     const [routeLoading, setRouteLoading] = useState(false);
 
-    // Fetch donation data
+    const fetchDonationData = async () => {
+        if (!donationId) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await getDonationTracking(donationId);
+
+            if (response.success && response.tracking) {
+                setDonationData(response.tracking);
+            } else {
+                setError('Failed to load donation data');
+            }
+        } catch (err) {
+            console.error('[DeliveryConfirmation] Error fetching donation data:', err);
+            setError(err.message || 'Failed to load donation data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch donation data on mount and when donationId changes
     useEffect(() => {
-        const fetchDonationData = async () => {
-            if (!donationId) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-                setError(null);
-                const response = await getDonationTracking(donationId);
-                
-                if (response.success && response.tracking) {
-                    setDonationData(response.tracking);
-                } else {
-                    setError('Failed to load donation data');
-                }
-            } catch (err) {
-                console.error('[DeliveryConfirmation] Error fetching donation data:', err);
-                setError(err.message || 'Failed to load donation data');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchDonationData();
     }, [donationId]);
+
+    // Refetch when page gains focus (e.g. after driver confirms pickup on Pickup page and returns)
+    useEffect(() => {
+        const handleFocus = () => {
+            if (donationId && !loading) {
+                getDonationTracking(donationId).then((response) => {
+                    if (response?.success && response?.tracking) {
+                        setDonationData(response.tracking);
+                    }
+                }).catch(() => {});
+            }
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [donationId, loading]);
 
     // Start location tracking when component mounts (only if demo mode is off)
     useEffect(() => {
@@ -285,9 +300,17 @@ function DeliveryConfirmation() {
         };
     }, [isDemoMode]);
 
+    const donationStatus = donationData?.donation?.status;
+    const canConfirmDelivery = donationStatus === 'picked_up';
+
     const handleConfirmDelivery = async () => {
         if (!donationId) {
             alert('Donation ID is missing');
+            return;
+        }
+
+        if (!canConfirmDelivery) {
+            alert('Confirm pickup at the donor first, then return here to confirm delivery.');
             return;
         }
 
@@ -554,25 +577,39 @@ function DeliveryConfirmation() {
                                 </p>
                             </div>
                         ) : (
-                            <button
-                                onClick={handleConfirmDelivery}
-                                disabled={isConfirming || !donationId}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px 24px',
-                                    background: isConfirming ? '#9ca3af' : 'linear-gradient(135deg, #1F4E36 0%, #2d5a3d 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    cursor: isConfirming || !donationId ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                {isConfirming ? 'Confirming Delivery...' : 'Confirm Delivery'}
-                            </button>
+                            <>
+                                {!canConfirmDelivery && (
+                                    <p style={{
+                                        marginBottom: '12px',
+                                        padding: '12px',
+                                        background: '#fef3c7',
+                                        color: '#92400e',
+                                        borderRadius: '8px',
+                                        fontSize: '14px'
+                                    }}>
+                                        Confirm pickup at the donor first, then return here to confirm delivery.
+                                    </p>
+                                )}
+                                <button
+                                    onClick={handleConfirmDelivery}
+                                    disabled={isConfirming || !donationId || !canConfirmDelivery}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 24px',
+                                        background: (isConfirming || !canConfirmDelivery) ? '#9ca3af' : 'linear-gradient(135deg, #1F4E36 0%, #2d5a3d 100%)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '16px',
+                                        fontWeight: 'bold',
+                                        cursor: (isConfirming || !donationId || !canConfirmDelivery) ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    {isConfirming ? 'Confirming Delivery...' : 'Confirm Delivery'}
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>

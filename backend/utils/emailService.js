@@ -2809,6 +2809,64 @@ const sendNotificationEmail = async (email, title, message) => {
   }
 };
 
+/**
+ * Send email when user profile is updated (list of changed fields)
+ * @param {string} email - User's email (recipient)
+ * @param {string[]} changedFields - Human-readable list of changed field names, e.g. ['Name', 'Contact Number']
+ */
+const sendProfileUpdatedEmail = async (email, changedFields) => {
+  if (!isEmailConfigured() || !transporter) {
+    console.warn('Email not configured. Skipping profile updated email.');
+    return;
+  }
+  if (!changedFields || changedFields.length === 0) {
+    return;
+  }
+
+  const listItems = changedFields.map((f) => `<li>${f}</li>`).join('');
+  try {
+    const mailOptions = {
+      from: EMAIL_FROM,
+      to: email,
+      subject: 'Your FoodLoop profile was updated',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            ul { margin: 12px 0; padding-left: 24px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2 style="margin: 0;">FoodLoop – Profile Updated</h2>
+          </div>
+          <div class="content">
+            <p>Your FoodLoop profile has been updated successfully. The following details were changed:</p>
+            <ul>${listItems}</ul>
+            <p>If you did not make these changes, please contact us or reset your password if needed.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated notification from FoodLoop.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Profile updated email sent to: ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending profile updated email to ${email}:`, error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   getUserDisplayName,
   sendWelcomeEmail,
@@ -2839,5 +2897,6 @@ module.exports = {
   sendAdminLoginNotificationEmail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
+  sendProfileUpdatedEmail,
   sendNotificationEmail,
 };
