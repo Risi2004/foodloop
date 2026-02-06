@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DriverNavbar from "../../../../components/afterLogin/dashboard/driverSection/navbar/DriverNavbar";
 import DriverFooter from "../../../../components/afterLogin/dashboard/driverSection/footer/DriverFooter";
@@ -7,11 +7,15 @@ import changeIcon from "../../../../assets/icons/afterLogin/driver/camera.svg";
 import lockIcon from "../../../../assets/icons/afterLogin/driver/Lock.svg";
 import memberIcon from "../../../../assets/icons/afterLogin/driver/Customer.svg";
 import { getUser, setUser } from '../../../../utils/auth';
-import { updateDriverProfile, changePassword } from '../../../../services/api';
+import { updateDriverProfile, changePassword, uploadProfileImage } from '../../../../services/api';
 import './EditProfile.css';
 
 function EditProfile() {
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
+    const [profileImageUrl, setProfileImageUrl] = useState('');
+    const [pendingProfileImageFile, setPendingProfileImageFile] = useState(null);
+    const [avatarPreviewUrl, setAvatarPreviewUrl] = useState(null);
     const [driverName, setDriverName] = useState('');
     const [email, setEmail] = useState('');
     const [contactNo, setContactNo] = useState('');
@@ -30,6 +34,7 @@ function EditProfile() {
     useEffect(() => {
         const user = getUser();
         if (user) {
+            setProfileImageUrl(user.profileImageUrl ?? '');
             setDriverName(user.driverName ?? '');
             setEmail(user.email ?? '');
             setContactNo(user.contactNo ?? '');
@@ -42,11 +47,31 @@ function EditProfile() {
         }
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+        };
+    }, [avatarPreviewUrl]);
+
     const handleSave = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
         if (saving) return;
         setSaving(true);
         try {
+            if (pendingProfileImageFile) {
+                const imgRes = await uploadProfileImage(pendingProfileImageFile);
+                if (imgRes?.success && imgRes?.user) {
+                    setUser(imgRes.user);
+                    setProfileImageUrl(imgRes.user.profileImageUrl ?? '');
+                } else {
+                    alert(imgRes?.message || 'Failed to upload profile picture.');
+                    setSaving(false);
+                    return;
+                }
+                if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+                setAvatarPreviewUrl(null);
+                setPendingProfileImageFile(null);
+            }
             const payload = {
                 driverName: driverName.trim() || undefined,
                 email: email.trim() || undefined,
@@ -123,8 +148,35 @@ function EditProfile() {
         }
     };
 
+    const handleProfileImageClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleProfileImageChange = (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file (e.g. JPEG, PNG).');
+            return;
+        }
+        if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+        setAvatarPreviewUrl(URL.createObjectURL(file));
+        setPendingProfileImageFile(file);
+    };
+
+    const displayProfileImageUrl = avatarPreviewUrl ?? profileImageUrl;
+
     return (
         <>
+            <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleProfileImageChange}
+                style={{ display: 'none' }}
+                aria-hidden="true"
+            />
             <DriverNavbar />
             <div className='edit__profile'>
                 <h1>Edit Profile</h1>
@@ -132,8 +184,20 @@ function EditProfile() {
                 <div className="edit__profile__s1">
                     <div className='edit__profile__s1__sub1'>
                         <div className="edit__profile__s1__sub1__sub">
-                            <img className="profile" src={profileIcon} alt="Profile-Icon" />
-                            <img className="change" src={changeIcon} alt="Change" />
+                            <img
+                                className="profile"
+                                src={displayProfileImageUrl || profileIcon}
+                                alt="Profile"
+                            />
+                            <button
+                                type="button"
+                                className="edit__profile__change-photo"
+                                onClick={handleProfileImageClick}
+                                title="Change profile picture"
+                                aria-label="Change profile picture"
+                            >
+                                <img src={changeIcon} alt="Change" />
+                            </button>
                         </div>
                         <h5>Driver</h5>
                         <h3>{driverName || email || 'Driver'}</h3>

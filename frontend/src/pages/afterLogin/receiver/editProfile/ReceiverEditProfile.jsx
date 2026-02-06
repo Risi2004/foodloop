@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EditSidebar from '../../../../components/afterLogin/donor/editProfile/editSidebar/EditSidebar';
-import PersonalInfoForm from '../../../../components/afterLogin/donor/editProfile/personalInfoForm/PersonalInfoForm';
-import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection/navbar/DonorNavbar";
-import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter";
-import { getCurrentUser, updateDonorProfile, uploadProfileImage } from '../../../../services/api';
+import ReceiverInfoForm from '../../../../components/afterLogin/receiver/editProfile/ReceiverInfoForm';
+import ReceiverNavbar from '../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar';
+import ReceiverFooter from '../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter';
+import { getCurrentUser, updateReceiverProfile, uploadProfileImage } from '../../../../services/api';
 import { setUser } from '../../../../utils/auth';
-import './IndividualEditProfile.css';
+import './ReceiverEditProfile.css';
 
-function IndividualEditProfile() {
+function ReceiverEditProfile() {
     const navigate = useNavigate();
     const [user, setUserState] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -35,13 +35,6 @@ function IndividualEditProfile() {
         fetchUser();
         return () => { cancelled = true; };
     }, []);
-
-    useEffect(() => {
-        if (!user) return;
-        if (user.donorType === 'Business') {
-            navigate('/donor/edit-profile', { replace: true });
-        }
-    }, [user, navigate]);
 
     useEffect(() => {
         return () => {
@@ -73,12 +66,12 @@ function IndividualEditProfile() {
                 setAvatarPreviewUrl(null);
                 setPendingProfileImageFile(null);
             }
-            const res = await updateDonorProfile(formData);
+            const res = await updateReceiverProfile(formData);
             if (res?.success && res?.user) {
                 setUser(res.user);
                 setUserState(res.user);
                 alert('Profile updated successfully.');
-                navigate('/donor/profile');
+                navigate('/receiver/profile');
             } else {
                 alert(res?.message || 'Failed to update profile');
             }
@@ -91,19 +84,19 @@ function IndividualEditProfile() {
     };
 
     const handleCancelProfile = () => {
-        navigate('/donor/profile');
+        navigate('/receiver/profile');
     };
 
     if (loading) {
         return (
             <>
-                <DonorNavbar />
-                <div className="individual-edit-profile-page">
-                    <div className="individual-edit-container individual-edit-loading">
+                <ReceiverNavbar />
+                <div className="receiver-edit-profile-page">
+                    <div className="receiver-edit-container receiver-edit-loading">
                         <p>Loading...</p>
                     </div>
                 </div>
-                <DonorFooter />
+                <ReceiverFooter />
             </>
         );
     }
@@ -111,36 +104,37 @@ function IndividualEditProfile() {
     if (error) {
         return (
             <>
-                <DonorNavbar />
-                <div className="individual-edit-profile-page">
-                    <div className="individual-edit-container individual-edit-error">
+                <ReceiverNavbar />
+                <div className="receiver-edit-profile-page">
+                    <div className="receiver-edit-container receiver-edit-error">
                         <p>{error}</p>
                     </div>
                 </div>
-                <DonorFooter />
+                <ReceiverFooter />
             </>
         );
     }
 
-    if (!user || user.donorType === 'Business') {
+    if (!user) {
         return null;
     }
 
     return (
         <>
-            <DonorNavbar />
-            <div className="individual-edit-profile-page">
-                <div className="individual-edit-container">
-                    <aside className="individual-sidebar-section">
+            <ReceiverNavbar />
+            <div className="receiver-edit-profile-page">
+                <div className="receiver-edit-container">
+                    <aside className="receiver-edit-sidebar-section">
                         <EditSidebar
                             user={user}
-                            subtitle="Manage your public profile and personal preferences."
+                            subtitle="Manage your organization profile and security settings."
+                            type="Active Receiver"
                             avatarPreviewUrl={avatarPreviewUrl}
                             onProfileImageSelected={handleProfileImageSelected}
                         />
                     </aside>
-                    <main className="individual-forms-section">
-                        <PersonalInfoForm
+                    <main className="receiver-edit-forms-section">
+                        <ReceiverInfoForm
                             user={user}
                             onSave={handleSaveProfile}
                             onCancel={handleCancelProfile}
@@ -149,9 +143,9 @@ function IndividualEditProfile() {
                     </main>
                 </div>
             </div>
-            <DonorFooter />
+            <ReceiverFooter />
         </>
     );
 }
 
-export default IndividualEditProfile;
+export default ReceiverEditProfile;

@@ -24,6 +24,7 @@ import DonorNotifications from "./pages/afterLogin/donor/notifications/DonorNoti
 import DriverNotifications from "./pages/afterLogin/driver/notifications/DriverNotifications";
 import ReceiverNotifications from "./pages/afterLogin/receiver/notifications/ReceiverNotifications";
 import ReceiverProfile from "./pages/afterLogin/receiver/profile/ReceiverProfile";
+import ReceiverEditProfile from "./pages/afterLogin/receiver/editProfile/ReceiverEditProfile";
 import Delivery from "./pages/afterLogin/driver/delivery/Delivery";
 import DeliveryConfirmation from "./pages/afterLogin/driver/delivery/DeliveryConfirmation";
 import DriverProfile from "./pages/afterLogin/driver/profile/DriverProfile";
@@ -93,6 +94,7 @@ function App() {
           <Route path="terms-&-conditions" element={<ReceiverTermsAndConditions />} />
           <Route path="notifications" element={<ReceiverNotifications />} />
           <Route path="profile" element={<ReceiverProfile />} />
+          <Route path="edit-profile" element={<ReceiverEditProfile />} />
           <Route path="find-food" element={<ReceiverFindFood />} />
           <Route path="digital-receipt" element={<ReceiptForm />} />
           <Route path="my-claims" element={<Myclaims />} />

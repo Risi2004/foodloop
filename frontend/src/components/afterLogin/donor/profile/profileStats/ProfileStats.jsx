@@ -1,29 +1,29 @@
 import './ProfileStats.css';
 
-function ProfileStats() {
+function ProfileStats({ donations = [] }) {
+    const totalItems = donations.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
+    const deliveredCount = donations.filter(d => d.status === 'delivered').length;
+
     return (
         <div className="profile-stats">
             <div className="stat-card large-stat">
                 <span className="stat-icon">📦</span>
-                <span className="stat-growth positive">+11%</span>
                 <h3>Items Donated</h3>
-                <div className="stat-value">2,568</div>
+                <div className="stat-value">{donations.length}</div>
             </div>
 
             <div className="stat-card large-stat">
                 <span className="stat-icon">👥</span>
-                <span className="stat-growth positive">+5%</span>
                 <h3>People Fed</h3>
-                <div className="stat-value">568</div>
+                <div className="stat-value">{deliveredCount}</div>
             </div>
 
             <div className="stat-card large-stat">
                 <span className="stat-icon">🔥</span>
-                <span className="stat-growth positive">+1%</span>
-                <h3>Methane Saved</h3>
+                <h3>Total Quantity</h3>
                 <div className="stat-value">
-                    25
-                    <span className="stat-unit">KG</span>
+                    {totalItems}
+                    <span className="stat-unit">units</span>
                 </div>
             </div>
         </div>

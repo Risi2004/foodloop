@@ -1,28 +1,42 @@
+import { Link } from 'react-router-dom';
 import './RecentDonations.css';
 
-function RecentDonations() {
-    const donations = [
-        { item: 'Organic Apples', date: 'Oct 24, 2023', quantity: '2KG', status: 'Completed' },
-        { item: 'Artisan Sourdough', date: 'Oct 24, 2023', quantity: '12KG', status: 'In Transit' },
-        { item: 'Mixed Leaf Salad', date: 'Oct 24, 2023', quantity: '5KG', status: 'In Transit' },
-        { item: 'Fresh Carrots', date: 'Oct 24, 2023', quantity: '3KG', status: 'Pending' },
-        { item: 'Organic Apples', date: 'Oct 24, 2023', quantity: '6KG', status: 'Completed' },
-    ];
+function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
-    const getStatusClass = (status) => {
-        switch (status) {
-            case 'Completed': return 'status-completed';
-            case 'In Transit': return 'status-transit';
-            case 'Pending': return 'status-pending';
-            default: return '';
-        }
+function mapStatusToDisplay(status) {
+    const map = {
+        delivered: 'Completed',
+        picked_up: 'In Transit',
+        assigned: 'In Transit',
+        approved: 'Pending',
+        pending: 'Pending',
+        cancelled: 'Cancelled',
     };
+    return map[status] || status || 'Pending';
+}
+
+function getStatusClass(displayStatus) {
+    switch (displayStatus) {
+        case 'Completed': return 'status-completed';
+        case 'In Transit': return 'status-transit';
+        case 'Pending': return 'status-pending';
+        case 'Cancelled': return 'status-pending';
+        default: return '';
+    }
+}
+
+function RecentDonations({ donations = [] }) {
+    const recentList = donations.slice(0, 10);
 
     return (
         <div className="recent-donations-section">
             <div className="section-header">
                 <h3>Recent Donations</h3>
-                <button className="view-all-btn">View All</button>
+                <Link to="/donor/my-donation" className="view-all-btn">View All</Link>
             </div>
 
             <div className="donations-table-container">
@@ -36,18 +50,27 @@ function RecentDonations() {
                         </tr>
                     </thead>
                     <tbody>
-                        {donations.map((d, index) => (
-                            <tr key={index}>
-                                <td className="item-name">{d.item}</td>
-                                <td className="item-date">{d.date}</td>
-                                <td className="item-quantity">{d.quantity}</td>
-                                <td style={{ textAlign: 'right' }}>
-                                    <span className={`status-badge ${getStatusClass(d.status)}`}>
-                                        <span className="status-dot">•</span> {d.status}
-                                    </span>
-                                </td>
+                        {recentList.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="no-donations">No donations yet. Create your first donation!</td>
                             </tr>
-                        ))}
+                        ) : (
+                            recentList.map((d) => {
+                                const displayStatus = mapStatusToDisplay(d.status);
+                                return (
+                                    <tr key={d.id}>
+                                        <td className="item-name">{d.itemName || '—'}</td>
+                                        <td className="item-date">{formatDate(d.createdAt)}</td>
+                                        <td className="item-quantity">{d.quantity ?? '—'}</td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <span className={`status-badge ${getStatusClass(displayStatus)}`}>
+                                                <span className="status-dot">•</span> {displayStatus}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
                     </tbody>
                 </table>
             </div>

@@ -1,4 +1,4 @@
-import { getAuthHeaders } from '../utils/auth';
+import { getAuthHeaders, getToken } from '../utils/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -265,6 +265,136 @@ export const getAllUsers = async (filters = {}) => {
     if (error.response) {
       throw error;
     }
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Get current user profile (any role)
+ * @returns {Promise<{ success: boolean, user: Object }>}
+ */
+export const getCurrentUser = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/users/me`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to fetch profile');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Upload profile picture (any role). Sends image as multipart field "avatar".
+ * @param {File} file - Image file
+ * @returns {Promise<{ success: boolean, user: Object }>}
+ */
+export const uploadProfileImage = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const token = getToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await fetch(`${API_URL}/api/users/me/avatar`, {
+      method: 'PATCH',
+      headers,
+      body: formData,
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = { message: response.statusText || 'Failed to update profile picture' };
+    }
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update profile picture');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Update donor profile (businessName, businessType, email, contactNo, address, username)
+ * @param {Object} profile - Donor profile fields to update
+ * @returns {Promise<{ success: boolean, user: Object }>}
+ */
+export const updateDonorProfile = async (profile) => {
+  try {
+    const body = {};
+    if (profile.businessName !== undefined) body.businessName = profile.businessName;
+    if (profile.businessType !== undefined) body.businessType = profile.businessType;
+    if (profile.email !== undefined) body.email = profile.email;
+    if (profile.contactNo !== undefined) body.contactNo = profile.contactNo;
+    if (profile.address !== undefined) body.address = profile.address;
+    if (profile.username !== undefined) body.username = profile.username;
+
+    const response = await fetch(`${API_URL}/api/users/me`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update profile');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Update receiver profile (receiverName, receiverType, email, contactNo, address)
+ * @param {Object} profile - Receiver profile fields to update
+ * @returns {Promise<{ success: boolean, user: Object }>}
+ */
+export const updateReceiverProfile = async (profile) => {
+  try {
+    const body = {};
+    if (profile.receiverName !== undefined) body.receiverName = profile.receiverName;
+    if (profile.receiverType !== undefined) body.receiverType = profile.receiverType;
+    if (profile.email !== undefined) body.email = profile.email;
+    if (profile.contactNo !== undefined) body.contactNo = profile.contactNo;
+    if (profile.address !== undefined) body.address = profile.address;
+
+    const response = await fetch(`${API_URL}/api/users/me`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to update profile');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
     const wrappedError = new Error(error.message || 'Network error occurred');
     wrappedError.response = { data: { message: wrappedError.message } };
     throw wrappedError;

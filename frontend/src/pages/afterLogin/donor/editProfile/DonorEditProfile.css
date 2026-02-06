@@ -25,3 +25,16 @@
     flex-direction: column;
     gap: 30px;
 }
+
+.edit-profile-loading,
+.edit-profile-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.edit-profile-error {
+    color: #ffcdd2;
+}

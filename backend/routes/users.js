@@ -4,10 +4,88 @@ const User = require('../models/User');
 const { authenticateUser } = require('../middleware/auth');
 const socketService = require('../services/socketService');
 const { sendProfileUpdatedEmail } = require('../utils/emailService');
+const { handleFileUpload } = require('../middleware/upload');
+const { uploadFileToS3 } = require('../config/awsS3');
 
-// Apply JSON body parser and authentication to all routes
-router.use(express.json());
+// Authentication first (no body needed - uses Bearer token)
 router.use(authenticateUser);
+
+/**
+ * PATCH /api/users/me/avatar
+ * Upload profile picture (any role). Must be BEFORE express.json() so multipart body is not consumed.
+ * Accepts multipart with field "avatar".
+ */
+router.patch('/me/avatar', handleFileUpload, async (req, res) => {
+  try {
+    const file = req.files?.avatar?.[0] || req.files?.profileImage?.[0];
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided. Use field name "avatar" or "profileImage".',
+      });
+    }
+    if (!file.mimetype.startsWith('image/')) {
+      return res.status(400).json({
+        success: false,
+        message: 'File must be an image (e.g. JPEG, PNG)',
+      });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    const imageUrl = await uploadFileToS3(file, 'profile-images');
+    user.profileImageUrl = imageUrl;
+    await user.save();
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture updated',
+      user: userResponse,
+    });
+  } catch (error) {
+    console.error('[Users] Error updating avatar:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update profile picture',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// JSON body parser for all other routes (after avatar so multipart is not consumed)
+router.use(express.json());
+
+/**
+ * GET /api/users/me
+ * Get current user profile (any role). Used for donor/receiver/driver profile pages.
+ */
+router.get('/me', async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password').lean();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error('[Users] Error fetching current user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
 
 /**
  * PATCH /api/users/me/location
@@ -111,15 +189,19 @@ router.patch('/me/location', async (req, res) => {
 
 /**
  * PATCH /api/users/me
- * Update current user profile (Driver: driverName, contactNo, address, email, vehicleNumber, vehicleType)
+ * Update current user profile.
+ * Driver: driverName, contactNo, address, email, vehicleNumber, vehicleType
+ * Donor: businessName, businessType, email, contactNo, address, username (for Individual)
+ * Receiver: receiverName, receiverType, email, contactNo, address
  * Requires authentication
  */
 router.patch('/me', async (req, res) => {
   try {
-    if (req.user.role !== 'Driver') {
+    const role = req.user.role;
+    if (role !== 'Driver' && role !== 'Donor' && role !== 'Receiver') {
       return res.status(403).json({
         success: false,
-        message: 'Only drivers can update profile via this endpoint',
+        message: 'Only drivers, donors, and receivers can update profile via this endpoint',
       });
     }
 
@@ -131,58 +213,172 @@ router.patch('/me', async (req, res) => {
       });
     }
 
-    const prevDriverName = user.driverName;
-    const prevContactNo = user.contactNo;
-    const prevAddress = user.address;
-    const prevEmail = user.email;
-    const prevVehicleNumber = user.vehicleNumber;
-    const prevVehicleType = user.vehicleType;
+    let changedFields = [];
 
-    const { driverName, contactNo, address, email, vehicleNumber, vehicleType } = req.body;
+    if (role === 'Driver') {
+      const prevDriverName = user.driverName;
+      const prevContactNo = user.contactNo;
+      const prevAddress = user.address;
+      const prevEmail = user.email;
+      const prevVehicleNumber = user.vehicleNumber;
+      const prevVehicleType = user.vehicleType;
 
-    if (driverName !== undefined) {
-      user.driverName = typeof driverName === 'string' ? driverName.trim() || null : user.driverName;
-    }
-    if (contactNo !== undefined) {
-      const val = typeof contactNo === 'string' ? contactNo.trim() : '';
-      if (val) user.contactNo = val;
-    }
-    if (address !== undefined) {
-      const val = typeof address === 'string' ? address.trim() : '';
-      if (val) user.address = val;
-    }
-    if (vehicleNumber !== undefined) {
-      user.vehicleNumber = typeof vehicleNumber === 'string' ? vehicleNumber.trim() || null : user.vehicleNumber;
-    }
-    if (vehicleType !== undefined) {
-      const allowed = ['Scooter', 'Bike', 'Car', 'Truck'];
-      user.vehicleType = allowed.includes(vehicleType) ? vehicleType : user.vehicleType;
-    }
-    if (email !== undefined) {
-      const newEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
-      if (newEmail) {
-        if (newEmail !== user.email) {
-          const existing = await User.findOne({ email: newEmail });
+      const { driverName, contactNo, address, email, vehicleNumber, vehicleType } = req.body;
+
+      if (driverName !== undefined) {
+        user.driverName = typeof driverName === 'string' ? driverName.trim() || null : user.driverName;
+      }
+      if (contactNo !== undefined) {
+        const val = typeof contactNo === 'string' ? contactNo.trim() : '';
+        if (val) user.contactNo = val;
+      }
+      if (address !== undefined) {
+        const val = typeof address === 'string' ? address.trim() : '';
+        if (val) user.address = val;
+      }
+      if (vehicleNumber !== undefined) {
+        user.vehicleNumber = typeof vehicleNumber === 'string' ? vehicleNumber.trim() || null : user.vehicleNumber;
+      }
+      if (vehicleType !== undefined) {
+        const allowed = ['Scooter', 'Bike', 'Car', 'Truck'];
+        user.vehicleType = allowed.includes(vehicleType) ? vehicleType : user.vehicleType;
+      }
+      if (email !== undefined) {
+        const newEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+        if (newEmail) {
+          if (newEmail !== user.email) {
+            const existing = await User.findOne({ email: newEmail });
+            if (existing) {
+              return res.status(409).json({
+                success: false,
+                message: 'Email already in use',
+              });
+            }
+            user.email = newEmail;
+          }
+        }
+      }
+
+      await user.save();
+
+      if (prevDriverName !== user.driverName) changedFields.push('Name');
+      if (prevContactNo !== user.contactNo) changedFields.push('Contact Number');
+      if (prevAddress !== user.address) changedFields.push('Address');
+      if (prevEmail !== user.email) changedFields.push('Email');
+      if (prevVehicleNumber !== user.vehicleNumber) changedFields.push('Vehicle Number');
+      if (prevVehicleType !== user.vehicleType) changedFields.push('Vehicle Type');
+    } else if (role === 'Donor') {
+      const prevBusinessName = user.businessName;
+      const prevBusinessType = user.businessType;
+      const prevContactNo = user.contactNo;
+      const prevAddress = user.address;
+      const prevEmail = user.email;
+      const prevUsername = user.username;
+
+      const { businessName, businessType, email, contactNo, address, username } = req.body;
+
+      if (businessName !== undefined) {
+        user.businessName = typeof businessName === 'string' ? businessName.trim() || null : user.businessName;
+      }
+      if (businessType !== undefined) {
+        const allowed = ['Restaurant', 'Supermarket', 'Wedding Hall'];
+        user.businessType = allowed.includes(businessType) ? businessType : user.businessType;
+      }
+      if (contactNo !== undefined) {
+        const val = typeof contactNo === 'string' ? contactNo.trim() : '';
+        if (val) user.contactNo = val;
+      }
+      if (address !== undefined) {
+        const val = typeof address === 'string' ? address.trim() : '';
+        if (val) user.address = val;
+      }
+      if (username !== undefined) {
+        const val = typeof username === 'string' ? username.trim() || null : null;
+        if (val !== null) {
+          const existing = await User.findOne({ username: val, _id: { $ne: user._id } });
           if (existing) {
             return res.status(409).json({
               success: false,
-              message: 'Email already in use',
+              message: 'Username already in use',
             });
           }
-          user.email = newEmail;
+          user.username = val;
+        } else {
+          user.username = null;
         }
       }
+      if (email !== undefined) {
+        const newEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+        if (newEmail) {
+          if (newEmail !== user.email) {
+            const existing = await User.findOne({ email: newEmail });
+            if (existing) {
+              return res.status(409).json({
+                success: false,
+                message: 'Email already in use',
+              });
+            }
+            user.email = newEmail;
+          }
+        }
+      }
+
+      await user.save();
+
+      if (prevBusinessName !== user.businessName) changedFields.push('Business Name');
+      if (prevBusinessType !== user.businessType) changedFields.push('Business Type');
+      if (prevContactNo !== user.contactNo) changedFields.push('Contact Number');
+      if (prevAddress !== user.address) changedFields.push('Address');
+      if (prevEmail !== user.email) changedFields.push('Email');
+      if (prevUsername !== user.username) changedFields.push('Username');
+    } else if (role === 'Receiver') {
+      const prevReceiverName = user.receiverName;
+      const prevReceiverType = user.receiverType;
+      const prevContactNo = user.contactNo;
+      const prevAddress = user.address;
+      const prevEmail = user.email;
+
+      const { receiverName, receiverType, email, contactNo, address } = req.body;
+
+      if (receiverName !== undefined) {
+        user.receiverName = typeof receiverName === 'string' ? receiverName.trim() || null : user.receiverName;
+      }
+      if (receiverType !== undefined) {
+        const allowed = ['NGO', 'Food Banks', 'Service Organization'];
+        user.receiverType = allowed.includes(receiverType) ? receiverType : user.receiverType;
+      }
+      if (contactNo !== undefined) {
+        const val = typeof contactNo === 'string' ? contactNo.trim() : '';
+        if (val) user.contactNo = val;
+      }
+      if (address !== undefined) {
+        const val = typeof address === 'string' ? address.trim() : '';
+        if (val) user.address = val;
+      }
+      if (email !== undefined) {
+        const newEmail = typeof email === 'string' ? email.toLowerCase().trim() : '';
+        if (newEmail) {
+          if (newEmail !== user.email) {
+            const existing = await User.findOne({ email: newEmail });
+            if (existing) {
+              return res.status(409).json({
+                success: false,
+                message: 'Email already in use',
+              });
+            }
+            user.email = newEmail;
+          }
+        }
+      }
+
+      await user.save();
+
+      if (prevReceiverName !== user.receiverName) changedFields.push('Organization Name');
+      if (prevReceiverType !== user.receiverType) changedFields.push('Organization Type');
+      if (prevContactNo !== user.contactNo) changedFields.push('Contact Number');
+      if (prevAddress !== user.address) changedFields.push('Address');
+      if (prevEmail !== user.email) changedFields.push('Email');
     }
-
-    await user.save();
-
-    const changedFields = [];
-    if (prevDriverName !== user.driverName) changedFields.push('Name');
-    if (prevContactNo !== user.contactNo) changedFields.push('Contact Number');
-    if (prevAddress !== user.address) changedFields.push('Address');
-    if (prevEmail !== user.email) changedFields.push('Email');
-    if (prevVehicleNumber !== user.vehicleNumber) changedFields.push('Vehicle Number');
-    if (prevVehicleType !== user.vehicleType) changedFields.push('Vehicle Type');
 
     if (changedFields.length > 0) {
       sendProfileUpdatedEmail(user.email, changedFields).catch((err) => {

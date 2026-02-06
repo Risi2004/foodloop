@@ -15,6 +15,26 @@
   gap: 30px;
 }
 
+.receiverProfile__loading,
+.receiverProfile__error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.receiverProfile__error {
+  color: #ffcdd2;
+}
+
+.receiverProfile__noClaims {
+  text-align: center;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
 /* Common Utilities */
 .glass-card {
   background: rgba(255, 255, 255, 0.08);

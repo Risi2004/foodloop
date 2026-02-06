@@ -39,6 +39,7 @@
     font-weight: 600;
     font-size: 12px;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .donations-table {
@@ -111,4 +112,11 @@
     /* "Pending" is red/pink */
     background: #ffcdd2;
     color: #b71c1c;
+}
+
+.no-donations {
+    text-align: center;
+    padding: 24px;
+    color: #666;
+    font-size: 14px;
 }
