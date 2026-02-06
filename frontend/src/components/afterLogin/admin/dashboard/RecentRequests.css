@@ -23,11 +23,24 @@
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .view-all-btn:hover {
     color: white;
     text-decoration: underline;
+}
+
+.recent-requests-error {
+    color: #ffcdd2;
+    font-size: 0.9rem;
+    margin: 0 0 12px 0;
+}
+
+.recent-requests-empty {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 24px !important;
 }
 
 .requests-table-container {

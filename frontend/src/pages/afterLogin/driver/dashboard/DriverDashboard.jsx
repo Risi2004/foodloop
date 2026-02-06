@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import FunctionsSection from '../../../../components/afterLogin/dashboard/driverSection/functionsSection/FunctionsSection';
 import Header from '../../../../components/afterLogin/dashboard/driverSection/header/Header';
 import DriverNavbar from '../../../../components/afterLogin/dashboard/driverSection/navbar/DriverNavbar';
@@ -10,6 +12,14 @@ import DriverFooter from "../../../../components/afterLogin/dashboard/driverSect
 import './DriverDashboard.css';
 
 function DriverDashboard(){
+    const { hash } = useLocation();
+    useEffect(() => {
+        if (hash === '#contact') {
+            const el = document.getElementById('contact');
+            if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        }
+    }, [hash]);
+
     return (
         <div className='driver__dashboard'>
             <DriverNavbar />

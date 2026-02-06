@@ -28,7 +28,7 @@ function DonorFooter() {
                         <h1>Quick Links</h1>
                         <Link to="/donor/dashboard">Home</Link>
                         <Link to="/donor/about">About Us</Link>
-                        <Link to="">Contact Us</Link>
+                        <Link to="/donor/dashboard#contact">Contact Us</Link>
                         <Link to="">My Donation</Link>
                     </div>
                     <div className="footer__s4">

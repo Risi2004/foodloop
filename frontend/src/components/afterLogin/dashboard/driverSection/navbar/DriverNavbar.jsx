@@ -7,7 +7,6 @@ import menu from "../../../../../assets/icons/navbar/menu-bar.svg"
 import { clearAuth, getUser } from "../../../../../utils/auth";
 import { getUnreadCount, NOTIFICATIONS_READ_EVENT } from "../../../../../services/notificationApi";
 import { deleteAccount } from "../../../../../services/api";
-
 function Navbar() {
     const navigate = useNavigate();
     const user = getUser();
@@ -104,7 +103,7 @@ function Navbar() {
                 <div className="navbar__s2">
                     <Link to="/driver/dashboard">Home</Link>
                     <Link to="/driver/about">About Us</Link>
-                    <Link to="/contact">Contact Us</Link>
+                    <Link to="/driver/dashboard#contact">Contact Us</Link>
                     <Link to="/driver/delivery">Delivery</Link>
                     <Link to="/driver/my-pickups">My Pickups</Link>
                 </div>
@@ -118,15 +117,16 @@ function Navbar() {
                     </Link>
                     <div className="navbar__s3__sub" onClick={toggleProfile}>
                         <h3>{getUserName()}</h3>
-                        <img 
-                            className="navbar__s3__img2" 
-                            src={getProfileImage()} 
-                            alt="profile-icon"
-                            onError={(e) => {
-                                // Fallback to default icon if image fails to load
-                                e.target.src = profile;
-                            }}
-                        />
+                        <div className="navbar__profile-wrap">
+                            <img 
+                                className="navbar__s3__img2" 
+                                src={getProfileImage()} 
+                                alt="profile-icon"
+                                onError={(e) => {
+                                    e.target.src = profile;
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
                 {isProfileOpen && (
@@ -169,7 +169,7 @@ function Navbar() {
                     <p onClick={toggleMenu}>X</p>
                     <Link to="/driver/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/driver/about" onClick={toggleMenu}>About Us</Link>
-                    <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
+                    <Link to="/driver/dashboard#contact" onClick={toggleMenu}>Contact Us</Link>
                     <Link to="/driver/delivery" onClick={toggleMenu}>Delivery</Link>
                     <Link to="/driver/my-pickups" onClick={toggleMenu}>My Pickups</Link>
                     <Link to="/driver/profile" onClick={toggleMenu}>View Profile</Link>

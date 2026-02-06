@@ -108,7 +108,7 @@ function Navbar() {
                 <div className="navbar__s2">
                     <Link to="/donor/dashboard">Home</Link>
                     <Link to="/donor/about">About Us</Link>
-                    <Link to="/contact">Contact Us</Link>
+                    <Link to="/donor/dashboard#contact">Contact Us</Link>
                     <Link to="/donor/my-donation">My Donation</Link>
                 </div>
 
@@ -121,15 +121,16 @@ function Navbar() {
                     </Link>
                     <div className="navbar__s3__sub" onClick={toggleProfile}>
                         <h3>{getUserName()}</h3>
-                        <img 
-                            className="navbar__s3__img2" 
-                            src={getProfileImage()} 
-                            alt="profile-icon"
-                            onError={(e) => {
-                                // Fallback to default icon if image fails to load
-                                e.target.src = profile;
-                            }}
-                        />
+                        <div className="navbar__profile-wrap">
+                            <img 
+                                className="navbar__s3__img2" 
+                                src={getProfileImage()} 
+                                alt="profile-icon"
+                                onError={(e) => {
+                                    e.target.src = profile;
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
                 {isProfileOpen && (
@@ -172,7 +173,7 @@ function Navbar() {
                     <p onClick={toggleMenu}>X</p>
                     <Link to="/donor/dashboard" onClick={toggleMenu}>Home</Link>
                     <Link to="/donor/about" onClick={toggleMenu}>About Us</Link>
-                    <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
+                    <Link to="/donor/dashboard#contact" onClick={toggleMenu}>Contact Us</Link>
                     <Link to="/donor/my-donation" onClick={toggleMenu}>My Donation</Link>
                     <Link to="/donor/profile" onClick={toggleMenu}>View Profile</Link>
                     <div className="navbar__popup__action">

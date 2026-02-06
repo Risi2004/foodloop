@@ -238,12 +238,20 @@ const generateImpactReceiptPDF = async (receiptData, donationData) => {
         .font('Helvetica')
         .text(`${receiptData.weightPerServing?.toFixed(3) || '0.000'} KG`, rightCol, metricsY + (lineHeight * 2));
 
+      // Use stored methane (kg); if 0 or missing, recalculate from quantity × weightPerServing × 0.05
+      const quantity = donationData.donation?.quantity ?? 0;
+      const weightPerServing = receiptData.weightPerServing ?? 0;
+      let methaneDisplay = receiptData.methaneSaved;
+      if (methaneDisplay == null || methaneDisplay === 0) {
+        const totalWeightKg = quantity * weightPerServing;
+        methaneDisplay = Math.round(totalWeightKg * 0.05 * 100) / 100;
+      }
       doc
         .font('Helvetica-Bold')
         .fillColor('#10b981')
         .text('Methane Saved:', leftCol, metricsY + (lineHeight * 3))
         .font('Helvetica')
-        .text(`${receiptData.methaneSaved?.toFixed(2) || '0.00'} KG`, rightCol, metricsY + (lineHeight * 3));
+        .text(`${typeof methaneDisplay === 'number' ? methaneDisplay.toFixed(2) : '0.00'} KG`, rightCol, metricsY + (lineHeight * 3));
 
       doc.y = metricsY + (lineHeight * 4) + 15;
 

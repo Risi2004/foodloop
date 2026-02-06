@@ -126,6 +126,24 @@ export const changePassword = async (currentPassword, newPassword) => {
 };
 
 /**
+ * Get admin dashboard stats (donors, drivers, receivers, pending counts)
+ * @returns {Promise} { success, stats: { donors, drivers, receivers, pending } }
+ */
+export const getAdminStats = async () => {
+  const response = await fetch(`${API_URL}/api/admin/stats`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const error = new Error(data.message || 'Failed to fetch dashboard stats');
+    error.response = { status: response.status, data };
+    throw error;
+  }
+  return data;
+};
+
+/**
  * Get all pending users (for admin)
  * @returns {Promise} Response with pending users array
  */

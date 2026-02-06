@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const NotificationRead = require('../models/NotificationRead');
 const UserNotification = require('../models/UserNotification');
+const User = require('../models/User');
 const { authenticateUser } = require('../middleware/auth');
 
 router.use(express.json());
@@ -11,7 +12,8 @@ router.use(express.json());
 /**
  * GET /api/notifications
  * List notifications for the current user (broadcast by role + per-user).
- * Returns active notifications with read flag and unreadCount.
+ * Only broadcast notifications created on or after the user's account creation are shown
+ * (so new users do not see old admin notifications).
  */
 router.get('/', authenticateUser, async (req, res) => {
   try {
@@ -25,10 +27,13 @@ router.get('/', authenticateUser, async (req, res) => {
     }
 
     const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+    const userDoc = userObjectId ? await User.findById(userObjectId).select('createdAt').lean() : null;
+    const userCreatedAt = userDoc && userDoc.createdAt ? userDoc.createdAt : new Date(0);
 
-    // Broadcast notifications (by role)
+    // Broadcast notifications (by role) – only those created on or after user's account creation
     const notifications = await Notification.find({
       status: 'active',
+      createdAt: { $gte: userCreatedAt },
       $or: [
         { targetRoles: 'All' },
         { targetRoles: userRole },
@@ -102,6 +107,7 @@ router.get('/', authenticateUser, async (req, res) => {
 /**
  * GET /api/notifications/unread-count
  * Returns unread notification count for current user (lightweight for navbar).
+ * Only counts broadcast notifications created on or after the user's account creation.
  */
 router.get('/unread-count', authenticateUser, async (req, res) => {
   try {
@@ -114,8 +120,13 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
       });
     }
 
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+    const userDoc = userObjectId ? await User.findById(userObjectId).select('createdAt').lean() : null;
+    const userCreatedAt = userDoc && userDoc.createdAt ? userDoc.createdAt : new Date(0);
+
     const notifications = await Notification.find({
       status: 'active',
+      createdAt: { $gte: userCreatedAt },
       $or: [
         { targetRoles: 'All' },
         { targetRoles: userRole },
@@ -125,7 +136,6 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
       .lean();
 
     const notificationIds = notifications.map((n) => n._id);
-    const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
     let broadcastReadCount = 0;
     if (userObjectId && notificationIds.length > 0) {
       broadcastReadCount = await NotificationRead.countDocuments({
@@ -181,6 +191,9 @@ router.post('/mark-read', authenticateUser, async (req, res) => {
       });
     }
 
+    const userDoc = await User.findById(userObjectId).select('createdAt').lean();
+    const userCreatedAt = userDoc && userDoc.createdAt ? userDoc.createdAt : new Date(0);
+
     const { all, notificationIds } = req.body || {};
     let broadcastIdsToMark = [];
     let userNotifIdsToMark = [];
@@ -189,6 +202,7 @@ router.post('/mark-read', authenticateUser, async (req, res) => {
     if (all === true) {
       const notifications = await Notification.find({
         status: 'active',
+        createdAt: { $gte: userCreatedAt },
         $or: [
           { targetRoles: 'All' },
           { targetRoles: userRole },

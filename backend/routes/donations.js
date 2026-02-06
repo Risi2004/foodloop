@@ -17,6 +17,7 @@ const {
 const { geocodeAddress, calculateDistance } = require('../services/geocodingService');
 const ImpactReceipt = require('../models/ImpactReceipt');
 const { generateImpactReceiptPDF } = require('../services/pdfService');
+const { getBadgeProgress, DONOR_MILESTONES, DONOR_BADGE_NAMES, DRIVER_MILESTONES, DRIVER_BADGE_NAMES } = require('../utils/badgeConfig');
 
 // Apply file upload middleware for image uploads
 router.use(express.json());
@@ -1003,6 +1004,52 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
 });
 
 /**
+ * GET /api/donations/donor-statistics
+ * Get donor statistics (delivered donations count and badge progress)
+ * Requires authentication (Donor role)
+ */
+router.get('/donor-statistics', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only donors can view their statistics',
+      });
+    }
+
+    const donorId = req.user.id;
+    const totalDonationsDelivered = await Donation.countDocuments({
+      donorId,
+      status: 'delivered',
+    });
+
+    const badgeProgress = getBadgeProgress(totalDonationsDelivered, DONOR_MILESTONES, DONOR_BADGE_NAMES);
+
+    res.status(200).json({
+      success: true,
+      statistics: {
+        totalDonationsDelivered,
+        badgeProgress: {
+          currentBadge: badgeProgress.currentBadge,
+          currentBadgeKey: badgeProgress.currentBadgeKey,
+          nextBadge: badgeProgress.nextBadge,
+          nextMilestone: badgeProgress.nextMilestone,
+          remaining: badgeProgress.remaining,
+          timeline: badgeProgress.timeline,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching donor statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch donor statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
  * GET /api/donations/driver-statistics
  * Get driver statistics (deliveries completed, distance travelled, etc.)
  * Requires authentication (Driver role)
@@ -1155,31 +1202,12 @@ router.get('/driver-statistics', authenticateUser, async (req, res) => {
       ? ((currentMonthDistance - lastMonthDistance) / lastMonthDistance * 100).toFixed(0)
       : (currentMonthDistance > 0 ? 100 : 0);
 
-    // Calculate impact progress
     const totalDeliveries = allDelivered.length;
-    let badgeLevel = 'Beginner';
-    let nextBadgeTarget = 10;
-    let progressPercentage = 0;
-
-    if (totalDeliveries >= 51) {
-      badgeLevel = 'Champion';
-      nextBadgeTarget = 100;
-      progressPercentage = 100;
-    } else if (totalDeliveries >= 26) {
-      badgeLevel = 'Hero';
-      nextBadgeTarget = 51;
-      progressPercentage = ((totalDeliveries - 25) / 25 * 100).toFixed(0);
-    } else if (totalDeliveries >= 11) {
-      badgeLevel = 'Helper';
-      nextBadgeTarget = 26;
-      progressPercentage = ((totalDeliveries - 10) / 15 * 100).toFixed(0);
-    } else {
-      badgeLevel = 'Beginner';
-      nextBadgeTarget = 11;
-      progressPercentage = (totalDeliveries / 10 * 100).toFixed(0);
-    }
-
-    const remainingForNextBadge = Math.max(0, nextBadgeTarget - totalDeliveries);
+    const badgeProgress = getBadgeProgress(totalDeliveries, DRIVER_MILESTONES, DRIVER_BADGE_NAMES);
+    const nextMilestone = badgeProgress.nextMilestone;
+    const progressPercentage = nextMilestone != null && totalDeliveries < nextMilestone
+      ? (totalDeliveries / nextMilestone * 100).toFixed(0)
+      : totalDeliveries >= 100 ? 100 : 0;
 
     console.log(`[Donations] Returning statistics for driver ${driverId}`);
 
@@ -1195,11 +1223,19 @@ router.get('/driver-statistics', authenticateUser, async (req, res) => {
         deliveriesTrend: parseFloat(deliveriesTrend),
         distanceTrend: parseFloat(distanceTrend),
         impactProgress: {
-          badgeLevel,
+          badgeLevel: badgeProgress.currentBadge || 'None',
           progressPercentage: parseFloat(progressPercentage),
           currentCount: totalDeliveries,
-          nextBadgeTarget,
-          remainingForNextBadge,
+          nextBadgeTarget: nextMilestone,
+          remainingForNextBadge: badgeProgress.remaining,
+        },
+        badgeProgress: {
+          currentBadge: badgeProgress.currentBadge,
+          currentBadgeKey: badgeProgress.currentBadgeKey,
+          nextBadge: badgeProgress.nextBadge,
+          nextMilestone: badgeProgress.nextMilestone,
+          remaining: badgeProgress.remaining,
+          timeline: badgeProgress.timeline,
         },
       },
     });
@@ -1260,7 +1296,7 @@ router.get('/driver-completed', authenticateUser, async (req, res) => {
         donorName,
         donorAddress: donation.donorAddress || donor?.address || '',
         receiverName,
-        receiverAddress: receiver?.address || '',
+        receiverAddress: donation.receiverAddress || receiver?.address || '',
         deliveredAt: donation.updatedAt, // Use updatedAt as delivery date
         createdAt: donation.createdAt,
       };
@@ -1329,7 +1365,7 @@ router.get('/my-donations', authenticateUser, async (req, res) => {
         receiverName: receiver?.receiverName,
         receiverType: receiver?.receiverType,
         receiverEmail: receiver?.email,
-        receiverAddress: receiver?.address || '',
+        receiverAddress: donation.receiverAddress || receiver?.address || '',
         // Driver details (if assigned)
         assignedDriverId: donation.assignedDriverId?._id?.toString(),
         driverName: driver?.driverName,
@@ -1445,14 +1481,15 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
           }
         }
 
-        // Get receiver coordinates (geocode receiver address)
-        let receiverLat = null;
-        let receiverLng = null;
-        if (receiver?.address) {
-          const receiverCoords = await geocodeAddress(receiver.address);
+        // Get receiver coordinates: use confirmed claim location first, else geocode address
+        let receiverLat = donation.receiverLatitude ?? null;
+        let receiverLng = donation.receiverLongitude ?? null;
+        const receiverAddressForGeocode = donation.receiverAddress || receiver?.address;
+        if ((!receiverLat || !receiverLng) && receiverAddressForGeocode) {
+          const receiverCoords = await geocodeAddress(receiverAddressForGeocode);
           if (receiverCoords) {
-            receiverLat = receiverCoords.lat;
-            receiverLng = receiverCoords.lng;
+            receiverLat = receiverLat ?? receiverCoords.lat;
+            receiverLng = receiverLng ?? receiverCoords.lng;
           }
         }
 
@@ -1510,10 +1547,10 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
           donorType: donor?.donorType,
           donorLatitude: donorLat,
           donorLongitude: donorLng,
-          // Receiver details
+          // Receiver details (use confirmed delivery address from claim, not signup address)
           receiverId: donation.assignedReceiverId?._id?.toString(),
           receiverName: receiverName,
-          receiverAddress: receiver?.address || '',
+          receiverAddress: donation.receiverAddress || receiver?.address || '',
           receiverEmail: receiver?.email,
           receiverType: receiver?.receiverType,
           receiverLatitude: receiverLat,
@@ -1825,13 +1862,19 @@ router.get('/:id/tracking', async (req, res) => {
         }
       : null;
 
-    // Get receiver location (geocode if needed)
+    // Get receiver location: use confirmed claim coordinates first, else geocode address
     let receiverLocation = null;
-    if (donation.assignedReceiverId) {
+    if (donation.receiverLatitude != null && donation.receiverLongitude != null) {
+      receiverLocation = {
+        latitude: donation.receiverLatitude,
+        longitude: donation.receiverLongitude,
+      };
+    } else if (donation.assignedReceiverId) {
       const receiver = donation.assignedReceiverId;
-      if (receiver.address) {
+      const addressToGeocode = donation.receiverAddress || receiver.address;
+      if (addressToGeocode) {
         const { geocodeAddress } = require('../services/geocodingService');
-        const coords = await geocodeAddress(receiver.address);
+        const coords = await geocodeAddress(addressToGeocode);
         if (coords) {
           receiverLocation = {
             latitude: coords.lat,
@@ -1862,7 +1905,7 @@ router.get('/:id/tracking', async (req, res) => {
       receiver: donation.assignedReceiverId ? {
         id: donation.assignedReceiverId._id?.toString(),
         name: donation.assignedReceiverId.receiverName || donation.assignedReceiverId.email || 'Receiver',
-        address: donation.assignedReceiverId.address || '',
+        address: donation.receiverAddress || donation.assignedReceiverId.address || '',
         location: receiverLocation,
       } : null,
       driver: donation.assignedDriverId ? {
@@ -2190,7 +2233,7 @@ router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
       });
     }
 
-    // Validate required fields
+    // Validate required fields (allow string numbers from form/JSON)
     if (!dropLocation || typeof dropLocation !== 'string' || dropLocation.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -2198,14 +2241,16 @@ router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
       });
     }
 
-    if (!peopleFed || typeof peopleFed !== 'number' || peopleFed < 1) {
+    const peopleFedNum = Number(peopleFed);
+    if (!Number.isFinite(peopleFedNum) || peopleFedNum < 1) {
       return res.status(400).json({
         success: false,
         errors: [{ field: 'peopleFed', message: 'People fed must be a number greater than 0' }],
       });
     }
 
-    if (!weightPerServing || typeof weightPerServing !== 'number' || weightPerServing < 0.001) {
+    const weightPerServingNum = Number(weightPerServing);
+    if (!Number.isFinite(weightPerServingNum) || weightPerServingNum < 0.001) {
       return res.status(400).json({
         success: false,
         errors: [{ field: 'weightPerServing', message: 'Weight per serving must be a number greater than or equal to 0.001 kg' }],
@@ -2242,19 +2287,13 @@ router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
       });
     }
 
-    // Check if receipt already exists - if it does, return it in the response
+    // Check if receipt already exists - one receipt per donation
     const existingReceipt = await ImpactReceipt.findOne({ donationId: id }).lean();
-    
-    // If receipt exists, include it in the response
     if (existingReceipt) {
-      receiptDetails.existingReceipt = {
-        dropLocation: existingReceipt.dropLocation,
-        peopleFed: existingReceipt.peopleFed,
-        weightPerServing: existingReceipt.weightPerServing,
-        distanceTraveled: existingReceipt.distanceTraveled,
-        methaneSaved: existingReceipt.methaneSaved,
-        createdAt: existingReceipt.createdAt,
-      };
+      return res.status(409).json({
+        success: false,
+        message: 'A receipt already exists for this donation',
+      });
     }
 
     // Calculate distance if coordinates are available
@@ -2271,25 +2310,22 @@ router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
       }
     }
 
-    // Calculate methane saved using formula: CH₄ = MSW × 0.05
-    // Where MSW = (quantity × weightPerServing) in tons
-    // Formula breakdown: CH₄ = (quantity × weightPerServing / 1000) × 0.05
-    // Constants: DOC = 0.15, DOC_f = 0.5, F = 0.5, 16/12 = 1.333...
-    // Simplified: CH₄ = MSW × 0.15 × 0.5 × 0.5 × (16/12) = MSW × 0.05
-    const quantity = donation.quantity || 0;
-    const totalWeightKg = quantity * weightPerServing; // Total weight in kg
-    const totalWeightTons = totalWeightKg / 1000; // Convert to tons
-    const methaneSaved = totalWeightTons * 0.05; // Apply formula
+    // Calculate methane saved: store in kg for display (formula factor 0.05; result in kg)
+    // methaneSavedKg = quantity × weightPerServing × 0.05
+    const quantity = Number(donation.quantity) || 0;
+    const totalWeightKg = quantity * weightPerServingNum;
+    const methaneSavedKg = totalWeightKg * 0.05;
+    const methaneSavedRounded = Math.round(methaneSavedKg * 100) / 100;
 
-    // Create impact receipt
+    // Create impact receipt (ensure methaneSaved is a number so it persists)
     const impactReceipt = new ImpactReceipt({
       donationId: id,
       receiverId: receiverId,
       dropLocation: dropLocation.trim(),
-      peopleFed: Math.round(peopleFed),
-      weightPerServing: Math.round(weightPerServing * 1000) / 1000, // Round to 3 decimal places (grams precision)
+      peopleFed: Math.round(peopleFedNum),
+      weightPerServing: Math.round(weightPerServingNum * 1000) / 1000,
       distanceTraveled: distanceTraveled,
-      methaneSaved: Math.round(methaneSaved * 100) / 100, // Round to 2 decimal places
+      methaneSaved: methaneSavedRounded,
     });
 
     await impactReceipt.save();
@@ -2349,7 +2385,7 @@ router.post('/:id/create-receipt', authenticateUser, async (req, res) => {
             receiverName: receiverName,
             receiverType: fullDonation.assignedReceiverId?.receiverType || '',
             type: fullDonation.assignedReceiverId?.receiverType || '',
-            address: fullDonation.assignedReceiverId?.address || '',
+            address: fullDonation.receiverAddress || fullDonation.assignedReceiverId?.address || '',
           },
           driver: fullDonation.assignedDriverId ? {
             name: driverName,
@@ -2531,7 +2567,7 @@ router.get('/:id/receipt-pdf', authenticateUser, async (req, res) => {
       receiver: {
         receiverName: receiverName,
         receiverType: donation.assignedReceiverId?.receiverType || '',
-        address: donation.assignedReceiverId?.address || '',
+        address: donation.receiverAddress || donation.assignedReceiverId?.address || '',
       },
       driver: donation.assignedDriverId ? {
         driverName: driverName,

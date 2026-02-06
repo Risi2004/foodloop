@@ -4,10 +4,29 @@ import chatbotIcon from '../../assets/chatbot/chatbot.svg';
 import chatbotIcon2 from '../../assets/chatbot/chatbot2.svg';
 import sendIcon from "../../assets/chatbot/send.svg";
 import { sendMessage } from '../../services/chatApi';
+import { getUser, isAuthenticated } from '../../utils/auth';
 
-const WELCOME_MESSAGE = 'Welcome to our FoodLoop AI. How can I help you';
+const WELCOME_MESSAGE_GUEST = 'Welcome to our FoodLoop AI. How can I help you?';
 const LOADING_PLACEHOLDER = '__loading__';
 const MAX_HISTORY_MESSAGES = 10;
+
+function getDisplayName(user) {
+  if (!user) return '';
+  if (user.role === 'Donor') {
+    return user.donorType === 'Business' ? (user.businessName || user.email || '') : (user.username || user.email || '');
+  }
+  if (user.role === 'Receiver') return user.receiverName || user.email || '';
+  if (user.role === 'Driver') return user.driverName || user.email || '';
+  return user.email || '';
+}
+
+function getWelcomeMessage() {
+  if (!isAuthenticated()) return WELCOME_MESSAGE_GUEST;
+  const user = getUser();
+  const name = getDisplayName(user);
+  if (!name || !name.trim()) return WELCOME_MESSAGE_GUEST;
+  return `Hi ${name.trim()}! Welcome to FoodLoop AI. How can I help you?`;
+}
 
 /** Remove markdown asterisks so **bold** and *italic* show as plain text */
 function stripMarkdown(text) {
@@ -30,7 +49,7 @@ function buildHistory(messages) {
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState([{ text: WELCOME_MESSAGE, fromBot: true }]);
+  const [messages, setMessages] = useState(() => [{ text: getWelcomeMessage(), fromBot: true }]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 

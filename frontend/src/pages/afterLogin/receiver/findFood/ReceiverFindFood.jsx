@@ -319,7 +319,7 @@ const FindFood = () => {
                     setClaimingDonationId(null);
                 }}
                 onConfirm={handleClaimLocationConfirm}
-                defaultAddress={receiverAddress || profileAddress}
+                defaultAddress={receiverAddress}
                 title="Confirm delivery location"
             />
 

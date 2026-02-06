@@ -141,10 +141,6 @@ function ReceiverProfile() {
                 </div>
                 <div className="receiverProfile__infoList">
                   <div className="receiverProfile__infoItem">
-                    <label>Registration No.</label>
-                    <span>—</span>
-                  </div>
-                  <div className="receiverProfile__infoItem">
                     <label>Contact</label>
                     <div className="receiverProfile__contactDetails">
                       <span>{displayName}</span>
@@ -165,13 +161,6 @@ function ReceiverProfile() {
                       <span>{user.address}</span>
                     </div>
                   )}
-                  <div className="receiverProfile__map">
-                    <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15843.080538964724!2d79.84501255541992!3d6.927079361628177!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ae259230f7d4555%3A0x6b77203cb5d83!2sColombo%2C%20Sri%20Lanka!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus"
-                      title="Location Map"
-                      loading="lazy"
-                    ></iframe>
-                  </div>
                 </div>
               </div>
 

@@ -39,9 +39,21 @@ const ReceiptForm = () => {
     // This will update whenever weightPerServing or donationData changes
     // If receipt exists, use the saved methaneSaved value
     const calculatedMethaneSaved = useMemo(() => {
-        // If receipt exists, use the saved value
-        if (receiptExists && donationData?.existingReceipt?.methaneSaved !== undefined) {
-            return donationData.existingReceipt.methaneSaved;
+        // If receipt exists, use the saved value (unless it's 0 and we can recalculate from quantity + weightPerServing)
+        const savedMethane = donationData?.existingReceipt?.methaneSaved;
+        if (receiptExists && savedMethane !== undefined && savedMethane !== null && savedMethane > 0) {
+            return savedMethane;
+        }
+        if (receiptExists && savedMethane === 0 && donationData?.donation?.quantity && weightPerServing) {
+            const q = donationData.donation.quantity;
+            const w = parseFloat(weightPerServing);
+            if (!isNaN(w) && w > 0) {
+                const kg = q * w * 0.05;
+                return Math.round(kg * 100) / 100;
+            }
+        }
+        if (receiptExists && savedMethane !== undefined && savedMethane !== null) {
+            return savedMethane;
         }
         
         if (!donationData?.donation?.quantity) {
@@ -62,20 +74,19 @@ const ReceiptForm = () => {
             return 0;
         }
         
-        // Calculate methane saved
+        // Calculate methane saved (formula: CH₄ = MSW × 0.05; MSW in tons → result in tons)
+        // Display in kg so small donations don't round to 0: methaneSavedKg = totalWeightKg × 0.05
         const totalWeightKg = quantity * weightPerServingNum; // Total weight in kg
-        const totalWeightTons = totalWeightKg / 1000; // Convert to tons
-        const methaneSaved = totalWeightTons * 0.05; // Apply formula: CH₄ = MSW × 0.05
+        const methaneSavedKg = totalWeightKg * 0.05; // Same factor 0.05, result in kg for display
         
         // Round to 2 decimal places
-        const result = Math.round(methaneSaved * 100) / 100;
+        const result = Math.round(methaneSavedKg * 100) / 100;
         
         console.log('[ReceiptForm] Methane saved calculated:', {
             quantity,
             weightPerServing: weightPerServingNum,
             totalWeightKg: totalWeightKg.toFixed(2),
-            totalWeightTons: totalWeightTons.toFixed(4),
-            methaneSaved: result
+            methaneSavedKg: result
         });
         
         return result;

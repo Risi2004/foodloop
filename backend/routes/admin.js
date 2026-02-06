@@ -12,6 +12,38 @@ router.use(express.json());
 router.use(authenticateAdmin);
 
 /**
+ * GET /api/admin/stats
+ * Dashboard counts: donors, drivers, receivers (completed), and pending users
+ */
+router.get('/stats', async (req, res) => {
+  try {
+    const [donors, drivers, receivers, pending] = await Promise.all([
+      User.countDocuments({ role: 'Donor', status: 'completed' }),
+      User.countDocuments({ role: 'Driver', status: 'completed' }),
+      User.countDocuments({ role: 'Receiver', status: 'completed' }),
+      User.countDocuments({ status: 'pending' }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        donors,
+        drivers,
+        receivers,
+        pending,
+      },
+    });
+  } catch (error) {
+    console.error('[Admin] Error fetching stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard stats',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
  * GET /api/admin/users/pending
  * Fetch all users with status: 'pending'
  * Returns users sorted by createdAt (newest first)

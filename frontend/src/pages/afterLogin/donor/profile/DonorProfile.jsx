@@ -6,12 +6,13 @@ import RecentDonations from '../../../../components/afterLogin/donor/profile/rec
 import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSection/navbar/DonorNavbar";
 import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter";
 import { getCurrentUser } from '../../../../services/api';
-import { getMyDonations } from '../../../../services/donationApi';
+import { getMyDonations, getDonorStatistics } from '../../../../services/donationApi';
 import './DonorProfile.css';
 
 function DonorProfile() {
     const [user, setUser] = useState(null);
     const [donations, setDonations] = useState([]);
+    const [badgeProgress, setBadgeProgress] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -21,13 +22,17 @@ function DonorProfile() {
             try {
                 setLoading(true);
                 setError(null);
-                const [userRes, donationsRes] = await Promise.all([
+                const [userRes, donationsRes, statsRes] = await Promise.all([
                     getCurrentUser(),
                     getMyDonations(),
+                    getDonorStatistics().catch(() => ({ success: false })),
                 ]);
                 if (cancelled) return;
                 if (userRes?.user) setUser(userRes.user);
                 if (donationsRes?.donations) setDonations(donationsRes.donations);
+                if (statsRes?.success && statsRes?.statistics?.badgeProgress) {
+                    setBadgeProgress(statsRes.statistics.badgeProgress);
+                }
             } catch (err) {
                 if (!cancelled) setError(err.message || 'Failed to load profile');
             } finally {
@@ -74,7 +79,7 @@ function DonorProfile() {
                     <ProfileHeader user={user} />
                     <div className="profile-content">
                         <aside className="profile-sidebar-column">
-                            <ProfileSidebar user={user} />
+                            <ProfileSidebar user={user} badgeProgress={badgeProgress} />
                         </aside>
                         <main className="profile-main-column">
                             <ProfileStats donations={donations} />

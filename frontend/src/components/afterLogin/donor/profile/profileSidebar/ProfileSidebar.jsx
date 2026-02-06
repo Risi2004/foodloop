@@ -1,8 +1,9 @@
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import AchievementsCard from '../../../badges/AchievementsCard';
 import './ProfileSidebar.css';
 
-function ProfileSidebar({ user }) {
+function ProfileSidebar({ user, badgeProgress }) {
     const contactName = user?.donorType === 'Business'
         ? (user?.businessName || 'Contact')
         : (user?.username || user?.email || 'Contact');
@@ -51,14 +52,7 @@ function ProfileSidebar({ user }) {
             </div>
 
             <div className="sidebar-card achievements-card">
-                <div className="card-header">
-                    <span className="section-icon">🏅</span>
-                    <h3>Achievements & Badges</h3>
-                </div>
-                <div className="gold-member-banner">
-                    <div className="medal-icon main-medal">🥇</div>
-                    <span className="tier-name">FoodLoop Donor</span>
-                </div>
+                <AchievementsCard badgeProgress={badgeProgress} unitLabel="donations" />
             </div>
         </div>
     );

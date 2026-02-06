@@ -6,17 +6,12 @@ import profileIcon from "../../../../assets/icons/afterLogin/driver/profile.svg"
 import verifyIcon from "../../../../assets/icons/afterLogin/driver/verify.svg"
 import validationIcon from "../../../../assets/icons/afterLogin/driver/validation.svg"
 import customerIcon from "../../../../assets/icons/afterLogin/driver/Customer.svg"
-import warrantyIcon from "../../../../assets/icons/afterLogin/driver/Warranty.svg"
-import fastIcon from "../../../../assets/icons/afterLogin/driver/Exercise.svg"
-import centuryIcon from "../../../../assets/icons/afterLogin/driver/Facebook-Like.svg"
-import bestIcon from "../../../../assets/icons/afterLogin/driver/Quality.svg"
 import truckIcon from "../../../../assets/icons/afterLogin/driver/Truck.svg"
 import trendIcon from "../../../../assets/icons/afterLogin/driver/Trend-Up.svg"
 import swapIcon from "../../../../assets/icons/afterLogin/driver/Swap.svg"
 import mealIcon from "../../../../assets/icons/afterLogin/driver/Meal.svg"
 import DeliveredCard from '../../../../components/afterLogin/driver/profile/DeliveredCard';
-import trophyIcon from "../../../../assets/icons/afterLogin/driver/Trophy.svg";
-import starIcon from "../../../../assets/icons/afterLogin/driver/Mandriva.svg";
+import AchievementsCard from '../../../../components/afterLogin/badges/AchievementsCard';
 import { getUser } from '../../../../utils/auth';
 import { getDriverStatistics, getDriverCompletedDeliveries } from '../../../../services/donationApi';
 import "./DriverProfile.css";
@@ -133,50 +128,15 @@ function DriverProfile() {
                             <h3>Address</h3>
                             <p>{profile?.address ?? '—'}</p>
                         </div>
-                        <div className='driver__profile__s2__sub1__sub2'>
-                            <div className='driver__profile__s2__sub1__sub2__sub1'>
-                                <img src={warrantyIcon} alt="Customer-Icon" />
-                                <h2>Achievements & Badges</h2>
-                            </div>
-                            <div className='driver__profile__s2__sub1__sub2__sub2'>
-                                <div className='driver__profile__s2__sub1__sub2__sub2__sub'>
-                                    <img src={fastIcon} alt="" />
-                                    <h4>Faster</h4>
+                        <div className='driver__profile__s2__sub1__badges'>
+                            {statistics?.badgeProgress ? (
+                                <AchievementsCard badgeProgress={statistics.badgeProgress} unitLabel="deliveries" />
+                            ) : (
+                                <div className="driver__profile__s2__sub1__badges__loading">
+                                    <h2>Awards and Achievements</h2>
+                                    <p>{loading ? 'Loading...' : 'Complete deliveries to earn badges.'}</p>
                                 </div>
-                                <div className='driver__profile__s2__sub1__sub2__sub2__sub'>
-                                    <img src={centuryIcon} alt="" />
-                                    <h4>Centurion</h4>
-                                </div>
-                                <div className='driver__profile__s2__sub1__sub2__sub2__sub'>
-                                    <img src={bestIcon} alt="" />
-                                    <h4>Best</h4>
-                                </div>
-                            </div>
-                            <div className='driver__profile__s2__sub1__sub2__sub2'>
-
-                            </div>
-                        </div>
-                        <div className='driver__profile__s2__sub1__sub3'>
-                            <div className='driver__profile__s2__sub1__sub3__sub1'>
-                                <h3>Your Impact Progress</h3>
-                                <div className='driver__profile__s2__sub1__sub3__sub1__badge'>
-                                    <img src={trophyIcon} alt="trophy" />
-                                    <p>{statistics?.impactProgress?.badgeLevel ?? 'Beginner'}</p>
-                                </div>
-                            </div>
-                            <div className='driver__profile__s2__sub1__sub3__sub2'>
-                                <img src={starIcon} alt="star" />
-                                <div className='driver__profile__s2__sub1__sub3__sub2__sub'>
-                                    <div className='driver__profile__s2__sub1__sub3__sub2__sub__text'>
-                                        <p>{statistics?.impactProgress?.currentCount ?? 0}/{statistics?.impactProgress?.nextBadgeTarget ?? 10} Pickups Completed</p>
-                                        <p>{statistics?.impactProgress?.progressPercentage ?? 0}%</p>
-                                    </div>
-                                    <div className='driver__profile__s2__sub1__sub3__sub2__sub__bar'>
-                                        <div className='driver__profile__s2__sub1__sub3__sub2__sub__bar__fill' style={{ width: `${Math.min(100, statistics?.impactProgress?.progressPercentage ?? 0)}%` }}></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="driver__profile__s2__sub1__sub3__p">{(statistics?.impactProgress?.remainingForNextBadge ?? 0) > 0 ? `Just ${statistics.impactProgress.remainingForNextBadge} more pickups to earn your next badge!` : 'You reached your current badge target!'}</p>
+                            )}
                         </div>
                     </div>
                     <div className='driver__profile__s2__sub2'>

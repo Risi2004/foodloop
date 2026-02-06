@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submitDonation } from '../../../../../services/donationApi';
+import { submitDonation, getDonorStatistics } from '../../../../../services/donationApi';
 import { clearAuth, getUser } from '../../../../../utils/auth';
+import { getBadgeIconSrc, BADGE_KEYS_ORDER } from '../../../../../utils/badgeIcons';
 import LocationMapModal from '../locationMapModal/LocationMapModal';
 import './DonationForm.css';
 
@@ -42,7 +43,22 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
     const [selectedLatitude, setSelectedLatitude] = useState(null);
     const [selectedLongitude, setSelectedLongitude] = useState(null);
     const [donorAddress, setDonorAddress] = useState('');
-    
+    const [donorStats, setDonorStats] = useState(null);
+
+    useEffect(() => {
+        const fetchBadge = async () => {
+            try {
+                const res = await getDonorStatistics();
+                if (res?.success && res?.statistics) {
+                    setDonorStats(res.statistics);
+                }
+            } catch (_) {
+                setDonorStats(null);
+            }
+        };
+        fetchBadge();
+    }, []);
+
     // Validation: Check if form is valid and can be submitted
     const isFormValid = () => {
         // Check all required fields
@@ -269,8 +285,8 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
 
             if (response.success) {
                 console.log('[DonationForm] Donation submitted successfully:', response.donation);
-                // Navigate to tracking page with donation ID
-                navigate(`/donor/track-order?donationId=${response.donation.id}&trackingId=${response.donation.trackingId}`);
+                // Navigate to My Donation page after successful submission
+                navigate('/donor/my-donation');
             } else {
                 throw new Error(response.message || 'Failed to submit donation');
             }
@@ -579,15 +595,59 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                     )}
                 </div>
 
-                <div className="progress-status">
-                    <div className="progress-text">
-                        You are 2 donations away from your Gold Donor badge!
-                        <span className="progress-fraction">8/10 Completed</span>
+                {donorStats?.badgeProgress && (
+                    <div className="progress-status">
+                        <div className="progress-text">
+                            {(() => {
+                                const bp = donorStats.badgeProgress;
+                                const nextIndex = bp.timeline?.findIndex((t) => !t.achieved) ?? -1;
+                                const nextKey = nextIndex >= 0 ? BADGE_KEYS_ORDER[nextIndex] : null;
+                                const iconKey = bp.currentBadgeKey || nextKey;
+                                const badgeIconSrc = iconKey ? getBadgeIconSrc(iconKey) : null;
+                                return (
+                                    <>
+                                        {badgeIconSrc && (
+                                            <img src={badgeIconSrc} alt="" className="progress-status__badge-icon" />
+                                        )}
+                                        {bp.nextBadge ? (
+                                            bp.remaining === 0 ? (
+                                                <>You're one donation away from your <strong>{bp.nextBadge}</strong> badge!</>
+                                            ) : bp.remaining === 1 ? (
+                                                <>You are 1 donation away from your <strong>{bp.nextBadge}</strong> badge!</>
+                                            ) : (
+                                                <>You are {bp.remaining} donations away from your <strong>{bp.nextBadge}</strong> badge!</>
+                                            )
+                                    ) : (
+                                        <>You've earned all donation badges! Congratulations!</>
+                                    )}
+                                    {bp.nextMilestone != null ? (
+                                        <span className="progress-fraction">
+                                            {donorStats.totalDonationsDelivered ?? 0}/{bp.nextMilestone} Completed
+                                        </span>
+                                    ) : (
+                                        <span className="progress-fraction">
+                                            {donorStats.totalDonationsDelivered ?? 0}+ Completed
+                                        </span>
+                                    )}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                        {donorStats.badgeProgress.nextMilestone != null && donorStats.badgeProgress.remaining != null && (
+                            <div className="progress-bar-bg">
+                                <div
+                                    className="progress-bar-fill"
+                                    style={{
+                                        width: `${Math.min(
+                                            100,
+                                            ((donorStats.badgeProgress.nextMilestone - donorStats.badgeProgress.remaining) / donorStats.badgeProgress.nextMilestone) * 100
+                                        )}%`,
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
-                    <div className="progress-bar-bg">
-                        <div className="progress-bar-fill" style={{ width: '80%' }}></div>
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Location Confirmation Modal */}

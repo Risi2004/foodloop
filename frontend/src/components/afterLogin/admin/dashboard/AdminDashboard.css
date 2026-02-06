@@ -37,6 +37,17 @@ body.admin-mode {
     /* Good for responsiveness */
 }
 
+.admin-dashboard-loading,
+.admin-dashboard-error {
+    padding: 40px 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.admin-dashboard-error {
+    color: #ffcdd2;
+}
+
 @media screen and (max-width: 1300px) {
     .admin-dashboard {
         width: 90%;

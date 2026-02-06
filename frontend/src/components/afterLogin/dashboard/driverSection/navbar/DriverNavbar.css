@@ -103,6 +103,25 @@
     cursor: pointer;
 }
 
+.navbar__profile-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.navbar__badge {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.navbar__badge-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    display: block;
+}
+
 .navbar__s3__img2 {
     width: 40px;
     height: 40px;

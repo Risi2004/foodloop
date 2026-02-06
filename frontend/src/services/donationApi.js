@@ -626,6 +626,45 @@ export const getActiveDeliveries = async () => {
 };
 
 /**
+ * Get donor statistics (delivered donations count and badge progress)
+ * @returns {Promise} Response with donor statistics and badgeProgress
+ */
+export const getDonorStatistics = async () => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${API_URL}/api/donations/donor-statistics`, {
+      method: 'GET',
+      headers,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+        throw error;
+      }
+      const error = new Error(data.message || 'Failed to fetch donor statistics');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
  * Get driver statistics (deliveries completed, distance travelled, etc.)
  * @returns {Promise} Response with driver statistics
  */

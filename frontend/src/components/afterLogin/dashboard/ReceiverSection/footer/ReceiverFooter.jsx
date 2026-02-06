@@ -28,7 +28,7 @@ function DonorFooter() {
                     <h1>Quick Links</h1>
                     <Link to="/receiver/dashboard">Home</Link>
                     <Link to="/receiver/about">About Us</Link>
-                    <Link to="">Contact Us</Link>
+                    <Link to="/receiver/dashboard#contact">Contact Us</Link>
                     <Link to="">Find Food</Link>
                     <Link to="">My Claims</Link>
                 </div>

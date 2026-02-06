@@ -163,6 +163,59 @@
     padding: 10px;
 }
 
+.driver__profile__s2__sub1__badges {
+    border-radius: 20px;
+    background: linear-gradient(180deg, #1F4E36 0%, #48B47D 100%);
+    padding: 20px;
+    color: white;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.driver__profile__s2__sub1__badges__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.driver__profile__s2__sub1__badges__icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.driver__profile__s2__sub1__badges__icon-placeholder {
+    font-size: 32px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.driver__profile__s2__sub1__badges__label {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: white;
+    text-transform: uppercase;
+}
+
+.driver__profile__s2__sub1__badges__loading h2 {
+    color: white;
+    margin: 0 0 10px 0;
+    font-size: 1.25rem;
+}
+
+.driver__profile__s2__sub1__badges__loading p {
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
 .driver__profile__s2__sub2 {
     width: 65%;
     border: 1px solid;
