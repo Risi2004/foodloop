@@ -6,6 +6,7 @@ import TransparencyLoopCardSection from "../../../components/beforeLogin/transpa
 import Map from "../../../components/beforeLogin/map/Map"
 import ReviewSection from "../../../components/beforeLogin/review/ReviewSection"
 import Contact from "../../../components/beforeLogin/Contact/Contact"
+import Chatbot from "../../../components/chatbot/Chatbot"
 import Footer from "../../../components/beforeLogin/footer/Footer"
 import "./LandingPage.css"
 
@@ -13,6 +14,7 @@ function LandingPage() {
     return (
         <div className="landing__page">
             <Navbar />
+            <Chatbot />
             <HeaderImage /> 
             <StatsCardPage />
             <About />

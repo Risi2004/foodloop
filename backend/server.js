@@ -14,6 +14,7 @@ const donationRoutes = require('./routes/donations');
 const userRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
 const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
 const {
   checkAndDeleteExpiredDonations,
   sendExpiryWarningEmails,
@@ -57,6 +58,9 @@ app.use('/api/reviews', reviewRoutes);
 
 // Notification routes (authenticated users; role-filtered list)
 app.use('/api/notifications', notificationRoutes);
+
+// Chat route (proxy to AI service; no auth so chatbot works on landing page)
+app.use('/api/chat', chatRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

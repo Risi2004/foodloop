@@ -21,6 +21,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 PORT=8000
 ```
 
+4. **Optional – Chatbot knowledge base:** To add a proposal or reference PDF so the chatbot answers from it, set `KNOWLEDGE_PDF_PATH` to the PDF path (e.g. `./proposal.pdf` or an absolute path). If unset, the service looks for `ai-service/knowledge/proposal.pdf`. Place your PDF there or set the env var, then restart the service.
+
 ## Running the Service
 
 **Development:**
@@ -56,6 +58,7 @@ The service will be available at `http://localhost:8000`
 
 ## Notes
 
+- Set `KNOWLEDGE_PDF_PATH` (or place a PDF at `knowledge/proposal.pdf`) to use it as the chatbot knowledge base.
 - The service uses mock predictions if Gemini API key is not configured
 - Image URLs must be publicly accessible
 - Gemini AI provides superior food recognition compared to object detection models

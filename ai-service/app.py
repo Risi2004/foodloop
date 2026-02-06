@@ -6,35 +6,132 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
+import re
 import uvicorn
 import os
+import warnings
 from dotenv import load_dotenv
+from pypdf import PdfReader
 from models.gemini_analyzer import GeminiFoodAnalyzer
+
+# Suppress deprecation warning for google.generativeai
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*google.generativeai.*")
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
+import google.generativeai as genai
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize Gemini AI analyzer (load once on startup)
+# Initialize Gemini AI analyzer and chat model (load once on startup)
 analyzer = None
+chat_model = None
+
+CHAT_SYSTEM_INSTRUCTION = (
+    "You are the FoodLoop assistant. Only answer questions about FoodLoop, "
+    "food donation, the platform, and how to use it. Be brief and helpful.\n\n"
+    "Scope: If the user asks something off-topic (e.g. general knowledge, other products, "
+    "unrelated advice), politely say you are here to help with FoodLoop and food donation only, "
+    "and offer to answer questions about that.\n\n"
+    "Safety: Do not provide information that could be used to hack, exploit, or compromise "
+    "the website or any system (e.g. security vulnerabilities, injection techniques, "
+    "bypassing authentication, exploiting APIs, or similar). If such a question is asked, "
+    "politely refuse and say you cannot assist with that."
+)
+
+MAX_KNOWLEDGE_CHARS = 80_000
+
+
+def load_knowledge_from_pdf(path: str) -> str:
+    """
+    Load text from a PDF file for use as chatbot knowledge.
+    Returns empty string if path is missing, not a file, or on error.
+    Truncates to MAX_KNOWLEDGE_CHARS and appends a note if needed.
+    """
+    if not path or not os.path.isfile(path):
+        return ""
+    try:
+        reader = PdfReader(path)
+        parts = []
+        total = 0
+        for page in reader.pages:
+            if total >= MAX_KNOWLEDGE_CHARS:
+                break
+            text = page.extract_text() or ""
+            text = re.sub(r"\s+", " ", text).strip()
+            if text:
+                remaining = MAX_KNOWLEDGE_CHARS - total
+                if len(text) > remaining:
+                    text = text[:remaining]
+                    total = MAX_KNOWLEDGE_CHARS
+                else:
+                    total += len(text)
+                parts.append(text)
+        if not parts:
+            return ""
+        out = " ".join(parts)
+        if total >= MAX_KNOWLEDGE_CHARS:
+            out += " [Document truncated for length.]"
+        return out
+    except Exception as e:
+        print(f"⚠️  Failed to load knowledge PDF {path}: {e}")
+        return ""
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
     # Startup
-    global analyzer
+    global analyzer, chat_model
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("⚠️  Warning: GEMINI_API_KEY not found in environment variables")
             print("⚠️  Service will return mock predictions")
             analyzer = None
+            chat_model = None
         else:
+            genai.configure(api_key=api_key)
             analyzer = GeminiFoodAnalyzer(api_key=api_key)
             print("✅ Gemini AI analyzer initialized successfully")
+            # Load optional knowledge PDF (proposal document) for chatbot
+            knowledge_path = os.getenv("KNOWLEDGE_PDF_PATH") or os.path.join(
+                os.path.dirname(__file__), "knowledge", "proposal.pdf"
+            )
+            knowledge_text = load_knowledge_from_pdf(knowledge_path)
+            if knowledge_text:
+                full_system_instruction = (
+                    "Use the following knowledge base when answering. "
+                    "Base your answers on it when relevant.\n\n"
+                    + knowledge_text
+                    + "\n\n---\n\n"
+                    + CHAT_SYSTEM_INSTRUCTION
+                )
+                print("✅ Chatbot knowledge base loaded from PDF")
+            else:
+                full_system_instruction = CHAT_SYSTEM_INSTRUCTION
+            # Text chat model: prefer Gemini 3 Flash, then fallbacks
+            chat_model = None
+            for model_id, label in [
+                ("gemini-3-flash-preview", "Gemini 3 Flash"),
+                ("gemini-3-flash", "Gemini 3 Flash (alt)"),
+                ("gemini-pro", "Gemini Pro"),
+            ]:
+                try:
+                    chat_model = genai.GenerativeModel(
+                        model_id,
+                        system_instruction=full_system_instruction,
+                    )
+                    print(f"✅ Gemini chat model initialized: {label}")
+                    break
+                except Exception as chat_err:
+                    print(f"⚠️  {model_id} failed: {chat_err}, trying next fallback")
+            if chat_model is None:
+                print("⚠️  Chat will be unavailable")
     except Exception as e:
         print(f"⚠️  Warning: Could not initialize Gemini AI: {e}")
         print("⚠️  Service will return mock predictions")
         analyzer = None
+        chat_model = None
     
     yield  # App runs here
     
@@ -68,6 +165,21 @@ class PredictionResponse(BaseModel):
     storageRecommendation: str
     confidence: float
     detectedItems: List[str]
+
+
+class ChatHistoryItem(BaseModel):
+    role: str  # "user" or "model"
+    text: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[ChatHistoryItem]] = None
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
 
 @app.get("/")
 async def root():
@@ -180,6 +292,61 @@ def get_mock_predictions() -> PredictionResponse:
         confidence=0.90,
         detectedItems=["rice", "curry", "vegetables"]
     )
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """
+    Chat with FoodLoop assistant using Gemini.
+    Request: message (required), history (optional list of {role, text}).
+    Response: { reply: "..." }.
+    """
+    global chat_model
+    if not chat_model:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Chat unavailable",
+                "message": "AI chat is not configured. Please set GEMINI_API_KEY.",
+            },
+        )
+    message = (request.message or "").strip()
+    if not message:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "message is required", "message": "Message cannot be empty."},
+        )
+    try:
+        history = request.history or []
+        # Limit history to last 10 messages to avoid token limits
+        history = history[-10:]
+        # Convert to Gemini format: list of {role, parts: [text]}
+        gemini_history = []
+        for item in history:
+            role = item.role if item.role in ("user", "model") else "user"
+            gemini_history.append({"role": role, "parts": [item.text]})
+        if gemini_history:
+            chat_session = chat_model.start_chat(history=gemini_history)
+            response = chat_session.send_message(message)
+        else:
+            response = chat_model.generate_content(message)
+        reply = response.text if response and response.text else "I couldn't generate a response. Please try again."
+        return ChatResponse(reply=reply)
+    except Exception as e:
+        err_msg = str(e)
+        if "quota" in err_msg.lower() or "rate limit" in err_msg.lower() or "429" in err_msg:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "API quota exceeded",
+                    "message": "Gemini API rate limit exceeded. Please try again later.",
+                },
+            )
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Chat failed", "message": err_msg or "An error occurred while generating a response."},
+        )
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
