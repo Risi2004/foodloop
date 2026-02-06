@@ -129,6 +129,20 @@ const donationSchema = new mongoose.Schema({
     ref: 'User',
     default: null,
   },
+
+  // Receiver delivery location (set at claim time when receiver confirms on map)
+  receiverLatitude: {
+    type: Number,
+    default: null,
+  },
+  receiverLongitude: {
+    type: Number,
+    default: null,
+  },
+  receiverAddress: {
+    type: String,
+    default: null,
+  },
   
   // Tracking
   trackingId: {

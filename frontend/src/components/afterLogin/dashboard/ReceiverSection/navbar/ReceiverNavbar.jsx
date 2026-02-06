@@ -6,6 +6,7 @@ import profile from "../../../../../assets/icons/afterLogin/navbar/profile.svg"
 import menu from "../../../../../assets/icons/navbar/menu-bar.svg"
 import { clearAuth, getUser } from "../../../../../utils/auth";
 import { getUnreadCount, NOTIFICATIONS_READ_EVENT } from "../../../../../services/notificationApi";
+import { deleteAccount } from "../../../../../services/api";
 
 function Navbar() {
     const navigate = useNavigate();
@@ -51,6 +52,8 @@ function Navbar() {
 
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deletingAccount, setDeletingAccount] = useState(false);
 
     const toggleProfile = () => {
         setIsProfileOpen(!isProfileOpen)
@@ -61,6 +64,31 @@ function Navbar() {
         setIsMenuOpen(false);
         setIsProfileOpen(false);
         navigate('/login');
+    }
+
+    const openDeleteModal = () => {
+        setIsDeleteModalOpen(true);
+    }
+
+    const closeDeleteModal = () => {
+        if (!deletingAccount) setIsDeleteModalOpen(false);
+    }
+
+    const handleConfirmDeleteAccount = async () => {
+        if (deletingAccount) return;
+        setDeletingAccount(true);
+        try {
+            await deleteAccount();
+            clearAuth();
+            setIsMenuOpen(false);
+            setIsProfileOpen(false);
+            setIsDeleteModalOpen(false);
+            navigate('/login');
+        } catch (err) {
+            alert(err.response?.data?.message || err.message || 'Failed to delete account.');
+        } finally {
+            setDeletingAccount(false);
+        }
     }
     return (
         <>
@@ -105,6 +133,11 @@ function Navbar() {
                     <div className="navbar__s3__profile__popup">
                         <p onClick={toggleProfile}>X</p>
                         <Link to="/receiver/profile" onClick={toggleProfile}>View Profile</Link>
+                        <div className="navbar__popup__action">
+                            <button type="button" className="navbar__delete-account-btn" onClick={openDeleteModal}>
+                                Delete Account
+                            </button>
+                        </div>
                         <Link to="" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                             <button>Sign Out</button>
                         </Link>
@@ -140,9 +173,31 @@ function Navbar() {
                     <Link to="/receiver/find-food" onClick={toggleMenu}>Find Food</Link>
                     <Link to="/receiver/my-claims" onClick={toggleMenu}>My Claims</Link>
                     <Link to="/receiver/profile" onClick={toggleMenu}>View Profile</Link>
+                    <div className="navbar__popup__action">
+                        <button type="button" className="navbar__delete-account-btn" onClick={openDeleteModal}>
+                            Delete Account
+                        </button>
+                    </div>
                     <Link to="" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                         <button>Sign Out</button>
                     </Link>
+                </div>
+            )}
+
+            {isDeleteModalOpen && (
+                <div className="navbar__delete-modal-overlay" onClick={closeDeleteModal}>
+                    <div className="navbar__delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Delete Account</h3>
+                        <p>Are you sure? This will permanently delete your account and all related data.</p>
+                        <div className="navbar__delete-modal__actions">
+                            <button type="button" className="navbar__delete-modal__cancel" onClick={closeDeleteModal} disabled={deletingAccount}>
+                                Cancel
+                            </button>
+                            <button type="button" className="navbar__delete-account-btn" onClick={handleConfirmDeleteAccount} disabled={deletingAccount}>
+                                {deletingAccount ? 'Deleting...' : 'Delete Account'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </>

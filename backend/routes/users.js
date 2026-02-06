@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Donation = require('../models/Donation');
+const UserNotification = require('../models/UserNotification');
+const NotificationRead = require('../models/NotificationRead');
+const Review = require('../models/Review');
+const ImpactReceipt = require('../models/ImpactReceipt');
+const ContactMessage = require('../models/ContactMessage');
+const Notification = require('../models/Notification');
 const { authenticateUser } = require('../middleware/auth');
 const socketService = require('../services/socketService');
 const { sendProfileUpdatedEmail } = require('../utils/emailService');
@@ -82,6 +89,66 @@ router.get('/me', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * DELETE /api/users/me
+ * Delete current user account and all related data. Restricted to Donor, Receiver, Driver (not Admin).
+ */
+router.delete('/me', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const role = req.user.role;
+
+    if (role === 'Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin accounts cannot be deleted via this endpoint',
+      });
+    }
+
+    await UserNotification.deleteMany({ user: userId });
+    await NotificationRead.deleteMany({ user: userId });
+    await Review.deleteMany({ userId });
+    await ImpactReceipt.deleteMany({ receiverId: userId });
+
+    if (role === 'Donor') {
+      const donorDonations = await Donation.find({ donorId: userId }).select('_id').lean();
+      const donationIds = donorDonations.map((d) => d._id);
+      if (donationIds.length > 0) {
+        await ImpactReceipt.deleteMany({ donationId: { $in: donationIds } });
+      }
+      await Donation.deleteMany({ donorId: userId });
+    } else if (role === 'Receiver') {
+      await Donation.updateMany(
+        { assignedReceiverId: userId },
+        { $set: { assignedReceiverId: null } }
+      );
+    } else if (role === 'Driver') {
+      await Donation.updateMany(
+        { assignedDriverId: userId },
+        { $set: { assignedDriverId: null } }
+      );
+    }
+
+    await ContactMessage.updateMany({ userId }, { $set: { userId: null } });
+    await ContactMessage.updateMany({ repliedBy: userId }, { $set: { repliedBy: null } });
+    await Notification.updateMany({ createdBy: userId }, { $set: { createdBy: null } });
+
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted',
+    });
+  } catch (error) {
+    console.error('[Users] Error deleting account:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete account',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

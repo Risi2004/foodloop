@@ -28,37 +28,58 @@ const createCustomIcon = (imageUrl) => {
     });
 };
 
-// Component to center map on all markers
-const MapController = ({ items }) => {
+// Component to center map on all markers (and receiver if set)
+const MapController = ({ items, receiverPosition }) => {
     const map = useMap();
     
     useEffect(() => {
-        if (items.length > 0) {
-            const positions = items
-                .filter(item => item.position && Array.isArray(item.position) && item.position.length === 2)
-                .map(item => item.position);
-            
-            if (positions.length > 0) {
-                const bounds = L.latLngBounds(positions);
-                map.fitBounds(bounds, { padding: [50, 50] });
-            }
+        const positions = items
+            .filter(item => item.position && Array.isArray(item.position) && item.position.length === 2)
+            .map(item => item.position);
+        if (receiverPosition && Array.isArray(receiverPosition) && receiverPosition.length === 2) {
+            positions.push(receiverPosition);
+        }
+        if (positions.length > 0) {
+            const bounds = L.latLngBounds(positions);
+            map.fitBounds(bounds, { padding: [50, 50] });
         } else {
-            // Default to Sri Lanka if no items
             map.setView([7.0873, 80.0144], 8);
         }
-    }, [map, items]);
+    }, [map, items, receiverPosition]);
     
     return null;
 };
 
-// Current Location Component
-const CurrentLocationOverlay = () => {
+// Current Location Overlay: dynamic with "Use my location" / "Select location" or address
+const CurrentLocationOverlay = ({ receiverPosition, receiverAddress, onSelectLocation, onUseMyLocation, locationLoading, locationError }) => {
     return (
         <div className="current-location-overlay">
             <div className="location-icon">📍</div>
             <div className="location-text">
-                <span className="label">Current Location</span>
-                <span className="value">Gampaha, Sri Lanka</span>
+                {receiverPosition && receiverAddress ? (
+                    <>
+                        <span className="label">Current Location</span>
+                        <span className="value">{receiverAddress}</span>
+                    </>
+                ) : receiverPosition ? (
+                    <>
+                        <span className="label">Current Location</span>
+                        <span className="value">Location set</span>
+                    </>
+                ) : (
+                    <>
+                        <span className="label">Set your location</span>
+                        <div className="location-actions">
+                            <button type="button" className="location-action-btn" onClick={onUseMyLocation} disabled={locationLoading}>
+                                {locationLoading ? 'Getting...' : 'Use my location'}
+                            </button>
+                            <button type="button" className="location-action-btn" onClick={onSelectLocation} disabled={locationLoading}>
+                                Select location
+                            </button>
+                        </div>
+                        {locationError && <span className="location-error">{locationError}</span>}
+                    </>
+                )}
             </div>
         </div>
     );
@@ -86,28 +107,26 @@ const formatTime = (time) => {
     return time;
 };
 
-const MapSection = ({ items }) => {
+const MapSection = ({ items, receiverPosition, receiverAddress, onSelectLocation, onUseMyLocation, locationLoading, locationError }) => {
     // Default center (Sri Lanka)
     const defaultPosition = [7.0873, 80.0144];
     
-    // Calculate center based on items if available
+    // Calculate center based on items (and receiver if set)
     const calculateCenter = () => {
-        if (items.length === 0) return defaultPosition;
-        
         const validPositions = items
             .filter(item => item.position && Array.isArray(item.position) && item.position.length === 2)
             .map(item => item.position);
-        
+        if (receiverPosition && Array.isArray(receiverPosition) && receiverPosition.length === 2) {
+            validPositions.push(receiverPosition);
+        }
         if (validPositions.length === 0) return defaultPosition;
-        
         const avgLat = validPositions.reduce((sum, pos) => sum + pos[0], 0) / validPositions.length;
         const avgLng = validPositions.reduce((sum, pos) => sum + pos[1], 0) / validPositions.length;
-        
         return [avgLat, avgLng];
     };
 
     const center = calculateCenter();
-    const zoom = items.length > 1 ? 10 : 13;
+    const zoom = items.length > 1 || receiverPosition ? 10 : 13;
 
     return (
         <div className="map-container-wrapper">
@@ -117,7 +136,7 @@ const MapSection = ({ items }) => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 
-                <MapController items={items} />
+                <MapController items={items} receiverPosition={receiverPosition} />
                 <ZoomButtons />
 
                 {items.map((item, index) => {
@@ -186,9 +205,22 @@ const MapSection = ({ items }) => {
                         </Marker>
                     );
                 })}
+
+                {receiverPosition && Array.isArray(receiverPosition) && receiverPosition.length === 2 && (
+                    <Marker position={receiverPosition} icon={DefaultIcon}>
+                        <Tooltip permanent={false} direction="top">Your location</Tooltip>
+                    </Marker>
+                )}
             </MapContainer>
 
-            <CurrentLocationOverlay />
+            <CurrentLocationOverlay
+                receiverPosition={receiverPosition}
+                receiverAddress={receiverAddress}
+                onSelectLocation={onSelectLocation}
+                onUseMyLocation={onUseMyLocation}
+                locationLoading={locationLoading}
+                locationError={locationError}
+            />
         </div>
     );
 };

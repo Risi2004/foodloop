@@ -686,6 +686,18 @@ router.post('/:id/claim', authenticateUser, async (req, res) => {
       });
     }
 
+    // Optional receiver delivery location from request body
+    const { receiverLatitude, receiverLongitude, receiverAddress } = req.body || {};
+    if (receiverLatitude != null && receiverLongitude != null) {
+      const lat = Number(receiverLatitude);
+      const lng = Number(receiverLongitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= 5 && lat <= 10 && lng >= 79 && lng <= 82) {
+        donation.receiverLatitude = lat;
+        donation.receiverLongitude = lng;
+        donation.receiverAddress = typeof receiverAddress === 'string' ? receiverAddress.trim() || null : null;
+      }
+    }
+
     // Update donation: assign to receiver and change status to 'assigned'
     donation.assignedReceiverId = receiverId;
     donation.status = 'assigned';
@@ -895,10 +907,10 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
         // Get receiver name
         const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
 
-        // Get receiver coordinates (geocode receiver address)
-        let receiverLat = null;
-        let receiverLng = null;
-        if (receiver?.address) {
+        // Get receiver coordinates: prefer donation-level (set at claim) else geocode receiver address
+        let receiverLat = donation.receiverLatitude ?? null;
+        let receiverLng = donation.receiverLongitude ?? null;
+        if ((receiverLat == null || receiverLng == null) && receiver?.address) {
           const receiverCoords = await geocodeAddress(receiver.address);
           if (receiverCoords) {
             receiverLat = receiverCoords.lat;
@@ -952,7 +964,7 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
           // Receiver details
           receiverId: donation.assignedReceiverId?._id?.toString(),
           receiverName: receiverName,
-          receiverAddress: receiver?.address || '',
+          receiverAddress: donation.receiverAddress || receiver?.address || '',
           receiverEmail: receiver?.email,
           receiverType: receiver?.receiverType,
           receiverLatitude: receiverLat,

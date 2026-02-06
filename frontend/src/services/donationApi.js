@@ -184,11 +184,12 @@ export const getAvailableDonations = async () => {
 /**
  * Claim a donation (receiver claims a food donation)
  * @param {string} donationId - Donation ID to claim
+ * @param {{ receiverLatitude?: number, receiverLongitude?: number, receiverAddress?: string }} location - Optional delivery location (from map confirmation)
  * @returns {Promise} Response with claimed donation
  */
-export const claimDonation = async (donationId) => {
+export const claimDonation = async (donationId, location) => {
   try {
-    console.log('[DonationAPI] Claiming donation:', donationId);
+    console.log('[DonationAPI] Claiming donation:', donationId, location ? '(with location)' : '');
     
     // Check if token is expired before making the request
     if (isTokenExpired()) {
@@ -210,6 +211,13 @@ export const claimDonation = async (donationId) => {
     const response = await fetch(`${API_URL}/api/donations/${donationId}/claim`, {
       method: 'POST',
       headers,
+      ...(location && {
+        body: JSON.stringify({
+          receiverLatitude: location.receiverLatitude,
+          receiverLongitude: location.receiverLongitude,
+          receiverAddress: location.receiverAddress,
+        }),
+      }),
     });
 
     const data = await response.json();

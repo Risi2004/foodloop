@@ -117,9 +117,13 @@
     top: 100px;
     right: 20px;
     width: 16%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: stretch;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.8);
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
@@ -142,9 +146,13 @@
     top: 100px;
     right: 0;
     width: 50%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: stretch;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.8);
     box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
@@ -181,6 +189,98 @@
     font-size: 28px;
     margin-right: 20px;
     margin-top: 20px;
+}
+
+.navbar__popup__action {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 20px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.navbar__delete-account-btn,
+.navbar__popup__action .navbar__delete-account-btn,
+.responsive__navbar__popup .navbar__delete-account-btn,
+.navbar__s3__profile__popup .navbar__delete-account-btn {
+    padding: 15px;
+    border-radius: 33px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: none;
+    cursor: pointer;
+    background: #dc2626 !important;
+    color: white !important;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.navbar__delete-account-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.navbar__delete-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.navbar__delete-modal {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.navbar__delete-modal h3 {
+    margin: 0 0 12px 0;
+    font-size: 20px;
+    color: #1a1a1a;
+}
+
+.navbar__delete-modal p {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    color: #333;
+    text-align: left;
+    cursor: default;
+}
+
+.navbar__delete-modal__actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.navbar__delete-modal__actions .navbar__delete-account-btn {
+    flex: 1;
+}
+
+.navbar__delete-modal__cancel {
+    padding: 15px 20px;
+    border-radius: 33px;
+    border: 1px solid #ccc;
+    background: #fff;
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.navbar__delete-modal__cancel:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 @media screen and (max-width: 1250px) {

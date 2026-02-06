@@ -41,7 +41,7 @@ const MapCenterController = ({ center, zoom }) => {
     return null;
 };
 
-const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress }) => {
+const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress, title = 'Confirm Pickup Location' }) => {
     const [coordinates, setCoordinates] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -213,7 +213,7 @@ const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress }) => {
         <div className="location-map-modal-overlay" onClick={handleCancel}>
             <div className="location-map-modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="location-map-modal-header">
-                    <h2>Confirm Pickup Location</h2>
+                    <h2>{title}</h2>
                     <button className="location-map-modal-close" onClick={handleCancel}>×</button>
                 </div>
 

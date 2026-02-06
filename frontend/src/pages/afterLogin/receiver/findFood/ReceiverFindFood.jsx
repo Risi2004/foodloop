@@ -4,12 +4,38 @@ import Sidebar from '../../../../components/afterLogin/receiver/findFood/sideBar
 import MapSection from '../../../../components/afterLogin/receiver/findFood/mapSection/MapSection';
 import ReceiverNavbar from "../../../../components/afterLogin/dashboard/ReceiverSection/navbar/ReceiverNavbar";
 import ReceiverFooter from "../../../../components/afterLogin/dashboard/ReceiverSection/footer/ReceiverFooter";
+import LocationMapModal from '../../../../components/afterLogin/donor/myDonation/locationMapModal/LocationMapModal';
 import { getAvailableDonations, claimDonation } from '../../../../services/donationApi';
+import { getCurrentUser } from '../../../../services/api';
+
+// Reverse geocode coordinates to address (Nominatim)
+const reverseGeocode = async (lat, lng) => {
+    try {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { 'User-Agent': 'FoodLoop-App/1.0' } }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.display_name || null;
+    } catch {
+        return null;
+    }
+};
 
 const FindFood = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [receiverPosition, setReceiverPosition] = useState(null);
+    const [receiverAddress, setReceiverAddress] = useState('');
+    const [profileAddress, setProfileAddress] = useState('');
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [claimLocationModalOpen, setClaimLocationModalOpen] = useState(false);
+    const [claimingDonationId, setClaimingDonationId] = useState(null);
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [locationError, setLocationError] = useState('');
 
     // Format time ago
     const getTimeAgo = (date) => {
@@ -99,6 +125,82 @@ const FindFood = () => {
         fetchDonations();
     }, []);
 
+    // Load profile address for default in modals
+    useEffect(() => {
+        let cancelled = false;
+        getCurrentUser()
+            .then(res => {
+                if (!cancelled && res?.user?.address) setProfileAddress(res.user.address);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, []);
+
+    const handleUseMyLocation = () => {
+        setLocationError('');
+        setLocationLoading(true);
+        if (!navigator.geolocation) {
+            setLocationError('Geolocation is not supported.');
+            setLocationLoading(false);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                if (lat < 5 || lat > 10 || lng < 79 || lng > 82) {
+                    setLocationError('Location is outside Sri Lanka.');
+                    setReceiverPosition(null);
+                    setReceiverAddress('');
+                } else {
+                    setReceiverPosition([lat, lng]);
+                    const addr = await reverseGeocode(lat, lng);
+                    setReceiverAddress(addr || 'Location set');
+                }
+                setLocationLoading(false);
+            },
+            () => {
+                setLocationError('Could not get location. Check permissions or try Select location.');
+                setLocationLoading(false);
+            },
+            { timeout: 10000, maximumAge: 60000 }
+        );
+    };
+
+    const handleSelectLocationConfirm = (lat, lng, address) => {
+        setReceiverPosition([lat, lng]);
+        setReceiverAddress(address || 'Location set');
+        setShowLocationModal(false);
+    };
+
+    const handleClaim = (donationId) => {
+        setClaimingDonationId(donationId);
+        setClaimLocationModalOpen(true);
+    };
+
+    const handleClaimLocationConfirm = async (lat, lng, address) => {
+        const donationId = claimingDonationId;
+        setClaimLocationModalOpen(false);
+        setClaimingDonationId(null);
+        if (!donationId) return;
+        try {
+            const response = await claimDonation(donationId, {
+                receiverLatitude: lat,
+                receiverLongitude: lng,
+                receiverAddress: address || '',
+            });
+            if (response.success) {
+                setItems(prev => prev.filter(item => {
+                    const id = item.id || item.donation?._id || item.donation?.id;
+                    return id !== donationId;
+                }));
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Failed to claim donation. Please try again.';
+            alert(msg);
+        }
+    };
+
     if (loading) {
         return (
             <>
@@ -182,38 +284,6 @@ const FindFood = () => {
         }
     };
 
-    // Handle claim donation
-    const handleClaim = async (donationId) => {
-        try {
-            console.log('[ReceiverFindFood] Claiming donation:', donationId);
-            
-            // Call API to claim donation
-            const response = await claimDonation(donationId);
-            
-            if (response.success) {
-                // Remove claimed donation from local state
-                setItems(prevItems => prevItems.filter(item => {
-                    const id = item.id || item.donation?._id || item.donation?.id;
-                    return id !== donationId;
-                }));
-                
-                // Show success message (optional - you can add a toast notification here)
-                console.log('[ReceiverFindFood] Donation claimed successfully');
-                
-                // Optionally refresh the list to ensure consistency
-                // fetchDonations();
-            }
-        } catch (error) {
-            console.error('[ReceiverFindFood] Error claiming donation:', error);
-            
-            // Show error message to user
-            const errorMessage = error.response?.data?.message || error.message || 'Failed to claim donation. Please try again.';
-            alert(errorMessage); // You can replace this with a better notification system
-            
-            throw error; // Re-throw to let FoodCard handle it
-        }
-    };
-
     return (
         <>
             <ReceiverNavbar />
@@ -222,9 +292,37 @@ const FindFood = () => {
                     <Sidebar items={items} onCardClick={handleCardClick} onClaim={handleClaim} />
                 </div>
                 <div className="map-section">
-                    <MapSection items={items} />
+                    <MapSection
+                        items={items}
+                        receiverPosition={receiverPosition}
+                        receiverAddress={receiverAddress}
+                        onSelectLocation={() => setShowLocationModal(true)}
+                        onUseMyLocation={handleUseMyLocation}
+                        locationLoading={locationLoading}
+                        locationError={locationError}
+                    />
                 </div>
             </div>
+
+            <LocationMapModal
+                isOpen={showLocationModal}
+                onClose={() => setShowLocationModal(false)}
+                onConfirm={handleSelectLocationConfirm}
+                defaultAddress={receiverAddress || profileAddress}
+                title="Select your location"
+            />
+
+            <LocationMapModal
+                isOpen={claimLocationModalOpen}
+                onClose={() => {
+                    setClaimLocationModalOpen(false);
+                    setClaimingDonationId(null);
+                }}
+                onConfirm={handleClaimLocationConfirm}
+                defaultAddress={receiverAddress || profileAddress}
+                title="Confirm delivery location"
+            />
+
             <ReceiverFooter />
         </>
     );

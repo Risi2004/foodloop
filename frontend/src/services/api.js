@@ -297,6 +297,31 @@ export const getCurrentUser = async () => {
 };
 
 /**
+ * Delete current user account and all related data (Donor, Receiver, Driver only).
+ * @returns {Promise<{ success: boolean, message: string }>}
+ */
+export const deleteAccount = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/users/me`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to delete account');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
  * Upload profile picture (any role). Sends image as multipart field "avatar".
  * @param {File} file - Image file
  * @returns {Promise<{ success: boolean, user: Object }>}

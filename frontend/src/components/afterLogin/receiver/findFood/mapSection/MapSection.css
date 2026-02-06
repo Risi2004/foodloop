@@ -95,6 +95,39 @@
     font-weight: 500;
 }
 
+.location-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.location-action-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1b4332;
+    background: #e8f5e9;
+    border: 1px solid #1b4332;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.location-action-btn:hover:not(:disabled) {
+    background: #c8e6c9;
+}
+
+.location-action-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.location-error {
+    font-size: 0.75rem;
+    color: #c62828;
+    margin-top: 4px;
+}
+
 /* Map Controls */
 .map-controls {
     position: absolute;
