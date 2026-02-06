@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const ContactMessage = require('../models/ContactMessage');
 const Notification = require('../models/Notification');
+const UserNotification = require('../models/UserNotification');
 const { authenticateAdmin } = require('../middleware/auth');
 const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail, sendContactReplyEmail, sendNotificationEmail } = require('../utils/emailService');
 
@@ -320,6 +321,33 @@ router.post('/messages/:id/reply', async (req, res) => {
       await sendContactReplyEmail(contactMessage.email, contactMessage.name, reply.trim());
     } catch (emailError) {
       console.error('[Admin] Error sending reply email:', emailError);
+    }
+
+    // If the contact submitter is a registered user, create an in-app notification
+    try {
+      let targetUserId = contactMessage.userId;
+      if (!targetUserId && contactMessage.email) {
+        const registeredUser = await User.findOne({
+          email: contactMessage.email.trim().toLowerCase(),
+          status: 'completed',
+        })
+          .select('_id')
+          .lean();
+        if (registeredUser) targetUserId = registeredUser._id;
+      }
+      if (targetUserId) {
+        const replyText = reply.trim();
+        const maxLength = 500;
+        const displayReply = replyText.length <= maxLength ? replyText : replyText.slice(0, maxLength - 3) + '...';
+        const userNotification = new UserNotification({
+          user: targetUserId,
+          title: 'Reply from FoodLoop',
+          message: `Admin replied to your contact message.\n\n${displayReply}`,
+        });
+        await userNotification.save();
+      }
+    } catch (notifError) {
+      console.error('[Admin] Error creating user notification for contact reply:', notifError);
     }
 
     res.status(200).json({

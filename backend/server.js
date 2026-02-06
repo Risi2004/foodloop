@@ -1,12 +1,17 @@
 // Load and validate environment variables
 require('./config/env');
 
+const http = require('http');
 const express = require('express');
+const { Server: SocketIOServer } = require('socket.io');
 const cors = require('cors');
 const multer = require('multer');
 const cron = require('node-cron');
 const { PORT, NODE_ENV } = require('./config/env');
 const connectDB = require('./config/database');
+const { verifyToken } = require('./utils/jwt');
+const Donation = require('./models/Donation');
+const socketService = require('./services/socketService');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const contactRoutes = require('./routes/contact');
@@ -15,6 +20,7 @@ const userRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
+const mapRoutes = require('./routes/map');
 const {
   checkAndDeleteExpiredDonations,
   sendExpiryWarningEmails,
@@ -61,6 +67,9 @@ app.use('/api/notifications', notificationRoutes);
 
 // Chat route (proxy to AI service; no auth so chatbot works on landing page)
 app.use('/api/chat', chatRoutes);
+
+// Map locations (public; for landing page map)
+app.use('/api/map', mapRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -109,7 +118,70 @@ console.log('✅ Scheduled jobs initialized:');
 console.log('   - Expired donation deletion: Every 30 minutes');
 console.log('   - Expiry warning emails: Every hour');
 
-app.listen(PORT, () => {
+// HTTP server for Express + Socket.IO
+const server = http.createServer(app);
+
+// Socket.IO: real-time driver location to donor/receiver
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: process.env.FRONTEND_ORIGIN || '*',
+    methods: ['GET', 'POST'],
+  },
+});
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    return next(new Error('No token'));
+  }
+  try {
+    const decoded = verifyToken(token);
+    socket.userId = decoded.id?.toString();
+    socket.role = decoded.role;
+    next();
+  } catch (err) {
+    next(new Error('Invalid or expired token'));
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.on('join_donation', async (donationId, callback) => {
+    if (!donationId || typeof donationId !== 'string') {
+      callback?.({ success: false, message: 'Invalid donation ID' });
+      return;
+    }
+    try {
+      const donation = await Donation.findById(donationId).select('donorId assignedReceiverId').lean();
+      if (!donation) {
+        callback?.({ success: false, message: 'Donation not found' });
+        return;
+      }
+      const userId = socket.userId;
+      const isDonor = donation.donorId?.toString() === userId;
+      const isReceiver = donation.assignedReceiverId?.toString() === userId;
+      if (!isDonor && !isReceiver) {
+        callback?.({ success: false, message: 'Not authorized to track this donation' });
+        return;
+      }
+      socket.join(`donation:${donationId}`);
+      callback?.({ success: true });
+    } catch (err) {
+      console.error('[Socket] join_donation error:', err);
+      callback?.({ success: false, message: 'Server error' });
+    }
+  });
+
+  socket.on('leave_donation', (donationId) => {
+    if (donationId && typeof donationId === 'string') {
+      socket.leave(`donation:${donationId}`);
+    }
+  });
+});
+
+socketService.setIO(io);
+
+server.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📝 Environment: ${NODE_ENV}`);
+  console.log('📡 Socket.IO enabled for real-time tracking');
 });

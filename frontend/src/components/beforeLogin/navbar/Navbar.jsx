@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import React, { useState } from 'react';
 import "./Navbar.css"
 import arrow from "../../../assets/icons/navbar/arrow.svg"
@@ -6,6 +6,19 @@ import menu from "../../../assets/icons/navbar/menu-bar.svg"
 
 function Navbar({ isLoggedIn }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const isHome = location.pathname === '/';
+
+    const scrollToSection = (sectionId) => {
+        if (isHome) {
+            const el = document.getElementById(sectionId);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            navigate(`/#${sectionId}`);
+        }
+        setIsMenuOpen(false);
+    };
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
@@ -24,8 +37,9 @@ function Navbar({ isLoggedIn }) {
 
                 <div className="navbar__s2">
                     <Link to="/">Home</Link>
-                    <Link to="/about">About Us</Link>
-                    <Link to="/contact">Contact Us</Link>                </div>
+                    <button type="button" className="navbar__link" onClick={() => scrollToSection('about')}>About Us</button>
+                    <button type="button" className="navbar__link" onClick={() => scrollToSection('contact')}>Contact Us</button>
+                </div>
 
                 <div className="navbar__s3">
                     <Link to="/login">
@@ -54,8 +68,8 @@ function Navbar({ isLoggedIn }) {
                 <div className="responsive__navbar__popup">
                     <p onClick={toggleMenu}>X</p>
                     <Link to="/" onClick={toggleMenu}>Home</Link>
-                    <Link to="/about" onClick={toggleMenu}>About Us</Link>
-                    <Link to="/contact" onClick={toggleMenu}>Contact Us</Link>
+                    <button type="button" className="responsive__navbar__popup__link" onClick={() => scrollToSection('about')}>About Us</button>
+                    <button type="button" className="responsive__navbar__popup__link" onClick={() => scrollToSection('contact')}>Contact Us</button>
                 </div>
             )}
         </>

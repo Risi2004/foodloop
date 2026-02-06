@@ -443,7 +443,51 @@ export const getAvailablePickups = async () => {
 };
 
 /**
- * Confirm pickup of a donation (driver confirms they will pick up)
+ * Accept order: driver claims an order from Available Pickups (before physical pickup).
+ * Order appears in My Pickups In Transit. Use confirmPickup when physically at donor.
+ * @param {string} donationId - Donation ID to accept
+ * @returns {Promise} Response with accepted donation
+ */
+export const acceptOrder = async (donationId) => {
+  try {
+    console.log('[DonationAPI] Accepting order for donation:', donationId);
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: 'Your session has expired. Please log in again.', code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/accept-order`, {
+      method: 'POST',
+      headers,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { data: { message: 'Your session has expired. Please log in again.', code: 'TOKEN_EXPIRED' } };
+        throw error;
+      }
+      const error = new Error(data.message || 'Failed to accept order');
+      error.response = { data };
+      throw error;
+    }
+    console.log('[DonationAPI] Order accepted:', data);
+    return data;
+  } catch (error) {
+    console.error('[DonationAPI] Error accepting order:', error);
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Confirm pickup of a donation (driver confirms physical pickup at donor)
  * @param {string} donationId - Donation ID to confirm pickup for
  * @returns {Promise} Response with confirmed donation
  */
@@ -703,22 +747,29 @@ export const getDriverCompletedDeliveries = async () => {
   }
 };
 
+const TRACKING_FETCH_TIMEOUT_MS = 15000;
+
 /**
  * Get tracking data for a donation
  * @param {string} donationId - Donation ID to track
  * @returns {Promise} Response with tracking data
  */
 export const getDonationTracking = async (donationId) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TRACKING_FETCH_TIMEOUT_MS);
+
   try {
     console.log('[DonationAPI] Fetching tracking data for donation:', donationId);
-    
+
     const response = await fetch(`${API_URL}/api/donations/${donationId}/tracking`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
 
     if (!response.ok) {
@@ -727,10 +778,22 @@ export const getDonationTracking = async (donationId) => {
       throw error;
     }
 
+    if (!data.tracking) {
+      const error = new Error('Invalid tracking response');
+      error.response = { data };
+      throw error;
+    }
+
     console.log('[DonationAPI] Tracking data fetched successfully');
     return data;
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error('[DonationAPI] Error fetching tracking data:', error);
+    if (error.name === 'AbortError') {
+      const wrappedError = new Error('Request timed out. Please check your connection and try again.');
+      wrappedError.response = { data: { message: wrappedError.message } };
+      throw wrappedError;
+    }
     if (error.response) {
       throw error;
     }

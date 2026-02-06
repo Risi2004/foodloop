@@ -19,8 +19,17 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
         const today = new Date();
         return today.toISOString().split('T')[0];
     });
-    const [pickupTimeFrom, setPickupTimeFrom] = useState('16:00'); // 4:00 PM
-    const [pickupTimeTo, setPickupTimeTo] = useState('17:30'); // 5:30 PM
+    // From = current time, To = current time + 1.5 hrs (editable)
+    const getTimeString = (d) =>
+        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const [pickupTimeFrom, setPickupTimeFrom] = useState(() => {
+        return getTimeString(new Date());
+    });
+    const [pickupTimeTo, setPickupTimeTo] = useState(() => {
+        const now = new Date();
+        const to = new Date(now.getTime() + 90 * 60 * 1000); // +1.5 hours
+        return getTimeString(to);
+    });
     const [aiConfidence, setAiConfidence] = useState(null);
     const [aiQualityScore, setAiQualityScore] = useState(null);
     const [isAiFilled, setIsAiFilled] = useState(false);

@@ -10,8 +10,8 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { confirmDelivery, getDonationTracking } from '../../../../services/donationApi';
 import { startLocationTracking, stopLocationTracking } from '../../../../services/locationService';
-import { updateDriverLocation } from '../../../../services/api';
-import { generatePathWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
+import { updateDriverLocation, startDemo, stopDemo } from '../../../../services/api';
+import { generateRouteWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -34,6 +34,17 @@ const ZoomHandler = () => {
     );
 };
 
+// Updates map center when driver moves without resetting zoom
+function MapCenterUpdater({ center }) {
+    const map = useMap();
+    useEffect(() => {
+        if (center && center.length === 2) {
+            map.setView(center, map.getZoom());
+        }
+    }, [center, map]);
+    return null;
+}
+
 function DeliveryConfirmation() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -46,6 +57,8 @@ function DeliveryConfirmation() {
     const [error, setError] = useState(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [demoProgress, setDemoProgress] = useState({ currentIndex: 0, total: 0 });
+    const [demoRouteWaypoints, setDemoRouteWaypoints] = useState([]);
+    const [routeLoading, setRouteLoading] = useState(false);
 
     // Fetch donation data
     useEffect(() => {
@@ -110,8 +123,14 @@ function DeliveryConfirmation() {
         if (isDemoMode) {
             // Disable demo mode
             stopSimulation();
+            try {
+                await stopDemo();
+            } catch (err) {
+                console.error('[DeliveryConfirmation] Error stopping server demo:', err);
+            }
             setIsDemoMode(false);
             setDemoProgress({ currentIndex: 0, total: 0 });
+            setDemoRouteWaypoints([]);
             // Resume real location tracking if available
             if (donationId) {
                 startLocationTracking(async (location, error) => {
@@ -198,57 +217,61 @@ function DeliveryConfirmation() {
 
             // Update driver location state with starting location
             setDriverLocation([startLocation.lat, startLocation.lng]);
-            
-            // Update server with starting location
+
             try {
                 await updateDriverLocation(startLocation.lat, startLocation.lng);
             } catch (err) {
                 console.error('[DeliveryConfirmation] Error updating starting location:', err);
             }
 
-            // Generate waypoints from driver location to receiver location
-            const waypoints = generatePathWaypoints(
-                startLocation.lat,
-                startLocation.lng,
-                endLocation.lat,
-                endLocation.lng,
-                12
-            );
+            setRouteLoading(true);
+            try {
+                const waypoints = await generateRouteWaypoints(
+                    startLocation.lat,
+                    startLocation.lng,
+                    endLocation.lat,
+                    endLocation.lng
+                );
 
-            if (waypoints.length === 0) {
-                alert('Failed to generate path waypoints');
-                return;
-            }
+                if (waypoints.length === 0) {
+                    alert('Failed to generate path waypoints');
+                    return;
+                }
 
-            console.log(`[DeliveryConfirmation] Starting demo mode: ${waypoints.length} waypoints from driver to receiver`);
+                setDemoRouteWaypoints(waypoints.map((w) => [w.latitude, w.longitude]));
 
-            // Start simulation
-            const success = simulateMovement(
-                waypoints,
-                async (waypoint) => {
-                    // Update local state
-                    setDriverLocation([waypoint.latitude, waypoint.longitude]);
-                    setDemoProgress({ currentIndex: waypoint.index + 1, total: waypoint.total });
+                console.log(`[DeliveryConfirmation] Starting demo mode: ${waypoints.length} waypoints from driver to receiver`);
 
-                    // Update server location
-                    try {
-                        await updateDriverLocation(waypoint.latitude, waypoint.longitude);
-                    } catch (err) {
-                        console.error('[DeliveryConfirmation] Error updating driver location in demo mode:', err);
-                    }
+                try {
+                    await startDemo(waypoints);
+                } catch (err) {
+                    console.error('[DeliveryConfirmation] Error starting server demo (movement will only show while you stay on this page):', err);
+                }
 
-                    // If reached destination, show message
-                    if (waypoint.index === waypoint.total - 1) {
-                        console.log('[DeliveryConfirmation] Demo mode: Reached receiver location');
-                    }
-                },
-                2500 // 2.5 seconds interval
-            );
+                const success = simulateMovement(
+                    waypoints,
+                    async (waypoint) => {
+                        setDriverLocation([waypoint.latitude, waypoint.longitude]);
+                        setDemoProgress({ currentIndex: waypoint.index + 1, total: waypoint.total });
+                        try {
+                            await updateDriverLocation(waypoint.latitude, waypoint.longitude);
+                        } catch (err) {
+                            console.error('[DeliveryConfirmation] Error updating driver location in demo mode:', err);
+                        }
+                        if (waypoint.index === waypoint.total - 1) {
+                            console.log('[DeliveryConfirmation] Demo mode: Reached receiver location');
+                        }
+                    },
+                    2500
+                );
 
-            if (success) {
-                setIsDemoMode(true);
-            } else {
-                alert('Failed to start demo mode');
+                if (success) {
+                    setIsDemoMode(true);
+                } else {
+                    alert('Failed to start demo mode');
+                }
+            } finally {
+                setRouteLoading(false);
             }
         }
     };
@@ -368,11 +391,10 @@ function DeliveryConfirmation() {
         ? [donationData.driver.location.latitude, donationData.driver.location.longitude]
         : [6.860, 79.925]); // Default fallback
 
-    // Build route path
-    const routePath = [
-        currentLocation,
-        receiverLocation
-    ];
+    // Build route path: use road route waypoints when in demo, else simple segment
+    const routePath = demoRouteWaypoints.length > 0
+        ? demoRouteWaypoints
+        : [currentLocation, receiverLocation];
 
     // Custom icons
     const receiverIcon = new L.DivIcon({
@@ -397,6 +419,7 @@ function DeliveryConfirmation() {
                     {/* Demo Mode Toggle Button */}
                     <button
                         onClick={handleDemoModeToggle}
+                        disabled={routeLoading}
                         className="demo-mode-toggle"
                         style={{
                             position: 'absolute',
@@ -410,16 +433,17 @@ function DeliveryConfirmation() {
                             borderRadius: '8px',
                             fontSize: '14px',
                             fontWeight: 'bold',
-                            cursor: 'pointer',
+                            cursor: routeLoading ? 'wait' : 'pointer',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            transition: 'all 0.3s ease'
+                            transition: 'all 0.3s ease',
+                            opacity: routeLoading ? 0.8 : 1
                         }}
                         title={isDemoMode ? 'Disable Demo Mode' : 'Enable Demo Mode - Simulate movement for competition'}
                     >
-                        {isDemoMode ? '🛑' : '▶️'} {isDemoMode ? 'Stop Demo' : 'Demo Mode'}
+                        {routeLoading ? '⏳ Loading route...' : (isDemoMode ? '🛑 Stop Demo' : '▶️ Demo Mode')}
                     </button>
 
                     {/* Demo Mode Status Indicator */}
@@ -457,7 +481,7 @@ function DeliveryConfirmation() {
                         scrollWheelZoom={true}
                         style={{ height: "100%", width: "100%" }}
                         zoomControl={false}
-                        key={driverLocation ? driverLocation.join(',') : 'default'}
+                        key="delivery-map"
                     >
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -481,6 +505,7 @@ function DeliveryConfirmation() {
                             </Marker>
                         )}
                         <Polyline pathOptions={mobileBlueOptions} positions={routePath} />
+                        <MapCenterUpdater center={currentLocation} />
                         <ZoomHandler />
                     </MapContainer>
                 </div>

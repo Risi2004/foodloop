@@ -3,7 +3,7 @@ import icon1 from '../../../assets/icons/contact/1.svg';
 import icon2 from '../../../assets/icons/contact/2.svg';
 import icon3 from '../../../assets/icons/contact/3.svg';
 import './Contact.css';
-import { getUser } from '../../../utils/auth';
+import { getUser, isAuthenticated } from '../../../utils/auth';
 import { submitContactMessage } from '../../../services/contactApi';
 
 function getDisplayName(user) {
@@ -26,7 +26,9 @@ function Contact() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
 
+  // Pre-fill name, email, contact no only for registered (logged-in) users; guests see empty fields
   useEffect(() => {
+    if (!isAuthenticated()) return;
     const user = getUser();
     if (user) {
       setName(getDisplayName(user) || '');
@@ -65,7 +67,7 @@ function Contact() {
   };
 
   return (
-    <div className='contact'>
+    <div id="contact" className='contact'>
       <div className='contact__s1'>
         <div className='contact__s1__sub1'>
           <img src={icon3} alt="mail-icon" />

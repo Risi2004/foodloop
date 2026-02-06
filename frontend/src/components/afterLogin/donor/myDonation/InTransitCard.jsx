@@ -2,13 +2,11 @@ import foodImage from "../../../../assets/icons/afterLogin/receiver/img.png";
 import organicFoodIcon from "../../../../assets/icons/afterLogin/receiver/Organic Food.svg";
 import swapIcon from "../../../../assets/icons/afterLogin/receiver/Swap.svg";
 import './DonationCards.css';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const InTransitCard = ({ donation }) => {
-    const navigate = useNavigate();
-    const handleFollowMapClick = () => {
-        navigate(`/donor/track-order?donationId=${donation.id}`);
-    };
+    const donationId = donation?.id || donation?._id || '';
+    const trackOrderUrl = donationId ? `/donor/track-order?donationId=${donationId}` : '#';
 
     if (!donation) {
         return null;
@@ -36,10 +34,10 @@ const InTransitCard = ({ donation }) => {
                     </div>
                 </div>
                 <div className="tool">
-                    <div className="edit" onClick={handleFollowMapClick}>
+                    <Link to={trackOrderUrl} className="edit" style={{ textDecoration: 'none', color: 'inherit', cursor: donationId ? 'pointer' : 'default' }} aria-label="Follow map to track delivery">
                         <img className="swap" src={swapIcon} alt="Follow map" />
                         <div className="supplied">Follow Map</div>
-                    </div>
+                    </Link>
                 </div>
             </div>
             <div className="fed">

@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateUser } = require('../middleware/auth');
 const Review = require('../models/Review');
 const User = require('../models/User');
+const UserNotification = require('../models/UserNotification');
 const { getUserDisplayName } = require('../utils/emailService');
 const {
   sendReviewSubmittedEmail,
@@ -261,6 +262,21 @@ router.post('/:id/approve', authenticateUser, async (req, res) => {
         // Don't fail approval if email fails
       }
     })();
+
+    // In-app notification for the reviewer (always a registered user)
+    try {
+      const reviewerId = review.userId && (review.userId._id || review.userId);
+      if (reviewerId) {
+        const userNotification = new UserNotification({
+          user: reviewerId,
+          title: 'Review approved',
+          message: 'Your review has been approved and is now visible on FoodLoop.',
+        });
+        await userNotification.save();
+      }
+    } catch (notifError) {
+      console.error('[Reviews] Error creating user notification for review approval:', notifError);
+    }
 
     res.status(200).json({
       success: true,

@@ -10,15 +10,15 @@ import './DonorTrackingPage.css';
 function DonorTrackingPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const donationId = searchParams.get('donationId');
+    const rawId = searchParams.get('donationId');
+    const donationId = rawId && rawId !== 'undefined' && rawId.trim() !== '' ? rawId.trim() : null;
 
-    // Use live tracking hook
+    // Use live tracking hook (only when we have a valid donationId)
     const { trackingData, driverLocation, loading, error } = useLiveTracking(donationId, {
-        interval: 5000, // Poll every 5 seconds
+        interval: 2500,
         enabled: !!donationId
     });
 
-    // Check if donationId is provided
     useEffect(() => {
         if (!donationId) {
             alert('No donation ID provided');
@@ -26,7 +26,11 @@ function DonorTrackingPage() {
         }
     }, [donationId, navigate]);
 
-    if (loading && !trackingData) {
+    if (!donationId) {
+        return null;
+    }
+
+    if (!trackingData && loading) {
         return (
             <>
                 <DonorNavbar />

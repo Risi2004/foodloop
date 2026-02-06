@@ -3,13 +3,14 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 const NotificationRead = require('../models/NotificationRead');
+const UserNotification = require('../models/UserNotification');
 const { authenticateUser } = require('../middleware/auth');
 
 router.use(express.json());
 
 /**
  * GET /api/notifications
- * List notifications for the current user's role (authenticated).
+ * List notifications for the current user (broadcast by role + per-user).
  * Returns active notifications with read flag and unreadCount.
  */
 router.get('/', authenticateUser, async (req, res) => {
@@ -23,6 +24,9 @@ router.get('/', authenticateUser, async (req, res) => {
       });
     }
 
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+
+    // Broadcast notifications (by role)
     const notifications = await Notification.find({
       status: 'active',
       $or: [
@@ -35,7 +39,6 @@ router.get('/', authenticateUser, async (req, res) => {
       .lean();
 
     const notificationIds = notifications.map((n) => n._id);
-    const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
     let readSet = new Set();
     if (userObjectId && notificationIds.length > 0) {
       const reads = await NotificationRead.find({
@@ -47,10 +50,8 @@ router.get('/', authenticateUser, async (req, res) => {
       reads.forEach((r) => readSet.add(r.notification.toString()));
     }
 
-    let unreadCount = 0;
-    const list = notifications.map((n) => {
+    const broadcastList = notifications.map((n) => {
       const read = readSet.has(n._id.toString());
-      if (!read) unreadCount += 1;
       return {
         id: n._id.toString(),
         title: n.title,
@@ -59,6 +60,28 @@ router.get('/', authenticateUser, async (req, res) => {
         read,
       };
     });
+
+    // Per-user notifications
+    let userList = [];
+    if (userObjectId) {
+      const userNotifications = await UserNotification.find({ user: userObjectId })
+        .sort({ createdAt: -1 })
+        .select('title message createdAt _id readAt')
+        .lean();
+      userList = userNotifications.map((n) => ({
+        id: n._id.toString(),
+        title: n.title,
+        message: n.message,
+        createdAt: n.createdAt,
+        read: !!n.readAt,
+      }));
+    }
+
+    // Merge and sort by createdAt desc
+    const list = [...broadcastList, ...userList].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    const unreadCount = list.filter((n) => !n.read).length;
 
     res.status(200).json({
       success: true,
@@ -103,18 +126,26 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
 
     const notificationIds = notifications.map((n) => n._id);
     const userObjectId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
-    let readCount = 0;
+    let broadcastReadCount = 0;
     if (userObjectId && notificationIds.length > 0) {
-      readCount = await NotificationRead.countDocuments({
+      broadcastReadCount = await NotificationRead.countDocuments({
         user: userObjectId,
         notification: { $in: notificationIds },
       });
     }
-    const unreadCount = notificationIds.length - readCount;
+    const broadcastUnread = Math.max(0, notificationIds.length - broadcastReadCount);
+
+    let userUnreadCount = 0;
+    if (userObjectId) {
+      userUnreadCount = await UserNotification.countDocuments({
+        user: userObjectId,
+        readAt: null,
+      });
+    }
 
     res.status(200).json({
       success: true,
-      unreadCount: Math.max(0, unreadCount),
+      unreadCount: broadcastUnread + userUnreadCount,
     });
   } catch (error) {
     console.error('[Notifications] Error fetching unread count:', error);
@@ -129,7 +160,7 @@ router.get('/unread-count', authenticateUser, async (req, res) => {
 /**
  * POST /api/notifications/mark-read
  * Body: { all?: boolean, notificationIds?: string[] }
- * Mark notifications as read for current user.
+ * Mark notifications as read for current user (broadcast + user notifications).
  */
 router.post('/mark-read', authenticateUser, async (req, res) => {
   try {
@@ -151,7 +182,9 @@ router.post('/mark-read', authenticateUser, async (req, res) => {
     }
 
     const { all, notificationIds } = req.body || {};
-    let idsToMark = [];
+    let broadcastIdsToMark = [];
+    let userNotifIdsToMark = [];
+    let userNotifsMarkedCount = 0;
 
     if (all === true) {
       const notifications = await Notification.find({
@@ -163,15 +196,42 @@ router.post('/mark-read', authenticateUser, async (req, res) => {
       })
         .select('_id')
         .lean();
-      idsToMark = notifications.map((n) => n._id);
+      broadcastIdsToMark = notifications.map((n) => n._id);
+      const userResult = await UserNotification.updateMany(
+        { user: userObjectId, readAt: null },
+        { $set: { readAt: new Date() } }
+      );
+      userNotifsMarkedCount = userResult.modifiedCount;
     } else if (Array.isArray(notificationIds) && notificationIds.length > 0) {
-      const valid = notificationIds
-        .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
-        .map((id) => new mongoose.Types.ObjectId(id));
-      idsToMark = valid;
+      for (const id of notificationIds) {
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) continue;
+        const objId = new mongoose.Types.ObjectId(id);
+        const userNotif = await UserNotification.findOneAndUpdate(
+          { _id: objId, user: userObjectId, readAt: null },
+          { $set: { readAt: new Date() } }
+        );
+        if (userNotif) {
+          userNotifIdsToMark.push(objId);
+        } else {
+          broadcastIdsToMark.push(objId);
+        }
+      }
     }
 
-    if (idsToMark.length === 0) {
+    let marked = userNotifsMarkedCount + userNotifIdsToMark.length;
+    if (broadcastIdsToMark.length > 0) {
+      const ops = broadcastIdsToMark.map((notificationId) => ({
+        updateOne: {
+          filter: { user: userObjectId, notification: notificationId },
+          update: { $setOnInsert: { user: userObjectId, notification: notificationId, readAt: new Date() } },
+          upsert: true,
+        },
+      }));
+      const result = await NotificationRead.bulkWrite(ops);
+      marked += result.upsertedCount + result.modifiedCount;
+    }
+
+    if (all !== true && marked === 0 && userNotifIdsToMark.length === 0) {
       return res.status(200).json({
         success: true,
         message: 'Nothing to mark as read',
@@ -179,20 +239,10 @@ router.post('/mark-read', authenticateUser, async (req, res) => {
       });
     }
 
-    const ops = idsToMark.map((notificationId) => ({
-      updateOne: {
-        filter: { user: userObjectId, notification: notificationId },
-        update: { $setOnInsert: { user: userObjectId, notification: notificationId, readAt: new Date() } },
-        upsert: true,
-      },
-    }));
-
-    const result = await NotificationRead.bulkWrite(ops);
-
     res.status(200).json({
       success: true,
       message: 'Marked as read',
-      marked: result.upsertedCount + result.modifiedCount,
+      marked,
     });
   } catch (error) {
     console.error('[Notifications] Error marking as read:', error);

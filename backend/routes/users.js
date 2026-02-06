@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { authenticateUser } = require('../middleware/auth');
+const socketService = require('../services/socketService');
 
 // Apply JSON body parser and authentication to all routes
 router.use(express.json());
@@ -78,6 +79,10 @@ router.patch('/me/location', async (req, res) => {
     user.driverLongitude = lng;
     await user.save();
 
+    socketService.emitDriverLocation(req.user.id, lat, lng).catch((err) => {
+      console.error('[Users] Socket emit error:', err);
+    });
+
     console.log(`[Users] Driver location updated: ${req.user.id} -> [${lat}, ${lng}]`);
 
     // Prepare response (exclude password)
@@ -98,6 +103,134 @@ router.patch('/me/location', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update location',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+// --- Server-side demo: continues movement after driver signs out ---
+const DEMO_INTERVAL_MS = 2500;
+const activeDemoByDriver = new Map(); // driverId -> { intervalId, waypoints, currentIndex }
+
+/**
+ * POST /api/users/me/demo/start
+ * Start server-side demo: advance driver location along waypoints every 2.5s.
+ * Donor/receiver see movement via tracking API even if driver signs out.
+ */
+router.post('/me/demo/start', async (req, res) => {
+  try {
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can start demo',
+      });
+    }
+
+    const { waypoints } = req.body;
+    if (!Array.isArray(waypoints) || waypoints.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'waypoints array is required and must not be empty',
+      });
+    }
+
+    const driverId = req.user.id;
+
+    // Stop any existing demo for this driver
+    const existing = activeDemoByDriver.get(driverId);
+    if (existing && existing.intervalId) {
+      clearInterval(existing.intervalId);
+      activeDemoByDriver.delete(driverId);
+    }
+
+    const normalizedWaypoints = waypoints.map((w) => ({
+      latitude: typeof w.latitude === 'number' ? w.latitude : parseFloat(w.latitude),
+      longitude: typeof w.longitude === 'number' ? w.longitude : parseFloat(w.longitude),
+    })).filter((w) => !isNaN(w.latitude) && !isNaN(w.longitude));
+
+    if (normalizedWaypoints.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid waypoints (latitude, longitude) are required',
+      });
+    }
+
+    let currentIndex = 0;
+    const intervalId = setInterval(async () => {
+      const wp = normalizedWaypoints[currentIndex];
+      if (!wp) {
+        clearInterval(intervalId);
+        activeDemoByDriver.delete(driverId);
+        return;
+      }
+      try {
+        const user = await User.findById(driverId);
+        if (user) {
+          user.driverLatitude = wp.latitude;
+          user.driverLongitude = wp.longitude;
+          await user.save();
+          socketService.emitDriverLocation(driverId, wp.latitude, wp.longitude).catch((err) => {
+            console.error('[Users] Demo socket emit error:', err);
+          });
+        }
+      } catch (err) {
+        console.error('[Users] Demo tick error:', err);
+      }
+      currentIndex += 1;
+      if (currentIndex >= normalizedWaypoints.length) {
+        clearInterval(intervalId);
+        activeDemoByDriver.delete(driverId);
+      }
+    }, DEMO_INTERVAL_MS);
+
+    activeDemoByDriver.set(driverId, { intervalId, waypoints: normalizedWaypoints, currentIndex: 0 });
+    console.log(`[Users] Demo started for driver ${driverId}, ${normalizedWaypoints.length} waypoints`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Demo started. Movement will continue on the server even if you sign out.',
+      waypointCount: normalizedWaypoints.length,
+    });
+  } catch (error) {
+    console.error('[Users] Error starting demo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start demo',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * POST /api/users/me/demo/stop
+ * Stop server-side demo for this driver.
+ */
+router.post('/me/demo/stop', async (req, res) => {
+  try {
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can stop demo',
+      });
+    }
+
+    const driverId = req.user.id;
+    const existing = activeDemoByDriver.get(driverId);
+    if (existing && existing.intervalId) {
+      clearInterval(existing.intervalId);
+      activeDemoByDriver.delete(driverId);
+      console.log(`[Users] Demo stopped for driver ${driverId}`);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Demo stopped',
+    });
+  } catch (error) {
+    console.error('[Users] Error stopping demo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to stop demo',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

@@ -59,10 +59,12 @@ const DonorMyDonationDashboard = () => {
         fetchDonations();
     }, []);
 
-    // Filter donations by status
-    const inTransit = donations.filter(d => d.status === 'picked_up');
-    const lookingForDriver = donations.filter(d => 
-        d.status === 'assigned' || d.status === 'pending' || d.status === 'approved'
+    // After receiver claims: show in Looking for Driver; only after driver accepts, show in In Transit
+    const lookingForDriver = donations.filter(d =>
+        d.status === 'pending' || d.status === 'approved' || (d.status === 'assigned' && !d.assignedDriverId)
+    );
+    const inTransit = donations.filter(d =>
+        (d.status === 'assigned' && d.assignedDriverId) || d.status === 'picked_up'
     );
     const completed = donations.filter(d => d.status === 'delivered');
 

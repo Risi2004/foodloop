@@ -108,7 +108,7 @@ function TrackingMap({ trackingData, driverLocation: liveDriverLocation }) {
                 scrollWheelZoom={true}
                 className="map-container"
                 zoomControl={false}
-                key={driverLocation ? driverLocation.join(',') : 'default'}
+                key="tracking-map"
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

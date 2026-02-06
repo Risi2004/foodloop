@@ -281,3 +281,55 @@ export const updateDriverLocation = async (latitude, longitude) => {
     throw wrappedError;
   }
 };
+
+/**
+ * Start server-side demo so movement continues after driver signs out.
+ * @param {Array<{ latitude: number, longitude: number }>} waypoints
+ * @returns {Promise}
+ */
+export const startDemo = async (waypoints) => {
+  try {
+    const response = await fetch(`${API_URL}/api/users/me/demo/start`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ waypoints }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to start demo');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Stop server-side demo for this driver.
+ * @returns {Promise}
+ */
+export const stopDemo = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/users/me/demo/stop`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.message || 'Failed to stop demo');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};

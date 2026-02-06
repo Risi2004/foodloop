@@ -1,9 +1,8 @@
-import { Link } from "react-router-dom";
 import schedule from "../../../../assets/icons/afterLogin/driver/schedule.svg";
 import transit from "../../../../assets/icons/afterLogin/driver/transit.svg";
 import './DeliveryCard.css';
 
-function DeliveryCard({ donation, isSelected, onClick }) {
+function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAccepting }) {
     if (!donation) {
         return null;
     }
@@ -40,12 +39,16 @@ function DeliveryCard({ donation, isSelected, onClick }) {
                 <img src={schedule} alt="schedule" />
                 <p>{expiryText}</p>
             </div>
-            <Link to={`/driver/pickup?donationId=${donation.id}`}>
-                <button>
-                    <p>Confirm Pickup</p>
-                    <img src={transit} alt="pickup" />
-                </button>
-            </Link>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onAcceptOrder?.(donation);
+                }}
+                disabled={isAccepting}
+            >
+                <p>{isAccepting ? 'Accepting...' : 'Accept order'}</p>
+                <img src={transit} alt="pickup" />
+            </button>
         </div>
     )
 }

@@ -3,7 +3,7 @@ import DriverNavbar from "../../../../components/afterLogin/dashboard/driverSect
 import DriverFooter from "../../../../components/afterLogin/dashboard/driverSection/footer/DriverFooter";
 import DeliverCard from "../../../../components/afterLogin/driver/delivery/DeliveryCard";
 import DeliveryMap from "../../../../components/afterLogin/driver/delivery/DeliveryMap";
-import { getAvailablePickups, getActiveDeliveries } from '../../../../services/donationApi';
+import { getAvailablePickups, getActiveDeliveries, acceptOrder } from '../../../../services/donationApi';
 import { updateDriverLocation } from '../../../../services/api';
 import { getAuthHeaders } from '../../../../utils/auth';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +19,7 @@ function Delivery() {
     const [driverLocation, setDriverLocation] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [acceptingOrderId, setAcceptingOrderId] = useState(null);
 
     // Fetch available pickups, active deliveries, and driver location
     useEffect(() => {
@@ -101,6 +102,19 @@ function Delivery() {
 
     const handlePickupSelect = (pickup) => {
         setSelectedPickup(pickup);
+    };
+
+    const handleAcceptOrder = async (pickup) => {
+        if (!pickup?.id) return;
+        setAcceptingOrderId(pickup.id);
+        try {
+            await acceptOrder(pickup.id);
+            navigate(`/driver/pickup?donationId=${pickup.id}`);
+        } catch (err) {
+            alert(err.message || 'Failed to accept order. Please try again.');
+        } finally {
+            setAcceptingOrderId(null);
+        }
     };
 
     const handleDeliverySelect = (delivery) => {
@@ -218,12 +232,12 @@ function Delivery() {
             <DriverNavbar />
             <div className='delivery'>
                 <div className='delivery__s1'>
-                    {/* Active Deliveries Section */}
+                    {/* In Transit Pickups - orders this driver has confirmed pickup for */}
                     {activeDeliveries.length > 0 && (
                         <>
                             <div className='delivery__s1__info'>
-                                <h1>Active Deliveries</h1>
-                                <h5>{activeDeliveries.length} Delivery{activeDeliveries.length !== 1 ? 's' : ''} In Progress</h5>
+                                <h1>In Transit Pickups</h1>
+                                <h5>{activeDeliveries.length} Pickup{activeDeliveries.length !== 1 ? 's' : ''} In Transit</h5>
                             </div>
                             {activeDeliveries.map((delivery) => (
                                 <div
@@ -299,6 +313,8 @@ function Delivery() {
                                 donation={pickup}
                                 isSelected={selectedPickup?.id === pickup.id}
                                 onClick={() => handlePickupSelect(pickup)}
+                                onAcceptOrder={handleAcceptOrder}
+                                isAccepting={acceptingOrderId === pickup.id}
                             />
                         ))
                     )}

@@ -13,8 +13,8 @@ import Food from "../../../../components/afterLogin/driver/pickup/Food/Food";
 import LiveJourney from "../../../../components/afterLogin/driver/pickup/liveJourney/LiveJourney";
 import { confirmPickup, getDonationTracking } from '../../../../services/donationApi';
 import { startLocationTracking, stopLocationTracking } from '../../../../services/locationService';
-import { updateDriverLocation } from '../../../../services/api';
-import { generatePathWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
+import { updateDriverLocation, startDemo, stopDemo } from '../../../../services/api';
+import { generateRouteWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -35,6 +35,17 @@ const ZoomHandler = () => {
             <button className="zoom-btn zoom-out" onClick={() => map.zoomOut()}>-</button>
         </div>
     )
+};
+
+// Updates map center when driver moves without resetting zoom
+function MapCenterUpdater({ center }) {
+    const map = useMap();
+    useEffect(() => {
+        if (center && center.length === 2) {
+            map.setView(center, map.getZoom());
+        }
+    }, [center, map]);
+    return null;
 }
 
 function Pickup() {
@@ -49,6 +60,8 @@ function Pickup() {
     const [error, setError] = useState(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [demoProgress, setDemoProgress] = useState({ currentIndex: 0, total: 0 });
+    const [demoRouteWaypoints, setDemoRouteWaypoints] = useState([]);
+    const [routeLoading, setRouteLoading] = useState(false);
     const locationUpdateIntervalRef = useRef(null);
 
     // Fetch donation data
@@ -66,6 +79,10 @@ function Pickup() {
                 
                 if (response.success && response.tracking) {
                     setDonationData(response.tracking);
+                    // If donation already physically confirmed (picked_up), show confirmed state
+                    if (response.tracking?.donation?.status === 'picked_up') {
+                        setIsConfirmed(true);
+                    }
                 } else {
                     setError('Failed to load donation data');
                 }
@@ -117,8 +134,14 @@ function Pickup() {
         if (isDemoMode) {
             // Disable demo mode
             stopSimulation();
+            try {
+                await stopDemo();
+            } catch (err) {
+                console.error('[Pickup] Error stopping server demo:', err);
+            }
             setIsDemoMode(false);
             setDemoProgress({ currentIndex: 0, total: 0 });
+            setDemoRouteWaypoints([]);
             // Resume real location tracking if available
             if (donationId) {
                 startLocationTracking(async (location, error) => {
@@ -144,7 +167,7 @@ function Pickup() {
 
             // First, get driver's current location from server (from tracking data)
             let startLocation = null;
-            
+
             // Priority 1: Use driver location from tracking data
             if (donationData?.driver?.location) {
                 startLocation = {
@@ -184,7 +207,7 @@ function Pickup() {
                     console.warn('[Pickup] Could not get driver location from geolocation:', err);
                 }
             }
-            
+
             const endLocation = donationData?.donor?.location
                 ? { lat: donationData.donor.location.latitude, lng: donationData.donor.location.longitude }
                 : null;
@@ -196,7 +219,7 @@ function Pickup() {
 
             // Update driver location state with starting location
             setDriverLocation([startLocation.lat, startLocation.lng]);
-            
+
             // Update server with starting location
             try {
                 await updateDriverLocation(startLocation.lat, startLocation.lng);
@@ -204,49 +227,55 @@ function Pickup() {
                 console.error('[Pickup] Error updating starting location:', err);
             }
 
-            // Generate waypoints from driver location to donor location
-            const waypoints = generatePathWaypoints(
-                startLocation.lat,
-                startLocation.lng,
-                endLocation.lat,
-                endLocation.lng,
-                12
-            );
+            setRouteLoading(true);
+            try {
+                // Fetch road route waypoints (falls back to straight line on failure)
+                const waypoints = await generateRouteWaypoints(
+                    startLocation.lat,
+                    startLocation.lng,
+                    endLocation.lat,
+                    endLocation.lng
+                );
 
-            if (waypoints.length === 0) {
-                alert('Failed to generate path waypoints');
-                return;
-            }
+                if (waypoints.length === 0) {
+                    alert('Failed to generate path waypoints');
+                    return;
+                }
 
-            console.log(`[Pickup] Starting demo mode: ${waypoints.length} waypoints from driver to donor`);
+                setDemoRouteWaypoints(waypoints.map((w) => [w.latitude, w.longitude]));
 
-            // Start simulation
-            const success = simulateMovement(
-                waypoints,
-                async (waypoint) => {
-                    // Update local state
-                    setDriverLocation([waypoint.latitude, waypoint.longitude]);
-                    setDemoProgress({ currentIndex: waypoint.index + 1, total: waypoint.total });
+                console.log(`[Pickup] Starting demo mode: ${waypoints.length} waypoints from driver to donor`);
 
-                    // Update server location
-                    try {
-                        await updateDriverLocation(waypoint.latitude, waypoint.longitude);
-                    } catch (err) {
-                        console.error('[Pickup] Error updating driver location in demo mode:', err);
-                    }
+                try {
+                    await startDemo(waypoints);
+                } catch (err) {
+                    console.error('[Pickup] Error starting server demo (movement will only show while you stay on this page):', err);
+                }
 
-                    // If reached destination, show message
-                    if (waypoint.index === waypoint.total - 1) {
-                        console.log('[Pickup] Demo mode: Reached donor location');
-                    }
-                },
-                2500 // 2.5 seconds interval
-            );
+                const success = simulateMovement(
+                    waypoints,
+                    async (waypoint) => {
+                        setDriverLocation([waypoint.latitude, waypoint.longitude]);
+                        setDemoProgress({ currentIndex: waypoint.index + 1, total: waypoint.total });
+                        try {
+                            await updateDriverLocation(waypoint.latitude, waypoint.longitude);
+                        } catch (err) {
+                            console.error('[Pickup] Error updating driver location in demo mode:', err);
+                        }
+                        if (waypoint.index === waypoint.total - 1) {
+                            console.log('[Pickup] Demo mode: Reached donor location');
+                        }
+                    },
+                    2500
+                );
 
-            if (success) {
-                setIsDemoMode(true);
-            } else {
-                alert('Failed to start demo mode');
+                if (success) {
+                    setIsDemoMode(true);
+                } else {
+                    alert('Failed to start demo mode');
+                }
+            } finally {
+                setRouteLoading(false);
             }
         }
     };
@@ -273,12 +302,10 @@ function Pickup() {
         ? [donationData.driver.location.latitude, donationData.driver.location.longitude]
         : [6.860, 79.925]); // Default fallback
 
-    // Build route path
-    const routePath = [
-        pickupLocation,
-        currentLocation,
-        dropoffLocation
-    ];
+    // Build route path: use road route waypoints when in demo, else simple segment
+    const routePath = demoRouteWaypoints.length > 0
+        ? demoRouteWaypoints
+        : [pickupLocation, currentLocation, dropoffLocation];
 
     const handleConfirmPickup = async () => {
         if (!donationId) {
@@ -425,6 +452,7 @@ function Pickup() {
                     {/* Demo Mode Toggle Button */}
                     <button
                         onClick={handleDemoModeToggle}
+                        disabled={routeLoading}
                         className="demo-mode-toggle"
                         style={{
                             position: 'absolute',
@@ -438,16 +466,17 @@ function Pickup() {
                             borderRadius: '8px',
                             fontSize: '14px',
                             fontWeight: 'bold',
-                            cursor: 'pointer',
+                            cursor: routeLoading ? 'wait' : 'pointer',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            transition: 'all 0.3s ease'
+                            transition: 'all 0.3s ease',
+                            opacity: routeLoading ? 0.8 : 1
                         }}
                         title={isDemoMode ? 'Disable Demo Mode' : 'Enable Demo Mode - Simulate movement for competition'}
                     >
-                        {isDemoMode ? '🛑' : '▶️'} {isDemoMode ? 'Stop Demo' : 'Demo Mode'}
+                        {routeLoading ? '⏳ Loading route...' : (isDemoMode ? '🛑 Stop Demo' : '▶️ Demo Mode')}
                     </button>
 
                     {/* Demo Mode Status Indicator */}
@@ -485,7 +514,7 @@ function Pickup() {
                         scrollWheelZoom={true}
                         style={{ height: "100%", width: "100%" }}
                         zoomControl={false}
-                        key={driverLocation ? driverLocation.join(',') : 'default'}
+                        key="pickup-map"
                     >
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -516,6 +545,7 @@ function Pickup() {
                             </Marker>
                         )}
                         <Polyline pathOptions={mobileBlueOptions} positions={routePath} />
+                        <MapCenterUpdater center={currentLocation} />
                         <ZoomHandler />
                     </MapContainer>
                 </div>

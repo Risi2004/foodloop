@@ -861,15 +861,15 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
     const driverId = req.user.id;
     const currentDate = new Date();
 
-    // Fetch donations that are picked up by this driver
+    // Fetch donations assigned to this driver: on the way to pickup (assigned) or to receiver (picked_up)
     const donations = await Donation.find({
       assignedDriverId: driverId,
-      status: 'picked_up',
-      expiryDate: { $gt: currentDate }, // Only non-expired donations
+      status: { $in: ['assigned', 'picked_up'] },
+      expiryDate: { $gt: currentDate },
     })
       .populate('donorId', 'address email donorType username businessName')
       .populate('assignedReceiverId', 'address email receiverName receiverType')
-      .sort({ actualPickupDate: -1 }) // Most recently picked up first
+      .sort({ updatedAt: -1 })
       .lean();
 
     // Import distance service
@@ -1382,10 +1382,11 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
     const driverLat = driver?.driverLatitude;
     const driverLng = driver?.driverLongitude;
 
-    // Fetch donations that are assigned to receivers but not yet picked up
+    // Fetch donations that are assigned to receivers but have no driver yet (order available list)
     const donations = await Donation.find({
       status: 'assigned',
       assignedReceiverId: { $ne: null },
+      assignedDriverId: null, // Exclude once a driver has picked/claimed the order
       expiryDate: { $gt: currentDate }, // Only non-expired donations
     })
       .populate('donorId', 'address email donorType username businessName')
@@ -1545,13 +1546,104 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
 });
 
 /**
+ * POST /api/donations/:id/accept-order
+ * Driver accepts/claims an order from Available Pickups (before physical pickup).
+ * Sets assignedDriverId, keeps status 'assigned'. Order then appears in driver's My Pickups In Transit.
+ */
+router.post('/:id/accept-order', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Driver') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only drivers can accept orders',
+      });
+    }
+
+    const { id } = req.params;
+    const driverId = req.user.id;
+
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found',
+      });
+    }
+
+    if (donation.assignedDriverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has already been assigned to another driver',
+      });
+    }
+
+    if (donation.status !== 'assigned') {
+      return res.status(400).json({
+        success: false,
+        message: `This donation cannot be accepted. Current status: ${donation.status}`,
+      });
+    }
+
+    if (!donation.assignedReceiverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has not been claimed by a receiver yet',
+      });
+    }
+
+    const currentDate = new Date();
+    if (donation.expiryDate <= currentDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation has expired',
+      });
+    }
+
+    donation.assignedDriverId = driverId;
+    // Keep status 'assigned' - physical confirm-pickup will set 'picked_up'
+    await donation.save();
+
+    console.log('[Donations] Order accepted by driver:', {
+      donationId: donation._id,
+      driverId,
+      status: donation.status,
+    });
+
+    await donation.populate('donorId', 'address email donorType username businessName');
+    await donation.populate('assignedReceiverId', 'receiverName receiverType email address');
+    await donation.populate('assignedDriverId', 'driverName vehicleNumber vehicleType');
+
+    res.status(200).json({
+      success: true,
+      message: 'Order accepted. It now appears in your My Pickups In Transit.',
+      donation: {
+        id: donation._id,
+        trackingId: donation.trackingId,
+        status: donation.status,
+        assignedDriverId: donation.assignedDriverId?._id?.toString(),
+        driverName: donation.assignedDriverId?.driverName,
+        assignedReceiverId: donation.assignedReceiverId?._id?.toString(),
+        receiverName: donation.assignedReceiverId?.receiverName,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error accepting order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to accept order',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
  * POST /api/donations/:id/confirm-pickup
- * Confirm pickup of a donation (driver confirms they will pick up)
- * Requires authentication (Driver role)
+ * Driver confirms physical pickup at donor (order must already be accepted by this driver).
+ * Sets status to 'picked_up' and actualPickupDate.
+ * Backward compatibility: if no driver assigned yet, assigns driver and sets picked_up in one call.
  */
 router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
   try {
-    // Check if user is a Driver
     if (req.user.role !== 'Driver') {
       return res.status(403).json({
         success: false,
@@ -1562,7 +1654,6 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
     const { id } = req.params;
     const driverId = req.user.id;
 
-    // Find the donation
     const donation = await Donation.findById(id);
     if (!donation) {
       return res.status(404).json({
@@ -1571,15 +1662,15 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
       });
     }
 
-    // Check if donation is already assigned to a driver
-    if (donation.assignedDriverId) {
+    const alreadyAssignedToThisDriver = donation.assignedDriverId && donation.assignedDriverId.toString() === driverId;
+
+    if (donation.assignedDriverId && !alreadyAssignedToThisDriver) {
       return res.status(400).json({
         success: false,
         message: 'This donation has already been assigned to another driver',
       });
     }
 
-    // Check if donation is in 'assigned' status (claimed by receiver but not yet picked up)
     if (donation.status !== 'assigned') {
       return res.status(400).json({
         success: false,
@@ -1587,7 +1678,6 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
       });
     }
 
-    // Check if donation has a receiver assigned
     if (!donation.assignedReceiverId) {
       return res.status(400).json({
         success: false,
@@ -1595,7 +1685,6 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
       });
     }
 
-    // Check if donation has expired
     const currentDate = new Date();
     if (donation.expiryDate <= currentDate) {
       return res.status(400).json({
@@ -1604,8 +1693,10 @@ router.post('/:id/confirm-pickup', authenticateUser, async (req, res) => {
       });
     }
 
-    // Update donation: assign driver and change status to 'picked_up'
-    donation.assignedDriverId = driverId;
+    // Assign driver if not already (backward compatibility)
+    if (!donation.assignedDriverId) {
+      donation.assignedDriverId = driverId;
+    }
     donation.status = 'picked_up';
     donation.actualPickupDate = new Date();
     await donation.save();

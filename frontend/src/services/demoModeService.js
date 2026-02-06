@@ -3,6 +3,8 @@
  * Simulates driver movement along a path for competition demonstrations
  */
 
+import { getRouteWaypoints } from './mapApi';
+
 let simulationInterval = null;
 let currentWaypointIndex = 0;
 let waypoints = [];
@@ -43,6 +45,31 @@ export const generatePathWaypoints = (startLat, startLng, endLat, endLng, numPoi
   
   console.log(`[DemoMode] Generated ${points.length} waypoints from [${startLat}, ${startLng}] to [${endLat}, ${endLng}]`);
   return points;
+};
+
+/**
+ * Generate road-following waypoints via routing API; fall back to linear interpolation on failure.
+ * @param {number} startLat
+ * @param {number} startLng
+ * @param {number} endLat
+ * @param {number} endLng
+ * @returns {Promise<Array<{ latitude: number, longitude: number }>>}
+ */
+export const generateRouteWaypoints = async (startLat, startLng, endLat, endLng) => {
+  if (!startLat || !startLng || !endLat || !endLng) {
+    console.error('[DemoMode] Invalid coordinates for route');
+    return generatePathWaypoints(startLat, startLng, endLat, endLng, 12);
+  }
+  try {
+    const waypoints = await getRouteWaypoints(startLat, startLng, endLat, endLng);
+    if (waypoints && waypoints.length > 0) {
+      console.log(`[DemoMode] Using road route: ${waypoints.length} waypoints`);
+      return waypoints;
+    }
+  } catch (err) {
+    console.warn('[DemoMode] Route API failed, using straight line:', err.message);
+  }
+  return generatePathWaypoints(startLat, startLng, endLat, endLng, 12);
 };
 
 /**

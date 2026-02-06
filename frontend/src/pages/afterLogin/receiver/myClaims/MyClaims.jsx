@@ -53,9 +53,11 @@ const Myclaims = () => {
         };
     }, []); // Only run once on mount
 
-    // Filter donations by status
-    const lookingForDriver = donations.filter(d => d.status === 'assigned');
-    const inTransit = donations.filter(d => d.status === 'picked_up');
+    // After receiver claims: show in Looking for Driver; only after driver accepts, show in In Transit
+    const lookingForDriver = donations.filter(d => d.status === 'assigned' && !d.assignedDriverId);
+    const inTransit = donations.filter(d =>
+        (d.status === 'assigned' && d.assignedDriverId) || d.status === 'picked_up'
+    );
     const completed = donations.filter(d => d.status === 'delivered');
 
     if (loading) {

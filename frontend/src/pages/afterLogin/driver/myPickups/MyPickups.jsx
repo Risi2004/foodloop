@@ -18,40 +18,58 @@ function MyPickups() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Fetch all data in parallel
+            const [statsResponse, activeResponse, completedResponse] = await Promise.all([
+                getDriverStatistics(),
+                getActiveDeliveries(),
+                getDriverCompletedDeliveries()
+            ]);
+
+            if (statsResponse.success) {
+                setStatistics(statsResponse.statistics);
+            }
+
+            if (activeResponse.success && activeResponse.deliveries) {
+                setInTransitDeliveries(activeResponse.deliveries);
+            }
+
+            if (completedResponse.success && completedResponse.deliveries) {
+                // Show only the most recent 10 completed deliveries
+                setCompletedDeliveries(completedResponse.deliveries.slice(0, 10));
+            }
+        } catch (err) {
+            console.error('[MyPickups] Error fetching data:', err);
+            setError(err.message || 'Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch on mount and when user returns to this page (e.g. after confirming a pickup)
     useEffect(() => {
-        const fetchData = async () => {
+        fetchData();
+    }, []);
+
+    // Refetch In Transit when tab/window gains focus (e.g. after confirming pickup on Delivery/Pickup page)
+    useEffect(() => {
+        const handleFocus = async () => {
+            if (document.hidden) return;
             try {
-                setLoading(true);
-                setError(null);
-
-                // Fetch all data in parallel
-                const [statsResponse, activeResponse, completedResponse] = await Promise.all([
-                    getDriverStatistics(),
-                    getActiveDeliveries(),
-                    getDriverCompletedDeliveries()
-                ]);
-
-                if (statsResponse.success) {
-                    setStatistics(statsResponse.statistics);
-                }
-
-                if (activeResponse.success && activeResponse.deliveries) {
+                const activeResponse = await getActiveDeliveries();
+                if (activeResponse?.success && activeResponse.deliveries) {
                     setInTransitDeliveries(activeResponse.deliveries);
                 }
-
-                if (completedResponse.success && completedResponse.deliveries) {
-                    // Show only the most recent 10 completed deliveries
-                    setCompletedDeliveries(completedResponse.deliveries.slice(0, 10));
-                }
             } catch (err) {
-                console.error('[MyPickups] Error fetching data:', err);
-                setError(err.message || 'Failed to load data');
-            } finally {
-                setLoading(false);
+                console.warn('[MyPickups] Focus refetch failed:', err);
             }
         };
-
-        fetchData();
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, []);
 
     // Format trend display
@@ -198,8 +216,8 @@ function MyPickups() {
                                 ))
                             ) : (
                                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
-                                    <p style={{ fontSize: '16px' }}>No deliveries in transit</p>
-                                    <p style={{ fontSize: '12px' }}>Completed deliveries will appear here</p>
+                                    <p style={{ fontSize: '16px' }}>No pickups in transit</p>
+                                    <p style={{ fontSize: '12px' }}>Confirm a pickup from Available Pickups (Delivery page) to see your orders here</p>
                                 </div>
                             )}
                         </div>
