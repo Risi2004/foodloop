@@ -66,10 +66,14 @@ function Contact() {
     }
   };
 
+  const handleContactClick = () => {
+    window.open("https://mail.google.com/mail/?view=cm&fs=1&to=foodloop.official27@gmail.com", "_blank");
+  };
+
   return (
     <div id="contact" className='contact'>
       <div className='contact__s1'>
-        <div className='contact__s1__sub1'>
+        <div className='contact__s1__sub1' onClick={handleContactClick}>
           <img src={icon3} alt="mail-icon" />
           <h5>Get In Touch</h5>
         </div>
@@ -81,7 +85,7 @@ function Contact() {
             <div className='contact__s1__sub2__sub__sub'>
               <h3>Email Us</h3>
               <p>Our friendly team is here to help.</p>
-              <h5 style={{ color: "#1F4E36" }}>foodloop.official@gmail.com</h5>
+              <h5 style={{ color: "#1F4E36" }}>foodloop.official27@gmail.com</h5>
             </div>
           </div>
           <div className='contact__s1__sub2__sub'>
