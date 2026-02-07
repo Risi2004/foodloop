@@ -22,6 +22,17 @@ function setIO(socketIO) {
 }
 
 /**
+ * Emit an event to all sockets for a given user (e.g. account_deactivated).
+ * @param {string} userId - MongoDB ObjectId or user id string
+ * @param {string} event - Event name
+ * @param {object} data - Payload to send
+ */
+function emitToUser(userId, event, data = {}) {
+  if (!io || !userId) return;
+  io.to(`user:${userId}`).emit(event, data);
+}
+
+/**
  * Emit driver location to all donor/receiver clients tracking donations for this driver.
  * Call after updating User.driverLatitude/driverLongitude (PATCH /me/location or demo tick).
  * @param {string} driverId - MongoDB ObjectId of the driver user
@@ -55,5 +66,6 @@ async function emitDriverLocation(driverId, latitude, longitude) {
 
 module.exports = {
   setIO,
+  emitToUser,
   emitDriverLocation,
 };

@@ -61,11 +61,13 @@
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.40);
     box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.00);
-    padding: 10px;
     border: none;
-    text-align: center;
-    padding: 15px;
     cursor: pointer;
+}
+
+.header__s1__btn2 p{
+    text-align: center;
+    padding: 10px;
 }
 
 .header__s1__btns {
@@ -79,6 +81,12 @@
 .header__s1__btn2 p {
     font-size: 18px;
     margin: 0;
+}
+
+.header__s1__btn2 p {
+    display: block;
+    width: 100%;
+    text-align: center;
 }
 
 @media screen and (max-width:1300px) {

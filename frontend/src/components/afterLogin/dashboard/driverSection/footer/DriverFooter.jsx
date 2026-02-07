@@ -2,10 +2,19 @@ import icon1 from "../../../../../assets/icons/footer/1.svg"
 import icon2 from "../../../../../assets/icons/footer/2.svg"
 import icon3 from "../../../../../assets/icons/footer/3.svg"
 import icon4 from "../../../../../assets/icons/footer/4.svg"
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import './DriverFooter.css'
 
-function DonorFooter() {
+function DriverFooter() {
+    const location = useLocation();
+
+    const handleHomeClick = (e) => {
+        if (location.pathname === '/driver/dashboard') {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
     return (
             <>
                 <div className='footer'>
@@ -26,7 +35,7 @@ function DonorFooter() {
                     </div>
                     <div className="footer__s3">
                         <h1>Quick Links</h1>
-                        <Link to="/driver/dashboard">Home</Link>
+                        <Link to="/driver/dashboard" onClick={handleHomeClick}>Home</Link>
                         <Link to="/driver/about">About Us</Link>
                         <Link to="/driver/dashboard#contact">Contact Us</Link>
                         <Link to="/driver/delivery">Delivery</Link>
@@ -50,4 +59,4 @@ function DonorFooter() {
     )
 }
 
-export default DonorFooter;
+export default DriverFooter;

@@ -15,6 +15,7 @@ import scooterIcon from '../../../assets/icons/signup/scooter.svg';
 import bikeIcon from '../../../assets/icons/signup/motorcycle.svg';
 import carIcon from '../../../assets/icons/signup/car.svg';
 import truckIcon from '../../../assets/icons/signup/truck.svg';
+import defaultProfileIcon from '../../../assets/icons/afterLogin/navbar/profile.svg';
 
 function SignupPage() {
     const navigate = useNavigate();
@@ -48,27 +49,160 @@ function SignupPage() {
         licenseFile: null,
     });
 
+    // Validation patterns (shared where noted)
+    const INDIVIDUAL_DONOR_NAME_REGEX = /^[a-zA-Z\s]+$/; // Individual Donor "Name" (letters and spaces only)
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const CONTACT_REGEX = /^\d{10}$/;
+    const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()\-_+=])[A-Za-z\d@$!%*?&#^()\-_+=]{8,}$/;
+    const BUSINESS_NAME_REGEX = /^[a-zA-Z\s]+$/;
+    const RECEIVER_NAME_REGEX = /^[a-zA-Z\s]+$/;
+    const DRIVER_NAME_REGEX = /^[a-zA-Z\s]+$/;
+    const VEHICLE_NUMBER_REGEX = /^[a-zA-Z0-9\s]+$/;
+
+    const validateIndividualDonorField = (fieldId, value) => {
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        switch (fieldId) {
+            case 'username':
+                if (!trimmed) return 'Name is required';
+                if (!INDIVIDUAL_DONOR_NAME_REGEX.test(trimmed)) return 'Name must contain only letters and spaces (no special characters)';
+                return null;
+            case 'email':
+                if (!trimmed) return 'Email is required';
+                if (!EMAIL_REGEX.test(trimmed)) return 'Please enter a valid email address';
+                return null;
+            case 'contactNo':
+                if (!trimmed) return 'Contact number is required';
+                if (!CONTACT_REGEX.test(trimmed.replace(/\s/g, ''))) return 'Contact number must be exactly 10 digits';
+                return null;
+            case 'password':
+                if (!value) return 'Password is required';
+                if (!PASSWORD_REGEX.test(value)) return 'Password must be at least 8 characters with a mix of uppercase, lowercase, numbers and symbols';
+                return null;
+            case 'retypePassword':
+                if (!value) return 'Retype password is required';
+                if (formData.password !== value) return 'Passwords do not match';
+                return null;
+            default:
+                return null;
+        }
+    };
+
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
     };
 
+    const handleIndividualDonorBlur = (e) => {
+        if (role !== 'Donor' || donorType !== 'Individuals') return;
+        const fieldId = e.target.id;
+        const value = e.target.value;
+        const error = validateIndividualDonorField(fieldId, value);
+        setErrors((prev) => ({ ...prev, [fieldId]: error || undefined }));
+    };
+
+    const validateCommonField = (fieldId, value) => {
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        switch (fieldId) {
+            case 'email':
+                if (!trimmed) return 'Email is required';
+                if (!EMAIL_REGEX.test(trimmed)) return 'Please enter a valid email address';
+                return null;
+            case 'contactNo':
+                if (!trimmed) return 'Contact number is required';
+                if (!CONTACT_REGEX.test(trimmed.replace(/\s/g, ''))) return 'Contact number must be exactly 10 digits';
+                return null;
+            case 'businessName':
+                if (!trimmed) return 'Business name is required';
+                if (!BUSINESS_NAME_REGEX.test(trimmed)) return 'Business name must contain only letters and spaces';
+                return null;
+            case 'receiverName':
+                if (!trimmed) return 'Receiver name is required';
+                if (!RECEIVER_NAME_REGEX.test(trimmed)) return 'Receiver name must contain only letters and spaces';
+                return null;
+            case 'driverName':
+                if (!trimmed) return 'Driver name is required';
+                if (!DRIVER_NAME_REGEX.test(trimmed)) return 'Driver name must contain only letters and spaces';
+                return null;
+            case 'vehicleNumber':
+                if (!trimmed) return 'Vehicle number is required';
+                if (!VEHICLE_NUMBER_REGEX.test(trimmed)) return 'Vehicle number can contain only letters, numbers and spaces (no special characters)';
+                return null;
+            default:
+                return null;
+        }
+    };
+
+    const handleSignupBlur = (e) => {
+        const fieldId = e.target.id;
+        const value = e.target.value;
+        if (fieldId === 'email' || fieldId === 'contactNo') {
+            const error = validateCommonField(fieldId, value);
+            setErrors((prev) => ({ ...prev, [fieldId]: error || undefined }));
+            return;
+        }
+        if (fieldId === 'businessName' && role === 'Donor' && donorType === 'Business Entity') {
+            const error = validateCommonField('businessName', value);
+            setErrors((prev) => ({ ...prev, businessName: error || undefined }));
+            return;
+        }
+        if ((fieldId === 'receiverName' && role === 'Receiver') || ((fieldId === 'driverName' || fieldId === 'vehicleNumber') && role === 'Driver')) {
+            const error = validateCommonField(fieldId, value);
+            setErrors((prev) => ({ ...prev, [fieldId]: error || undefined }));
+        }
+    };
+
+    const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10 MB
+
     const handleFileChange = (e, key) => {
         const file = e.target.files[0];
-        if (file) {
-            setFormData({ ...formData, [key]: file });
+        if (!file) return;
+        if (file.type !== 'application/pdf') {
+            setErrors((prev) => ({ ...prev, [key]: 'Only PDF files are allowed.' }));
+            setFormData((prev) => ({ ...prev, [key]: null }));
+            e.target.value = '';
+            return;
         }
+        if (file.size > MAX_PDF_SIZE) {
+            setErrors((prev) => ({ ...prev, [key]: 'File must be 10 MB or smaller.' }));
+            setFormData((prev) => ({ ...prev, [key]: null }));
+            e.target.value = '';
+            return;
+        }
+        setErrors((prev) => ({ ...prev, [key]: undefined }));
+        setFormData((prev) => ({ ...prev, [key]: file }));
     };
 
     const triggerFileUpload = (id) => {
         document.getElementById(id).click();
     };
 
+    const ALLOWED_PROFILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+    const MAX_PROFILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setProfileImage(URL.createObjectURL(file));
-            setProfileImageFile(file);
+        if (!file) return;
+
+        // Clear previous error
+        setErrors((prev) => ({ ...prev, profileImage: undefined }));
+
+        if (!ALLOWED_PROFILE_TYPES.includes(file.type)) {
+            setErrors((prev) => ({ ...prev, profileImage: 'Profile picture must be JPEG, JPG, or PNG only.' }));
+            setProfileImage(null);
+            setProfileImageFile(null);
+            e.target.value = '';
+            return;
         }
+
+        if (file.size > MAX_PROFILE_SIZE) {
+            setErrors((prev) => ({ ...prev, profileImage: 'Profile picture must be 10 MB or smaller.' }));
+            setProfileImage(null);
+            setProfileImageFile(null);
+            e.target.value = '';
+            return;
+        }
+
+        setProfileImage(URL.createObjectURL(file));
+        setProfileImageFile(file);
     };
 
     
@@ -88,44 +222,69 @@ function SignupPage() {
         if (role === 'Driver') return 'Create Volunteer Driver Account';
     };
 
-    const validateForm = () => {
+    const getValidationErrors = () => {
         const newErrors = {};
 
-        // Common validations
-        if (!formData.email) newErrors.email = 'Email is required';
+        // Common validations (all required except profile picture) — email & contact use regex for all roles
+        const emailErr = validateCommonField('email', formData.email);
+        if (emailErr) newErrors.email = emailErr;
         if (!formData.password) newErrors.password = 'Password is required';
-        if (formData.password && formData.password.length < 6) {
+        if (formData.password && formData.password.length < 6 && (role !== 'Donor' || donorType !== 'Individuals')) {
             newErrors.password = 'Password must be at least 6 characters';
         }
-        if (formData.password !== formData.retypePassword) {
+        if (!formData.retypePassword) newErrors.retypePassword = 'Retype password is required';
+        else if (formData.password !== formData.retypePassword) {
             newErrors.retypePassword = 'Passwords do not match';
         }
-        if (!formData.contactNo) newErrors.contactNo = 'Contact number is required';
-        if (!formData.address) newErrors.address = 'Address is required';
+        const contactErr = validateCommonField('contactNo', formData.contactNo);
+        if (contactErr) newErrors.contactNo = contactErr;
+        if (!formData.address?.trim()) newErrors.address = 'Address is required';
 
-        // Role-specific validations
+        // Role-specific validations (all required except profile picture)
         if (role === 'Donor' && donorType === 'Individuals') {
-            if (!formData.username) newErrors.username = 'Username is required';
+            const usernameErr = validateIndividualDonorField('username', formData.username);
+            if (usernameErr) newErrors.username = usernameErr;
+            const passwordErr = validateIndividualDonorField('password', formData.password);
+            if (passwordErr) newErrors.password = passwordErr;
+            const retypeErr = validateIndividualDonorField('retypePassword', formData.retypePassword);
+            if (retypeErr) newErrors.retypePassword = retypeErr;
         } else if (role === 'Donor' && donorType === 'Business Entity') {
-            if (!formData.businessName) newErrors.businessName = 'Business name is required';
+            const businessNameErr = validateCommonField('businessName', formData.businessName);
+            if (businessNameErr) newErrors.businessName = businessNameErr;
             if (!formData.businessType) newErrors.businessType = 'Business type is required';
             if (!formData.businessRegFile) newErrors.businessRegFile = 'Business registration file is required';
             if (!formData.addressProofFile) newErrors.addressProofFile = 'Address proof file is required';
         } else if (role === 'Receiver') {
-            if (!formData.receiverName) newErrors.receiverName = 'Receiver name is required';
+            const receiverNameErr = validateCommonField('receiverName', formData.receiverName);
+            if (receiverNameErr) newErrors.receiverName = receiverNameErr;
             if (!formData.receiverType) newErrors.receiverType = 'Receiver type is required';
             if (!formData.businessRegFile) newErrors.businessRegFile = 'Business registration file is required';
             if (!formData.addressProofFile) newErrors.addressProofFile = 'Address proof file is required';
         } else if (role === 'Driver') {
-            if (!formData.driverName) newErrors.driverName = 'Driver name is required';
-            if (!formData.vehicleNumber) newErrors.vehicleNumber = 'Vehicle number is required';
+            const driverNameErr = validateCommonField('driverName', formData.driverName);
+            if (driverNameErr) newErrors.driverName = driverNameErr;
+            const vehicleNumberErr = validateCommonField('vehicleNumber', formData.vehicleNumber);
+            if (vehicleNumberErr) newErrors.vehicleNumber = vehicleNumberErr;
             if (!formData.nicFile) newErrors.nicFile = 'NIC file is required';
             if (!formData.licenseFile) newErrors.licenseFile = 'Driving license file is required';
         }
 
+        return newErrors;
+    };
+
+    const validateForm = () => {
+        const newErrors = getValidationErrors();
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
+
+    const validationErrors = getValidationErrors();
+    const profileError = errors.profileImage;
+    const isFormValid = Object.keys(validationErrors).length === 0 && !profileError;
+    const submitDisabled = loading || !isFormValid;
+    const submitReason = submitDisabled && !loading
+        ? [...Object.values(validationErrors), profileError].filter(Boolean).join(' • ')
+        : '';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -264,11 +423,19 @@ function SignupPage() {
                             {profileImage ? (
                                 <img src={profileImage} alt="Profile" />
                             ) : (
-                                <span className="default__icon">👤</span>
+                                <img src={defaultProfileIcon} alt="Profile" className="default__icon" />
                             )}
                         </label>
-                        <input type="file" id="profile-upload" hidden onChange={handleImageUpload} />
-                        <p className="profile__label">Profile Photo (File Upload)</p>
+                        <input
+                            type="file"
+                            id="profile-upload"
+                            accept="image/jpeg,image/jpg,image/png"
+                            hidden
+                            onChange={handleImageUpload}
+                        />
+                        {errors.profileImage && (
+                            <span className="error-message" style={{ textAlign: 'center' }}>{errors.profileImage}</span>
+                        )}
                     </div>
 
                     {}
@@ -333,21 +500,24 @@ function SignupPage() {
                         {role === 'Donor' && donorType === 'Individuals' && (
                             <>
                                 <div className="input__group">
-                                    <label htmlFor="username">Username</label>
-                                    <input type="text" id="username" placeholder="Eg:-jjhon." value={formData.username} onChange={handleInputChange} />
+                                    <label htmlFor="username">Name</label>
+                                    <input type="text" id="username" placeholder="Eg: John" value={formData.username} onChange={handleInputChange} onBlur={handleIndividualDonorBlur} />
                                     {errors.username && <span className="error-message">{errors.username}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
-                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} onBlur={handleIndividualDonorBlur} />
+                                    {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
-                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} onBlur={handleIndividualDonorBlur} />
+                                    {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="address">Address</label>
                                     <input type="text" id="address" placeholder="Eg:-colombo" value={formData.address} onChange={handleInputChange} />
+                                    {errors.address && <span className="error-message">{errors.address}</span>}
                                 </div>
                             </>
                         )}
@@ -358,7 +528,7 @@ function SignupPage() {
                                 <div className="row">
                                     <div className="input__group half">
                                         <label htmlFor="businessName">Business Name</label>
-                                        <input type="text" id="businessName" placeholder="xmksn" value={formData.businessName} onChange={handleInputChange} />
+                                        <input type="text" id="businessName" placeholder="xmksn" value={formData.businessName} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                         {errors.businessName && <span className="error-message">{errors.businessName}</span>}
                                     </div>
                                                     <div className="input__group half">
@@ -374,21 +544,22 @@ function SignupPage() {
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Business Registration Cards</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('biz-reg-file')}>
                                         <span>{formData.businessRegFile ? formData.businessRegFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="biz-reg-file" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
+                                    <input type="file" id="biz-reg-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
                                     {errors.businessRegFile && <span className="error-message">{errors.businessRegFile}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
-                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
-                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
@@ -398,11 +569,12 @@ function SignupPage() {
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Address Proof</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('addr-proof-file')}>
                                         <span>{formData.addressProofFile ? formData.addressProofFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="addr-proof-file" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
+                                    <input type="file" id="addr-proof-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
                                     {errors.addressProofFile && <span className="error-message">{errors.addressProofFile}</span>}
                                 </div>
                             </>
@@ -414,7 +586,7 @@ function SignupPage() {
                                 <div className="row">
                                     <div className="input__group half">
                                         <label htmlFor="receiverName">Receiver Name</label>
-                                        <input type="text" id="receiverName" placeholder="xmksn" value={formData.receiverName} onChange={handleInputChange} />
+                                        <input type="text" id="receiverName" placeholder="xmksn" value={formData.receiverName} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                         {errors.receiverName && <span className="error-message">{errors.receiverName}</span>}
                                     </div>
                                     <div className="input__group half">
@@ -430,21 +602,22 @@ function SignupPage() {
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Business Registration Cards</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('rec-biz-reg-file')}>
                                         <span>{formData.businessRegFile ? formData.businessRegFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="rec-biz-reg-file" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
+                                    <input type="file" id="rec-biz-reg-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'businessRegFile')} />
                                     {errors.businessRegFile && <span className="error-message">{errors.businessRegFile}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
-                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
-                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
@@ -454,11 +627,12 @@ function SignupPage() {
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Address Proof</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('rec-addr-proof-file')}>
                                         <span>{formData.addressProofFile ? formData.addressProofFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="rec-addr-proof-file" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
+                                    <input type="file" id="rec-addr-proof-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'addressProofFile')} />
                                     {errors.addressProofFile && <span className="error-message">{errors.addressProofFile}</span>}
                                 </div>
                             </>
@@ -470,23 +644,23 @@ function SignupPage() {
                                 <div className="row">
                                     <div className="input__group half">
                                         <label htmlFor="driverName">Driver Name</label>
-                                        <input type="text" id="driverName" placeholder="xmksn" value={formData.driverName} onChange={handleInputChange} />
+                                        <input type="text" id="driverName" placeholder="xmksn" value={formData.driverName} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                         {errors.driverName && <span className="error-message">{errors.driverName}</span>}
                                     </div>
                                     <div className="input__group half">
                                         <label htmlFor="vehicleNumber">Vehicle number</label>
-                                        <input type="text" id="vehicleNumber" placeholder="BYD 2344" value={formData.vehicleNumber} onChange={handleInputChange} />
+                                        <input type="text" id="vehicleNumber" placeholder="BYD 2344" value={formData.vehicleNumber} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                         {errors.vehicleNumber && <span className="error-message">{errors.vehicleNumber}</span>}
                                     </div>
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="email">Email</label>
-                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} />
+                                    <input type="email" id="email" placeholder="Eg:-John Doe@gmail.com" value={formData.email} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.email && <span className="error-message">{errors.email}</span>}
                                 </div>
                                 <div className="input__group">
                                     <label htmlFor="contactNo">Contact No</label>
-                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} />
+                                    <input type="text" id="contactNo" placeholder="Eg:-854558415" value={formData.contactNo} onChange={handleInputChange} onBlur={handleSignupBlur} />
                                     {errors.contactNo && <span className="error-message">{errors.contactNo}</span>}
                                 </div>
                                 <div className="input__group">
@@ -497,20 +671,22 @@ function SignupPage() {
 
                                 <div className="input__group border__group">
                                     <label>NIC (Front & Back view)</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('nic-file')}>
                                         <span>{formData.nicFile ? formData.nicFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="nic-file" hidden onChange={(e) => handleFileChange(e, 'nicFile')} />
+                                    <input type="file" id="nic-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'nicFile')} />
                                     {errors.nicFile && <span className="error-message">{errors.nicFile}</span>}
                                 </div>
                                 <div className="input__group border__group">
                                     <label>Driving License (Front & Back view)</label>
+                                    <span className="file__hint">Upload PDF only</span>
                                     <div className="file__drop" onClick={() => triggerFileUpload('license-file')}>
                                         <span>{formData.licenseFile ? formData.licenseFile.name : 'Import or Drag File'}</span>
                                         <button className="add__file__btn" type="button">Add File</button>
                                     </div>
-                                    <input type="file" id="license-file" hidden onChange={(e) => handleFileChange(e, 'licenseFile')} />
+                                    <input type="file" id="license-file" accept="application/pdf" hidden onChange={(e) => handleFileChange(e, 'licenseFile')} />
                                     {errors.licenseFile && <span className="error-message">{errors.licenseFile}</span>}
                                 </div>
                             </>
@@ -520,12 +696,12 @@ function SignupPage() {
                         <div className="row">
                             <div className="input__group half">
                                 <label htmlFor="password">Password</label>
-                                <input type="password" id="password" placeholder="*******" value={formData.password} onChange={handleInputChange} />
+                                <input type="password" id="password" placeholder="*******" value={formData.password} onChange={handleInputChange} onBlur={handleIndividualDonorBlur} />
                                 {errors.password && <span className="error-message">{errors.password}</span>}
                             </div>
                             <div className="input__group half">
                                 <label htmlFor="retypePassword">Retype Password</label>
-                                <input type="password" id="retypePassword" placeholder="******" value={formData.retypePassword} onChange={handleInputChange} />
+                                <input type="password" id="retypePassword" placeholder="******" value={formData.retypePassword} onChange={handleInputChange} onBlur={handleIndividualDonorBlur} />
                                 {errors.retypePassword && <span className="error-message">{errors.retypePassword}</span>}
                             </div>
                         </div>
@@ -534,7 +710,7 @@ function SignupPage() {
 
                     {/* Error and Success Messages */}
                     {errors.submit && (
-                        <div className="error-message" style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
+                        <div className="error-message" style={{ marginBottom: '10px', textAlign: 'center' }}>
                             {errors.submit}
                         </div>
                     )}
@@ -547,7 +723,8 @@ function SignupPage() {
                     <button 
                         className="create__account__btn" 
                         onClick={handleSubmit}
-                        disabled={loading}
+                        disabled={submitDisabled}
+                        title={submitReason}
                     >
                         {loading ? 'Creating Account...' : 'Create Account'}
                     </button>

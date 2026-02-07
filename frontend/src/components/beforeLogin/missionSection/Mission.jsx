@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import icon2 from '../../../assets/icons/about/2.svg'
 import icon4 from '../../../assets/icons/about/4.svg'
 import icon5 from '../../../assets/icons/about/5.svg'
@@ -48,11 +49,11 @@ function Mission() {
                 <h1>surplus into support.</h1>
                 <p>Together, we can close the gap.</p>
                 <div className='join__us__btn'>
-                    <button className='join__us__btn1'>
+                    <Link to="/signup" className='join__us__btn1'>
                         Join as Volunteer
                         <img src={icon4} alt="join-as-volunteer" />
-                    </button>
-                    <button className='join__us__btn2'>Donate Food</button>
+                    </Link>
+                    <Link to="/signup" className='join__us__btn2'>Donate Food</Link>
                 </div>
             </div>
         </div>

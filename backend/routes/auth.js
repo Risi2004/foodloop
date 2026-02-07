@@ -349,6 +349,14 @@ router.post('/login', express.json(), async (req, res) => {
       });
     }
 
+    if (user.status === 'inactive') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Contact an administrator to reactivate.',
+        errors: [{ field: 'status', message: 'Account deactivated' }],
+      });
+    }
+
     // Status is 'completed' - allow login
     // Generate JWT token
     const token = generateToken(user);

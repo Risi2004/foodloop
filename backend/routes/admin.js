@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const UserNotification = require('../models/UserNotification');
 const { authenticateAdmin } = require('../middleware/auth');
 const { sendApprovalEmail, sendRejectionEmail, sendDeactivationEmail, sendActivationEmail, sendContactReplyEmail, sendNotificationEmail } = require('../utils/emailService');
+const socketService = require('../services/socketService');
 
 // Apply JSON body parser and admin authentication to all routes
 router.use(express.json());
@@ -157,6 +158,11 @@ router.patch('/users/:id/status', async (req, res) => {
     // Update status
     user.status = status;
     await user.save();
+
+    // Notify user's clients immediately when deactivated (so they sign out)
+    if (status === 'inactive') {
+      socketService.emitToUser(id, 'account_deactivated', {});
+    }
 
     // Send email notification based on status change
     try {

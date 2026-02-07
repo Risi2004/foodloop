@@ -2,9 +2,19 @@ import icon1 from "../../../assets/icons/footer/1.svg"
 import icon2 from "../../../assets/icons/footer/2.svg"
 import icon3 from "../../../assets/icons/footer/3.svg"
 import icon4 from "../../../assets/icons/footer/4.svg"
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import './Footer.css'
+
 function Footer() {
+    const location = useLocation();
+
+    const handleHomeClick = (e) => {
+        if (location.pathname === '/') {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
     return (
         <>
             <div className='footer'>
@@ -25,9 +35,9 @@ function Footer() {
                 </div>
                 <div className="footer__s3">
                     <h1>Quick Links</h1>
-                    <Link to="">Home</Link>
-                    <Link to="">About Us</Link>
-                    <Link to="">Contact Us</Link>
+                    <Link to="/" onClick={handleHomeClick}>Home</Link>
+                    <Link to="/#about">About Us</Link>
+                    <Link to="/#contact">Contact Us</Link>
                 </div>
                 <div className="footer__s4">
                     <h1>Legal</h1>

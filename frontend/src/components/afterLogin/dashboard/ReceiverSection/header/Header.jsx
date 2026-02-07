@@ -14,7 +14,7 @@ function Header() {
                     <p>Access a reliable stream of high-quality nutrition to serve your community and reduce operational costs.</p>
                     <div className="header__s1__btns">
                         <button className="header__s1__btn">
-                            <img src={camera} alt="cmaera-icon" />
+                            <img src={camera} alt="camera-icon" />
                             <p>Claim Food</p>
                         </button>
                         <button className="header__s1__btn2">

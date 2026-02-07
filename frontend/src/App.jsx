@@ -48,6 +48,7 @@ import ReceiptForm from "./pages/afterLogin/receiver/receiptForm/ReceiptForm";
 import Myclaims from "./pages/afterLogin/receiver/myClaims/MyClaims";
 import ReceiverTrackingPage from "./pages/afterLogin/receiver/trackingPage/ReceiverTrackingPage";
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
+import RoleLayout from "./components/afterLogin/RoleLayout/RoleLayout";
 
 
 function App() {
@@ -71,7 +72,7 @@ function App() {
         {/* After Signin - Protected Routes */}
 
         {/* Donor Routes - Only accessible by Donor role */}
-        <Route path="/donor" element={<RoleProtectedRoute allowedRoles={['Donor']}><Outlet /></RoleProtectedRoute>}>
+        <Route path="/donor" element={<RoleProtectedRoute allowedRoles={['Donor']}><RoleLayout /></RoleProtectedRoute>}>
           <Route path="dashboard" element={<DonorDashboard />} />
           <Route path="about" element={<DonorAbout />} />
           <Route path="privacy-policy" element={<DonorPrivacyPolicy />} />
@@ -87,7 +88,7 @@ function App() {
         </Route>
 
         {/* Receiver Routes - Only accessible by Receiver role */}
-        <Route path="/receiver" element={<RoleProtectedRoute allowedRoles={['Receiver']}><Outlet /></RoleProtectedRoute>}>
+        <Route path="/receiver" element={<RoleProtectedRoute allowedRoles={['Receiver']}><RoleLayout /></RoleProtectedRoute>}>
           <Route path="dashboard" element={<ReceiverDashboard />} />
           <Route path="about" element={<ReceiverAbout />} />
           <Route path="privacy-policy" element={<ReceiverPrivacyPolicy />} />
@@ -102,7 +103,7 @@ function App() {
         </Route>
 
         {/* Driver Routes - Only accessible by Driver role */}
-        <Route path="/driver" element={<RoleProtectedRoute allowedRoles={['Driver']}><Outlet /></RoleProtectedRoute>}>
+        <Route path="/driver" element={<RoleProtectedRoute allowedRoles={['Driver']}><RoleLayout /></RoleProtectedRoute>}>
           <Route path="dashboard" element={<DriverDashboard />} />
           <Route path="about" element={<DriverAbout />} />
           <Route path="privacy-policy" element={<DriverPrivacyPolicy />} />
@@ -117,7 +118,7 @@ function App() {
         </Route>
 
         {/* Admin Routes - Only accessible by Admin role */}
-        <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['Admin']}><Outlet /></RoleProtectedRoute>}>
+        <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['Admin']}><RoleLayout /></RoleProtectedRoute>}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="notification" element={<AdminNotificationPage />} />
           <Route path="user-management" element={<AdminUserManagementPage />} />

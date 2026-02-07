@@ -93,6 +93,12 @@
     color: white;
     border: none;
     cursor: pointer;
+    text-decoration: none;
+}
+
+.join__us__btn1:hover,
+.join__us__btn1:visited {
+    color: white;
 }
 
 .join__us__btn2 {
@@ -102,6 +108,12 @@
     border: none;
     color: white;
     cursor: pointer;
+    text-decoration: none;
+}
+
+.join__us__btn2:hover,
+.join__us__btn2:visited {
+    color: white;
 }
 
 @media screen and (max-width: 768px) {

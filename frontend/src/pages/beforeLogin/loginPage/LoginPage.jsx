@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { login } from '../../../services/api';
 import { setToken, setUser } from '../../../utils/auth';
 import './LoginPage.css';
@@ -8,8 +8,11 @@ import loginImage from '../../../assets/images/login/login.svg';
 import eye from "../../../assets/icons/login/eye-icon.svg"
 import receive from "../../../assets/icons/login/receive.svg"
 
+const DEACTIVATED_MESSAGE = 'Your account has been deactivated. Contact an administrator to reactivate.';
+
 function LoginPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -105,6 +108,21 @@ function LoginPage() {
                     </div>
 
                     <form className="form__card" onSubmit={handleSubmit}>
+                        {/* Deactivation message (from redirect state or query) */}
+                        {(location.state?.message === DEACTIVATED_MESSAGE || new URLSearchParams(location.search).get('deactivated') === '1') && (
+                            <div className="error-message" style={{
+                                color: '#ff6b6b',
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                padding: '12px',
+                                borderRadius: '8px',
+                                marginBottom: '1rem',
+                                textAlign: 'center',
+                                fontSize: '0.9rem',
+                                fontWeight: '600'
+                            }}>
+                                {DEACTIVATED_MESSAGE}
+                            </div>
+                        )}
                         {/* General Error Message */}
                         {generalError && (
                             <div className="error-message" style={{ 
@@ -175,8 +193,9 @@ function LoginPage() {
 
                         <div className="form__actions">
                             <Link to="/forgot-password" className="forgot__password">Forgot Password?</Link>
-                            <input type="checkbox" className="remember__me" />
                         </div>
+
+                        <Link to="/" className="login__home__link">← Back to Home</Link>
 
                         <button 
                             type="submit" 

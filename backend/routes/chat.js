@@ -4,10 +4,12 @@ const { AI_SERVICE_URL, AI_SERVICE_TIMEOUT } = require('../config/env');
 
 router.use(express.json());
 
+const SUPPORTED_LANGUAGES = ['en', 'ta', 'si'];
+
 /**
  * POST /api/chat
  * Proxy chat message to AI service (Gemini).
- * Body: { message: string, history?: [{ role: "user"|"model", text: string }] }
+ * Body: { message: string, history?: [{ role: "user"|"model", text: string }], language?: "en"|"ta"|"si" }
  * Response: { success: true, reply: string } or { success: false, message: string }
  */
 router.post('/', async (req, res) => {
@@ -19,7 +21,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const { message, history } = req.body || {};
+    const { message, history, language } = req.body || {};
     const trimmedMessage = typeof message === 'string' ? message.trim() : '';
 
     if (!trimmedMessage) {
@@ -28,6 +30,10 @@ router.post('/', async (req, res) => {
         message: 'Message is required.',
       });
     }
+
+    const lang = typeof language === 'string' && SUPPORTED_LANGUAGES.includes(language)
+      ? language
+      : 'en';
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -42,6 +48,7 @@ router.post('/', async (req, res) => {
       body: JSON.stringify({
         message: trimmedMessage,
         history: Array.isArray(history) ? history : undefined,
+        language: lang,
       }),
       signal: controller.signal,
     });
@@ -70,10 +77,21 @@ router.post('/', async (req, res) => {
         message: 'Chat request timed out. Please try again.',
       });
     }
+    const isConnectionError = err.cause?.code === 'ECONNREFUSED' ||
+      err.cause?.code === 'ENOTFOUND' ||
+      err.cause?.code === 'ECONNRESET' ||
+      (err.message && (err.message.includes('fetch failed') || err.message.includes('ECONNREFUSED')));
+    if (isConnectionError) {
+      console.error('[Chat] AI service unreachable:', err.cause?.code || err.message);
+      return res.status(503).json({
+        success: false,
+        message: 'Chat service is temporarily unavailable. Please try again later.',
+      });
+    }
     console.error('[Chat] Error:', err);
     return res.status(500).json({
       success: false,
-      message: err.message || 'Chat request failed.',
+      message: 'Chat request failed. Please try again.',
     });
   }
 });

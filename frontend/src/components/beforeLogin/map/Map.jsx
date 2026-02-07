@@ -111,15 +111,6 @@ function Map() {
                 <p>See our community in action. Green markers show donors in our network, and red markers show receivers feeding those in need.</p>
             </div>
             <div className='map__s2'>
-                <div className="map__zoom-controls">
-                    <button onClick={handleZoomIn} className="zoom-btn" aria-label="Zoom in">
-                        +
-                    </button>
-                    <button onClick={handleZoomOut} className="zoom-btn" aria-label="Zoom out">
-                        −
-                    </button>
-                </div>
-
                 <div className="map__container">
                     {loading && (
                         <div className="map__loading">Loading map...</div>
@@ -148,6 +139,14 @@ function Map() {
                             </Marker>
                         ))}
                     </MapContainer>
+                    <div className="map__zoom-controls">
+                        <button onClick={handleZoomIn} className="zoom-btn" aria-label="Zoom in">
+                            +
+                        </button>
+                        <button onClick={handleZoomOut} className="zoom-btn" aria-label="Zoom out">
+                            −
+                        </button>
+                    </div>
                     <MapLegend />
                 </div>
             </div>

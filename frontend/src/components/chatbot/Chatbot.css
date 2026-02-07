@@ -64,6 +64,36 @@
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: 0.02em;
+    min-width: 0;
+}
+
+.chatbot__lang {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.chatbot__lang__btn {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: transparent;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.chatbot__lang__btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.chatbot__lang__btn--active {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: #fff;
 }
 
 .chatbot__header__close {

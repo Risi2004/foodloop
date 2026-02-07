@@ -2,10 +2,19 @@ import icon1 from "../../../../../assets/icons/footer/1.svg"
 import icon2 from "../../../../../assets/icons/footer/2.svg"
 import icon3 from "../../../../../assets/icons/footer/3.svg"
 import icon4 from "../../../../../assets/icons/footer/4.svg"
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import './ReceiverFooter.css'
 
-function DonorFooter() {
+function ReceiverFooter() {
+    const location = useLocation();
+
+    const handleHomeClick = (e) => {
+        if (location.pathname === '/receiver/dashboard') {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
     return (
         <>
             <div className='footer'>
@@ -26,7 +35,7 @@ function DonorFooter() {
                 </div>
                 <div className="footer__s3">
                     <h1>Quick Links</h1>
-                    <Link to="/receiver/dashboard">Home</Link>
+                    <Link to="/receiver/dashboard" onClick={handleHomeClick}>Home</Link>
                     <Link to="/receiver/about">About Us</Link>
                     <Link to="/receiver/dashboard#contact">Contact Us</Link>
                     <Link to="">Find Food</Link>
@@ -50,4 +59,4 @@ function DonorFooter() {
     )
 }
 
-export default DonorFooter;
+export default ReceiverFooter;

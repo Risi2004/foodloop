@@ -21,6 +21,7 @@ const reviewRoutes = require('./routes/reviews');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
 const mapRoutes = require('./routes/map');
+const publicRoutes = require('./routes/public');
 const {
   checkAndDeleteExpiredDonations,
   sendExpiryWarningEmails,
@@ -70,6 +71,9 @@ app.use('/api/chat', chatRoutes);
 
 // Map locations (public; for landing page map)
 app.use('/api/map', mapRoutes);
+
+// Public stats (landing page; no auth)
+app.use('/api/public', publicRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -145,6 +149,11 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
+  // Join user room so we can emit to this user (e.g. account_deactivated)
+  if (socket.userId) {
+    socket.join(`user:${socket.userId}`);
+  }
+
   socket.on('join_donation', async (donationId, callback) => {
     if (!donationId || typeof donationId !== 'string') {
       callback?.({ success: false, message: 'Invalid donation ID' });

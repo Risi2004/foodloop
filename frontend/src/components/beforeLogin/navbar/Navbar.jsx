@@ -70,6 +70,7 @@ function Navbar({ isLoggedIn }) {
                     <Link to="/" onClick={toggleMenu}>Home</Link>
                     <button type="button" className="responsive__navbar__popup__link" onClick={() => scrollToSection('about')}>About Us</button>
                     <button type="button" className="responsive__navbar__popup__link" onClick={() => scrollToSection('contact')}>Contact Us</button>
+                    <button className="responsive__navbar__popup__login" onClick={() => navigate('login')}>Login</button>
                 </div>
             )}
         </>

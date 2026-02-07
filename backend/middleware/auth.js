@@ -1,4 +1,5 @@
 const { verifyToken } = require('../utils/jwt');
+const User = require('../models/User');
 
 /**
  * Middleware to authenticate admin users
@@ -55,7 +56,7 @@ const authenticateAdmin = async (req, res, next) => {
 
 /**
  * Middleware to authenticate any user (Donor, Receiver, Driver, Admin)
- * Verifies JWT token and attaches user info to request
+ * Verifies JWT token, checks user status, and attaches user info to request
  */
 const authenticateUser = async (req, res, next) => {
   try {
@@ -75,11 +76,37 @@ const authenticateUser = async (req, res, next) => {
       // Verify token
       const decoded = verifyToken(token);
 
+      // Skip status check for static admin
+      if (decoded.id === 'admin_static_id' && decoded.role === 'Admin') {
+        req.user = {
+          id: decoded.id,
+          email: decoded.email,
+          role: decoded.role,
+        };
+        return next();
+      }
+
+      // For everyone else: fetch user and check status
+      const user = await User.findById(decoded.id).select('status email role').lean();
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+      if (user.status !== 'completed') {
+        return res.status(403).json({
+          success: false,
+          message: 'Account deactivated',
+          status: user.status,
+        });
+      }
+
       // Attach user info to request
       req.user = {
         id: decoded.id,
-        email: decoded.email,
-        role: decoded.role,
+        email: user.email,
+        role: user.role,
       };
 
       next();

@@ -2,6 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import MapReadyNotifier from '../../../RoleLayout/MapReadyNotifier';
 import './DonorMap.css';
 
 
@@ -81,18 +82,9 @@ function DonorMap() {
                 <p>See our community in action. Red markers show active donations ready for pickup in your area.</p>
             </div>
             <div className='donor-map__content'>
-
-                <div className="donor-map__zoom-controls">
-                    <button onClick={handleZoomIn} className="zoom-btn" aria-label="Zoom in">
-                        +
-                    </button>
-                    <button onClick={handleZoomOut} className="zoom-btn" aria-label="Zoom out">
-                        −
-                    </button>
-                </div>
-
                 <div className="donor-map__container">
                     <MapContainer center={position} zoom={13} scrollWheelZoom={false} zoomControl={false}>
+                        <MapReadyNotifier />
                         <MapController setMapInstance={setMapInstance} />
                         <TileLayer
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -112,6 +104,14 @@ function DonorMap() {
                         </Marker>
 
                     </MapContainer>
+                    <div className="donor-map__zoom-controls">
+                        <button onClick={handleZoomIn} className="zoom-btn" aria-label="Zoom in">
+                            +
+                        </button>
+                        <button onClick={handleZoomOut} className="zoom-btn" aria-label="Zoom out">
+                            −
+                        </button>
+                    </div>
                     <MapLegend />
                 </div>
             </div>
