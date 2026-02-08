@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import trustIcon from '../../../../assets/icons/afterLogin/donor/my-donations/Trust.svg';
 import './DonationSidebar.css';
 
 const DonationSidebar = ({ impactStats }) => {
@@ -7,14 +8,18 @@ const DonationSidebar = ({ impactStats }) => {
   return (
     <aside className="donation-sidebar">
       <div className="sidebar-content">
-        <h1 className="sidebar-title">My Donation</h1>
+        <h1 className="sidebar-title">
+          <span className="sidebar-title--dark">My</span>{' '}
+          <span className="sidebar-title--accent">Donation</span>
+        </h1>
         <p className="sidebar-description">
           Manage your contributions and track their impact
         </p>
 
         <div className="impact-section">
           <div className="impact-header">
-            <div className="heart-icon">❤️</div>
+            <img src={trustIcon} alt="" className="impact-icon" width={48} height={48} />
+            <h2 className="impact-heading">Your Personal Impact</h2>
             <p className="impact-message">
               Thank you for being a vital part of the food loop.
             </p>

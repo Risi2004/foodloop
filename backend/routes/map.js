@@ -160,6 +160,7 @@ router.get('/locations', async (req, res) => {
           lat: coords.lat,
           lng: coords.lng,
           displayName: getReceiverDisplayName(user),
+          address: user.address || '',
         });
       }
     }

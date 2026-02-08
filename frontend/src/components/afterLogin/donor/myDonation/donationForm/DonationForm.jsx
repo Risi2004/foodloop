@@ -4,6 +4,18 @@ import { submitDonation, getDonorStatistics } from '../../../../../services/dona
 import { clearAuth, getUser } from '../../../../../utils/auth';
 import { getBadgeIconSrc, BADGE_KEYS_ORDER } from '../../../../../utils/badgeIcons';
 import LocationMapModal from '../locationMapModal/LocationMapModal';
+import autoFixHighIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/auto_fix_high.svg';
+import editIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Edit.svg';
+import lightningBoltIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Lightning Bolt.svg';
+import localShippingIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/local_shipping.svg';
+import plusMathIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Plus Math.svg';
+import subtractIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Subtract.svg';
+import protectIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Protect.svg';
+import sunIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Sun.svg';
+import winterIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Winter.svg';
+import blurIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Blur.svg';
+import calendarIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Tear-Off Calendar.svg';
+import clockIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Clock.svg';
 import './DonationForm.css';
 
 function DonationForm({ aiPredictions, imageUrl, error }) {
@@ -342,7 +354,10 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             AI Analysis: <span className="confidence">{Math.round((aiConfidence || aiPredictions.confidence || 0.90) * 100)}% confidence</span> — <span className="quality">{Math.round((aiQualityScore || aiPredictions.qualityScore || 0.85) * 100)}% quality</span> — Freshness Verified
                         </span>
                     </div>
-                    <div className="safety-badge">⚡ High Safety</div>
+                    <div className="safety-badge">
+                        <img src={lightningBoltIcon} alt="" className="form-icon safety-icon" />
+                        High Safety
+                    </div>
                 </div>
             )}
             {error && (
@@ -361,7 +376,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             {/* Core Details Header */}
             <div className="form-section-header">
                 <div className="section-title">
-                    <span className="magic-wand-icon">🪄</span>
+                    <img src={autoFixHighIcon} alt="" className="form-icon magic-wand-icon" />
                     <h2>Core Details</h2>
                     {isAiFilled && <span className="ai-filled-badge">(AI-Filled)</span>}
                 </div>
@@ -385,7 +400,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             readOnly={!isEditing && isAiFilled}
                             required
                         />
-                        {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
+                        {(!isEditing || !isAiFilled) && <img src={editIcon} alt="" className="form-icon edit-icon-img" />}
                     </div>
                 </div>
 
@@ -402,7 +417,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             readOnly={!isEditing && isAiFilled}
                             required
                         />
-                        {(!isEditing || !isAiFilled) && <span className="edit-icon">📝</span>}
+                        {(!isEditing || !isAiFilled) && <img src={editIcon} alt="" className="form-icon edit-icon-img" />}
                     </div>
                 </div>
 
@@ -414,7 +429,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             onClick={() => handleQuantityChange(-1)}
                             disabled={!isEditing && isAiFilled}
                         >
-                            —
+                            <img src={subtractIcon} alt="Decrease" className="form-icon qty-icon" />
                         </button>
                         <input 
                             type="text" 
@@ -440,7 +455,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             onClick={() => handleQuantityChange(1)}
                             disabled={!isEditing && isAiFilled}
                         >
-                            ＋
+                            <img src={plusMathIcon} alt="Increase" className="form-icon qty-icon" />
                         </button>
                     </div>
                 </div>
@@ -452,19 +467,22 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                             className={`toggle-btn hot ${storage === 'hot' ? 'active' : ''}`}
                             onClick={() => setStorage('hot')}
                         >
-                            ☀️ Hot
+                            <img src={sunIcon} alt="" className="form-icon storage-icon" />
+                            Hot
                         </button>
                         <button
                             className={`toggle-btn cold ${storage === 'cold' ? 'active' : ''}`}
                             onClick={() => setStorage('cold')}
                         >
-                            ❄️ Cold
+                            <img src={winterIcon} alt="" className="form-icon storage-icon" />
+                            Cold
                         </button>
                         <button
                             className={`toggle-btn dry ${storage === 'dry' ? 'active' : ''}`}
                             onClick={() => setStorage('dry')}
                         >
-                            💧 Dry
+                            <img src={blurIcon} alt="" className="form-icon storage-icon" />
+                            Dry
                         </button>
                     </div>
                 </div>
@@ -473,19 +491,19 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
             {/* Logistics Header */}
             <div className="form-section-header logistics-header">
                 <div className="section-title">
-                    <span className="truck-icon">🚛</span>
+                    <img src={localShippingIcon} alt="" className="form-icon truck-icon" />
                     <h2>Logistics & Impact</h2>
                 </div>
             </div>
 
-            {/* Logistics Content */}
+            {/* Logistics Content – Pickup Window (full width, centered) */}
             <div className="logistics-grid">
                 <div className="pickup-column">
                     <label>Pickup Window <span className="required-asterisk">*</span></label>
                     <div className="pickup-datetime-container">
                         <div className="pickup-date-wrapper">
                             <div className="pickup-input-group">
-                                <span className="pickup-icon">📅</span>
+                                <img src={calendarIcon} alt="" className="form-icon pickup-icon-img" />
                                 <input
                                     type="date"
                                     className="pickup-date-input"
@@ -498,7 +516,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                         </div>
                         <div className="pickup-time-wrapper">
                             <div className="pickup-input-group">
-                                <span className="pickup-icon">🕒</span>
+                                <img src={clockIcon} alt="" className="form-icon pickup-icon-img pickup-time-icon" />
                                 <label className="pickup-time-label">From</label>
                                 <input
                                     type="time"
@@ -509,7 +527,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                                 />
                             </div>
                             <div className="pickup-input-group">
-                                <span className="pickup-icon">🕒</span>
+                                <img src={clockIcon} alt="" className="form-icon pickup-icon-img pickup-time-icon" />
                                 <label className="pickup-time-label">To</label>
                                 <input
                                     type="time"
@@ -522,22 +540,12 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                         </div>
                     </div>
                 </div>
-
-                <div className="impact-column">
-                    <div className="impact-card">
-                        <label>Impact Estimate</label>
-                        <div className="impact-value">
-                            <span className="number">{quantity}</span>
-                            <span className="unit">people</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Expiry Date Input (always visible) */}
             <div className="form-section-header" style={{ marginTop: '20px' }}>
                 <div className="section-title">
-                    <span className="magic-wand-icon">📅</span>
+                    <img src={protectIcon} alt="" className="form-icon section-icon" />
                     <h2>Expiry Date</h2>
                 </div>
             </div>

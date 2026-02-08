@@ -29,6 +29,11 @@
 }
 
 @media screen and (max-width: 1100px) {
+    .new-donation-page {
+        margin-top: 24px;
+        margin-bottom: 40px;
+    }
+
     .donation-container {
         height: auto;
         min-height: auto;
@@ -45,6 +50,8 @@
 @media screen and (max-width: 768px) {
     .new-donation-page {
         padding: 10px;
+        margin-top: 16px;
+        margin-bottom: 24px;
     }
 
     .donation-container {

@@ -44,6 +44,28 @@
     border: 4px solid white;
 }
 
+.donor-map__loading,
+.donor-map__error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.donor-map__loading {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1F4E36;
+}
+
+.donor-map__error {
+    background: rgba(248, 113, 113, 0.95);
+    color: #fff;
+}
+
 .donor-map__zoom-controls {
     position: absolute;
     bottom: 20px;
@@ -88,6 +110,14 @@
     width: 100%;
     font-family: inherit;
     z-index: 1;
+}
+
+.donor-map__popup-address {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.9em;
+    color: #555;
+    font-weight: 500;
 }
 
 .donor-map__legend {

@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import MapReadyNotifier from '../../../RoleLayout/MapReadyNotifier';
+import { getMapLocations } from '../../../../../services/mapApi';
 import './DonorMap.css';
 
 
@@ -20,11 +21,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 
 const createCustomIcon = (type) => {
-    // We only use pickup SVG but want it red
     const pickupSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pin-inner-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
-
-    // For this specific request, we want the pickup shape (circle) but RED color.
-    // 'pin-pickup-red' is defined in CSS to be red (#E74C3C)
 
     return L.divIcon({
         className: 'custom-pin',
@@ -37,7 +34,7 @@ const createCustomIcon = (type) => {
     });
 };
 
-const redPickupIcon = createCustomIcon('pickup-red');
+const redReceiverIcon = createCustomIcon('pickup-red');
 
 
 const MapLegend = () => (
@@ -47,7 +44,7 @@ const MapLegend = () => (
             <div className="legend__icon pickup-red">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             </div>
-            <span>Pick up Points</span>
+            <span>Receiver locations</span>
         </div>
     </div>
 );
@@ -63,9 +60,33 @@ const MapController = ({ setMapInstance }) => {
 
 function DonorMap() {
     const [mapInstance, setMapInstance] = React.useState(null);
+    const [receivers, setReceivers] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
 
-    // Center based on the markers we are showing
     const position = [6.9271, 79.8612];
+
+    React.useEffect(() => {
+        let cancelled = false;
+        const fetchLocations = async () => {
+            try {
+                const data = await getMapLocations();
+                if (!cancelled && data && Array.isArray(data.receivers)) {
+                    setReceivers(data.receivers);
+                    setError(null);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setError(err.message || 'Unable to load receiver locations');
+                    setReceivers([]);
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        fetchLocations();
+        return () => { cancelled = true; };
+    }, []);
 
     const handleZoomIn = () => {
         if (mapInstance) mapInstance.zoomIn();
@@ -79,10 +100,16 @@ function DonorMap() {
         <div className="donor-map">
             <div className='donor-map__header'>
                 <h1>Live Impact Map</h1>
-                <p>See our community in action. Red markers show active donations ready for pickup in your area.</p>
+                <p>See our community in action. Red markers show receiver locations in your area.</p>
             </div>
             <div className='donor-map__content'>
                 <div className="donor-map__container">
+                    {loading && (
+                        <div className="donor-map__loading">Loading receiver locations...</div>
+                    )}
+                    {error && !loading && (
+                        <div className="donor-map__error">{error}</div>
+                    )}
                     <MapContainer center={position} zoom={13} scrollWheelZoom={false} zoomControl={false}>
                         <MapReadyNotifier />
                         <MapController setMapInstance={setMapInstance} />
@@ -90,19 +117,20 @@ function DonorMap() {
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-
-                        {/* Showing only Active Pickups, but with RED styling as requested */}
-                        <Marker position={[6.9271, 79.8612]} icon={redPickupIcon}>
-                            <Popup>
-                                <strong>Pick up Point</strong><br /> Fresh Vegetables available.
-                            </Popup>
-                        </Marker>
-                        <Marker position={[6.935, 79.85]} icon={redPickupIcon}>
-                            <Popup>
-                                <strong>Pick up Point</strong><br /> Bakery Surplus.
-                            </Popup>
-                        </Marker>
-
+                        {receivers.map((r, i) => (
+                            <Marker key={`receiver-${i}`} position={[r.lat, r.lng]} icon={redReceiverIcon}>
+                                <Popup>
+                                    <strong>Receiver</strong><br />
+                                    {r.displayName}
+                                    {r.address && (
+                                        <>
+                                            <br />
+                                            <span className="donor-map__popup-address">{r.address}</span>
+                                        </>
+                                    )}
+                                </Popup>
+                            </Marker>
+                        ))}
                     </MapContainer>
                     <div className="donor-map__zoom-controls">
                         <button onClick={handleZoomIn} className="zoom-btn" aria-label="Zoom in">

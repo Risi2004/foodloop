@@ -17,7 +17,6 @@ const About = () => (
   <section className="about">
     <header className="head">
       <div className="story-badge">
-        <div className="dot" />
         <div className="story-badge__label">The Food Loop Story</div>
       </div>
       <div className="hero-title-wrapper">
@@ -34,16 +33,16 @@ const About = () => (
       <div className="section-title">
         <span>
           <span className="section-title__text">
-            We are building a transparent loop to minimize waste and
+            We are building a transparent loop to minimize waste and 
           </span>
-          <span className="section-title__accent">maximize humanity</span>
+          <span className="section-title__accent"> maximize humanity</span>
         </span>
       </div>
       <div className="section-content">
         <div className="content-block">
           <div className="subsection-title">Ideally,</div>
           <p className="body-text">
-            food should never be wasted. Yet, tons of edible produce end up in
+            Food should never be wasted. Yet, tons of edible produce end up in
             landfills while millions go hungry. The disconnect isn&#039;t a lack
             of food—it&#039;s a lack of connection.
           </p>

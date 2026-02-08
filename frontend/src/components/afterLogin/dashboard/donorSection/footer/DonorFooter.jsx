@@ -38,12 +38,12 @@ function DonorFooter() {
                         <Link to="/donor/dashboard" onClick={handleHomeClick}>Home</Link>
                         <Link to="/donor/about">About Us</Link>
                         <Link to="/donor/dashboard#contact">Contact Us</Link>
-                        <Link to="">My Donation</Link>
+                        <Link to="/donor/my-donation">My Donations</Link>
                     </div>
                     <div className="footer__s4">
                         <h1>Legal</h1>
                         <Link to="/donor/privacy-policy">Privacy Policy</Link>
-                        <Link to="">Terms & Conditions</Link>
+                        <Link to="/donor/terms-&-conditions">Terms & Conditions</Link>
                     </div>
                     <div className="footer__s5">
                         <h1>Designed & Developed</h1>

@@ -47,13 +47,6 @@
   box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
 }
 
-.dot {
-  background: #48b47d;
-  border-radius: 50%;
-  width: 12px;
-  height: 12px;
-}
-
 .story-badge__label {
   color: #ffffff;
   font-family: "Inter-Bold", sans-serif;
@@ -122,14 +115,11 @@
 }
 
 .section-title__text {
-  color: #0d1b12;
+  color: black;
 }
 
 .section-title__accent {
-  background: linear-gradient(90deg, #013211 0%, #029834 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: black;
 }
 
 .section-content {
@@ -153,15 +143,14 @@
 }
 
 .subsection-title {
-  color: #029834;
-  font-family: "Inter-Bold", sans-serif;
+  color: #0d5d27;
   font-size: 32px;
   font-weight: 700;
 }
 
 .body-text,
 .body-text--secondary {
-  color: #4b5563;
+  color: black;
   font-family: "Inter-Bold", sans-serif;
   font-size: 18px;
   line-height: 1.5;

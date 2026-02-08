@@ -1,6 +1,11 @@
 import { useState, useRef } from 'react';
 import { uploadAndAnalyzeImage } from '../../../../../services/donationApi';
+import fileUploadIcon from '../../../../../assets/icons/afterLogin/donor/my-donations/File-upload.svg';
+import cameraIcon from '../../../../../assets/icons/afterLogin/donor/my-donations/Camera.svg';
 import './DonationMedia.css';
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
     const [selectedImage, setSelectedImage] = useState(null);
@@ -8,8 +13,20 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
     const [uploading, setUploading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [imageUrl, setImageUrl] = useState(null);
+    const [uploadError, setUploadError] = useState(null);
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
+
+    const validateFile = (file) => {
+        if (!file) return { valid: false, message: 'Please select a file.' };
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            return { valid: false, message: 'Upload only JPEG, JPG or PNG (under 10 MB).' };
+        }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            return { valid: false, message: 'File must be under 10 MB. Upload only JPEG, JPG or PNG.' };
+        }
+        return { valid: true };
+    };
 
     // Handle file selection from gallery
     const handleGalleryClick = () => {
@@ -25,17 +42,13 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+            const { valid, message } = validateFile(file);
+            if (!valid) {
+                setUploadError(message);
                 return;
             }
-
-            // Validate file size (max 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert('Image size should be less than 10MB');
-                return;
-            }
+            setUploadError(null);
+            if (onError) onError(null);
 
             setSelectedImage(file);
             
@@ -71,6 +84,7 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
             
             setImageUrl(result.imageUrl);
             setUploading(false);
+            setUploadError(null);
 
             // Notify parent components
             if (onImageUploaded) {
@@ -197,24 +211,24 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
         e.stopPropagation();
 
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            if (file.size > 10 * 1024 * 1024) {
-                alert('Image size should be less than 10MB');
+        if (file) {
+            const { valid, message } = validateFile(file);
+            if (!valid) {
+                setUploadError(message);
                 return;
             }
+            setUploadError(null);
+            if (onError) onError(null);
 
             setSelectedImage(file);
-            
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result);
             };
             reader.readAsDataURL(file);
-
-            // Upload and analyze dropped image
             uploadAndAnalyzeImageFile(file);
         } else {
-            alert('Please drop an image file');
+            setUploadError('Upload only JPEG, JPG or PNG (under 10 MB).');
         }
     };
 
@@ -224,77 +238,87 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
         setSelectedImage(null);
         setImagePreview(null);
         setImageUrl(null);
+        setUploadError(null);
         setUploading(false);
         setAnalyzing(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (cameraInputRef.current) cameraInputRef.current.value = '';
-        
-        // Notify parent
         if (onImageUploaded) onImageUploaded(null);
         if (onAnalysisComplete) onAnalysisComplete(null);
     };
 
     return (
         <div className="donation-media-section">
+            <div className="donation-media-wrapper">
             <div className="mobile-frame">
                 <div className="mobile-screen">
-                    <div 
-                        className="camera-view"
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        style={{
-                            backgroundImage: imagePreview 
-                                ? `url(${imagePreview})` 
-                                : `url('https://images.unsplash.com/photo-1595855709940-fae372671549?q=80&w=2670&auto=format&fit=crop')`
-                        }}
-                    >
-                        {!imagePreview && (
-                            <div className="upload-zone" onClick={handleGalleryClick}>
-                                <span className="upload-icon">📷</span>
-                                <p>Drag and Drop</p>
-                            </div>
-                        )}
-                        {imagePreview && (
-                            <div className="image-preview-overlay">
-                                {(uploading || analyzing) && (
-                                    <div className="ai-loading-overlay">
-                                        <div className="loading-content">
-                                            <div className="loading-spinner">
-                                                <div className="spinner-ring"></div>
-                                                <div className="spinner-ring"></div>
-                                                <div className="spinner-ring"></div>
-                                            </div>
-                                            <div className="loading-text">
-                                                {uploading && (
-                                                    <>
-                                                        <h3>Uploading Image...</h3>
-                                                        <p>Please wait while we upload your image</p>
-                                                    </>
-                                                )}
-                                                {analyzing && !uploading && (
-                                                    <>
-                                                        <h3>AI Analyzing Food</h3>
-                                                        <p>Detecting food items and assessing quality...</p>
-                                                        <div className="loading-dots">
-                                                            <span></span>
-                                                            <span></span>
-                                                            <span></span>
-                                                        </div>
-                                                    </>
-                                                )}
+                    <div className="mobile-screen-content">
+                        <div 
+                            className="camera-view"
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            style={{
+                                backgroundImage: imagePreview 
+                                    ? `url(${imagePreview})` 
+                                    : `url('https://images.unsplash.com/photo-1595855709940-fae372671549?q=80&w=2670&auto=format&fit=crop')`
+                            }}
+                        >
+                            {!imagePreview && (
+                                <div className="upload-zone" onClick={handleGalleryClick}>
+                                    <span className="upload-icon">📷</span>
+                                    <p>Drag and Drop</p>
+                                </div>
+                            )}
+                            {imagePreview && (
+                                <div className="image-preview-overlay">
+                                    {(uploading || analyzing) && (
+                                        <div className="ai-loading-overlay">
+                                            <div className="loading-content">
+                                                <div className="loading-spinner">
+                                                    <div className="spinner-ring"></div>
+                                                    <div className="spinner-ring"></div>
+                                                    <div className="spinner-ring"></div>
+                                                </div>
+                                                <div className="loading-text">
+                                                    {uploading && (
+                                                        <>
+                                                            <h3>Uploading Image...</h3>
+                                                            <p>Please wait while we upload your image</p>
+                                                        </>
+                                                    )}
+                                                    {analyzing && !uploading && (
+                                                        <>
+                                                            <h3>AI Analyzing Food</h3>
+                                                            <p>Detecting food items and assessing quality...</p>
+                                                            <div className="loading-dots">
+                                                                <span></span>
+                                                                <span></span>
+                                                                <span></span>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )}
-                                <button 
-                                    className="remove-image-btn" 
-                                    onClick={handleRemoveImage}
-                                    title="Remove image"
-                                    disabled={uploading || analyzing}
-                                >
-                                    ✕
-                                </button>
-                            </div>
+                                    )}
+                                    <button 
+                                        className="remove-image-btn" 
+                                        onClick={handleRemoveImage}
+                                        title="Remove image"
+                                        disabled={uploading || analyzing}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="upload-hint-screen">
+                        {!imagePreview && !uploadError && (
+                            <p className="upload-hint">Upload only JPEG, JPG or PNG (under 10 MB)</p>
+                        )}
+                        {uploadError && (
+                            <p className="upload-error">{uploadError}</p>
                         )}
                     </div>
                 </div>
@@ -305,30 +329,31 @@ function DonationMedia({ onImageUploaded, onAnalysisComplete, onError }) {
                         onClick={handleGalleryClick}
                         title="Upload from gallery"
                     >
-                        <span className="icon">🖼️</span>
+                        <img src={fileUploadIcon} alt="Upload from gallery" className="media-btn-icon" />
                     </button>
                     <button 
                         className="media-btn camera-btn" 
                         onClick={handleCameraClick}
                         title="Take photo"
                     >
-                        <span className="icon">📷</span>
+                        <img src={cameraIcon} alt="Take photo" className="media-btn-icon" />
                     </button>
                 </div>
+            </div>
             </div>
 
             {/* Hidden file inputs */}
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
             <input
                 ref={cameraInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 capture="environment"
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
