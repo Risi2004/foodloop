@@ -2068,7 +2068,7 @@ router.get('/:id/tracking', async (req, res) => {
     const donation = await Donation.findById(id)
       .populate('donorId', 'address email donorType username businessName contactNo')
       .populate('assignedReceiverId', 'receiverName receiverType email address contactNo')
-      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType driverLatitude driverLongitude')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType driverLatitude driverLongitude profileImageUrl')
       .lean();
 
     if (!donation) {
@@ -2152,6 +2152,7 @@ router.get('/:id/tracking', async (req, res) => {
         name: donation.assignedDriverId.driverName || 'Driver',
         vehicleNumber: donation.assignedDriverId.vehicleNumber,
         vehicleType: donation.assignedDriverId.vehicleType,
+        profileImageUrl: donation.assignedDriverId.profileImageUrl || null,
         location: driverLocation,
       } : null,
       timestamps: {

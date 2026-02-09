@@ -1,7 +1,7 @@
 import DriverInfoCard from './DriverInfoCard';
 import JourneyTimeline from './JourneyTimeline';
 import WhatsNextCard from './WhatsNextCard';
-import dotIcon from '../../../../assets/icons/afterLogin/driver/dot.svg';
+import dotIcon from '../../../../../assets/icons/afterLogin/driver/dot.svg';
 import './TrackingSidebar.css';
 
 function TrackingSidebar({ trackingData, driverLocation }) {

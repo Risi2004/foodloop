@@ -1,6 +1,6 @@
-import locationIcon from '../../../../assets/icons/afterLogin/driver/location.svg';
-import scooterIcon from '../../../../assets/icons/afterLogin/driver/scooter.svg';
-import receivedIcon from '../../../../assets/icons/afterLogin/driver/received.svg';
+import locationIcon from '../../../../../assets/icons/afterLogin/driver/location.svg';
+import scooterIcon from '../../../../../assets/icons/afterLogin/driver/scooter.svg';
+import receivedIcon from '../../../../../assets/icons/afterLogin/driver/received.svg';
 import './JourneyTimeline.css';
 
 function formatDate(d) {

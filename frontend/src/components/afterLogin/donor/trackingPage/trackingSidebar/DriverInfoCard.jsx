@@ -1,4 +1,5 @@
-import scooterIcon from '../../../../assets/icons/afterLogin/driver/scooter.svg';
+import scooterIcon from '../../../../../assets/icons/afterLogin/driver/scooter.svg';
+import profileIcon from '../../../../../assets/icons/afterLogin/navbar/profile.svg';
 import './DriverInfoCard.css';
 
 function formatStatusMessage(status, receiverName, driverLocation) {
@@ -34,7 +35,7 @@ function DriverInfoCard({ trackingData, driverLocation }) {
                     <span className="value">{locationText}</span>
                 </div>
                 <div className="driver-profile">
-                    <img src="https://via.placeholder.com/40" alt={driverName} />
+                    <img src={driver?.profileImageUrl ? driver.profileImageUrl : profileIcon} alt={driverName} className="driver-profile-img" />
                     <span className="driver-name">{driverName}</span>
                 </div>
             </div>

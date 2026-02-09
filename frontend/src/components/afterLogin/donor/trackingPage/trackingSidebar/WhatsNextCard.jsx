@@ -1,5 +1,5 @@
-import protectIcon from '../../../../assets/icons/afterLogin/donor/new-donation/Protect.svg';
-import receiptIcon from '../../../../assets/icons/afterLogin/receiver/Receipt.svg';
+import icon1 from '../../../../../assets/icons/1.svg';
+import icon2 from '../../../../../assets/icons/2.svg';
 import './WhatsNextCard.css';
 
 function WhatsNextCard({ trackingData }) {
@@ -15,14 +15,16 @@ function WhatsNextCard({ trackingData }) {
     return (
         <div className="whats-next-card">
             <div className="card-header">
-                <img src={protectIcon} alt="" className="icon-img" />
+                <span className="card-header-icon">
+                    <img src={icon1} alt="" className="icon-img" />
+                </span>
                 <h4>What's Next?</h4>
             </div>
             <p className="card-desc">
                 {description}
             </p>
             <div className="status-pill">
-                <img src={receiptIcon} alt="" className="icon-img" /> {pillText}
+                <img src={icon2} alt="" className="icon-img" /> {pillText}
             </div>
         </div>
     );

@@ -72,6 +72,8 @@
     top: 30px;
     height: calc(100vh - 60px);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .sidebar-section {
@@ -83,15 +85,23 @@
 
 @media (max-width: 1000px) {
     .tracking-layout {
-        flex-direction: column;
+        display: block;
         height: auto;
     }
 
     .map-section {
-        height: 400px;
+        display: block;
+        width: 100%;
+        position: relative;
+        top: 0;
+        height: 50vh;
+        min-height: 400px;
+        margin-bottom: 24px;
     }
 
     .sidebar-section {
+        display: block;
+        width: 100%;
         max-width: 100%;
     }
 }

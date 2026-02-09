@@ -15,33 +15,33 @@
 
 .map-controls {
     position: absolute;
-    bottom: 24px;
-    right: 24px;
+    bottom: 20px;
+    right: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     z-index: 1000;
 }
 
 .map-control-btn {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
-    background: white;
     border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    font-size: 20px;
-    color: #333;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #013211 0%, #029834 100%);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s;
 }
 
-.map-control-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+.map-control-btn:active {
+    transform: scale(0.95);
 }
 
 /* Custom Marker Styles handled via DivIcon in JSX usually, but helper classes here */

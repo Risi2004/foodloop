@@ -65,10 +65,13 @@
     gap: 8px;
 }
 
-.driver-profile img {
+.driver-profile img,
+.driver-profile .driver-profile-img {
     width: 32px;
     height: 32px;
     border-radius: 50%;
+    object-fit: contain;
+    background: #e8f5e9;
 }
 
 .driver-name {
