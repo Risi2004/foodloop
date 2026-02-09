@@ -2,7 +2,7 @@ import schedule from "../../../../assets/icons/afterLogin/driver/schedule.svg";
 import transit from "../../../../assets/icons/afterLogin/driver/transit.svg";
 import './DeliveryCard.css';
 
-function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAccepting }) {
+function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAccepting, hasActiveDelivery }) {
     if (!donation) {
         return null;
     }
@@ -14,7 +14,6 @@ function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAcceptin
     };
 
     const donorName = donation.donorName || 'Donor';
-    const distanceText = donation.driverToDonorDistanceFormatted || 'Distance N/A';
     const itemName = donation.itemName || 'Food Item';
     const quantity = formatQuantity(donation.quantity);
     const expiryText = donation.expiryText || 'Expired';
@@ -25,14 +24,13 @@ function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAcceptin
             onClick={onClick}
             style={{
                 cursor: 'pointer',
-                border: isSelected ? '5px solid #1F4E36' : '5px solid transparent', // Use transparent border to prevent layout shift
+                border: isSelected ? '2px solid #1F4E36' : undefined,
                 borderRadius: '12px',
                 transition: 'all 0.2s ease'
             }}
         >
             <div className="delivery__card__s1">
                 <h4>{donorName}</h4>
-                <h5>{distanceText} Away</h5>
             </div>
             <p style={{ marginBottom: "15px" }}>{itemName} • {quantity}</p>
             <div className="delivery__card__s2">
@@ -42,11 +40,14 @@ function DeliveryCard({ donation, isSelected, onClick, onAcceptOrder, isAcceptin
             <button
                 onClick={(e) => {
                     e.stopPropagation();
-                    onAcceptOrder?.(donation);
+                    if (!hasActiveDelivery) onAcceptOrder?.(donation);
                 }}
-                disabled={isAccepting}
+                disabled={isAccepting || hasActiveDelivery}
+                title={hasActiveDelivery ? 'You can only have 1 order at a time. Complete your current delivery first.' : undefined}
             >
-                <p>{isAccepting ? 'Accepting...' : 'Accept order'}</p>
+                <p>
+                    {isAccepting ? 'Accepting...' : hasActiveDelivery ? 'Complete current delivery first' : 'Accept order'}
+                </p>
                 <img src={transit} alt="pickup" />
             </button>
         </div>

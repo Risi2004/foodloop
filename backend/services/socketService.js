@@ -33,6 +33,17 @@ function emitToUser(userId, event, data = {}) {
 }
 
 /**
+ * Emit an event to all sockets for a given role (e.g. donation_created to all receivers).
+ * @param {string} role - Role name (e.g. 'Receiver', 'Driver', 'Donor')
+ * @param {string} event - Event name
+ * @param {object} data - Payload to send
+ */
+function emitToRole(role, event, data = {}) {
+  if (!io || !role) return;
+  io.to(`role:${role}`).emit(event, data);
+}
+
+/**
  * Emit driver location to all donor/receiver clients tracking donations for this driver.
  * Call after updating User.driverLatitude/driverLongitude (PATCH /me/location or demo tick).
  * @param {string} driverId - MongoDB ObjectId of the driver user
@@ -67,5 +78,6 @@ async function emitDriverLocation(driverId, latitude, longitude) {
 module.exports = {
   setIO,
   emitToUser,
+  emitToRole,
   emitDriverLocation,
 };

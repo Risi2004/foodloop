@@ -5,35 +5,33 @@ import L from 'leaflet';
 import LocationBox from './LocationBox';
 import './DeliveryMap.css';
 
-// Custom Icons
-const createCustomIcon = (color, type) => {
-    let svgContent = '';
+// Same pin SVG as donor and receiver dashboard maps (map pin with circle)
+const pinSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pin-inner-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
 
-    // Simple SVG icons
-    if (type === 'driver') {
-        svgContent = `<svg viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>`;
-    } else if (type === 'pickup') {
-        svgContent = `<svg viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
-    } else if (type === 'drop') {
-        svgContent = `<svg viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`;
-    } else if (type === 'truck') {
-        svgContent = `<svg viewBox="0 0 24 24" fill="white" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>`;
-    }
+// Use same symbols as donor dashboard and receiver dashboard maps: green pin (donor), red pin (receiver), blue pin (driver)
+const driverIcon = L.divIcon({
+    className: 'custom-pin',
+    html: `<div class="pin-outer pin-driver">${pinSvg}</div>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20]
+});
 
-    return L.divIcon({
-        className: 'custom-map-icon',
-        html: `<div class="marker-pin" style="background-color: ${color}; box-shadow: 0 0 10px ${color}80;">
-                 ${svgContent}
-               </div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -40]
-    });
-};
+const donorIcon = L.divIcon({
+    className: 'custom-pin',
+    html: `<div class="pin-outer pin-pickup">${pinSvg}</div>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20]
+});
 
-const driverIcon = createCustomIcon('#4CAF50', 'driver'); // Green
-const donorIcon = createCustomIcon('#2196F3', 'pickup');   // Blue
-const receiverIcon = createCustomIcon('#F44336', 'drop');     // Red
+const receiverIcon = L.divIcon({
+    className: 'custom-pin',
+    html: `<div class="pin-outer pin-pickup-red">${pinSvg}</div>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20]
+});
 
 // Component to handle map view bounds
 const MapController = ({ bounds }) => {
@@ -43,6 +41,21 @@ const MapController = ({ bounds }) => {
             map.fitBounds(bounds, { padding: [50, 50] });
         }
     }, [map, bounds]);
+    return null;
+};
+
+// Fix map size so tiles render – Leaflet needs invalidateSize when container dimensions are set
+const MapResizeFix = () => {
+    const map = useMap();
+    React.useEffect(() => {
+        map.invalidateSize();
+        const t1 = setTimeout(() => map.invalidateSize(), 100);
+        const t2 = setTimeout(() => map.invalidateSize(), 400);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [map]);
     return null;
 };
 
@@ -116,10 +129,12 @@ function DeliveryMap({ selectedPickup, driverLocation, onLocationUpdate }) {
 
     return (
         <div className="delivery-map-container">
-            <LocationBox driverLocation={driverLocation} onLocationUpdate={onLocationUpdate} />
+            {/* Fixed overlay layer – does not move when map is panned */}
+            <div className="delivery-map-overlay">
+                <LocationBox driverLocation={driverLocation} onLocationUpdate={onLocationUpdate} />
 
-            {/* Distance Information Box */}
-            {selectedPickup && (donorPos || receiverPos) && (
+                {/* Distance Information Box */}
+                {selectedPickup && (donorPos || receiverPos) && (
                 <div className="distance-info-box">
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#1F4E36' }}>Route Information</h3>
                     {driverToDonorDistance && (
@@ -153,37 +168,42 @@ function DeliveryMap({ selectedPickup, driverLocation, onLocationUpdate }) {
                         </div>
                     )}
                 </div>
-            )}
+                )}
+                {!selectedPickup && (
+                    <div className="no-pickup-message" style={{
+                        padding: '20px',
+                        textAlign: 'center',
+                        color: '#666',
+                        fontSize: '14px',
+                        background: 'white',
+                        borderRadius: '12px',
+                        marginBottom: '16px'
+                    }}>
+                        {driverPos ? (
+                            <p>Select a pickup from the list to view route and distances</p>
+                        ) : (
+                            <p>Set your location and select a pickup to view route</p>
+                        )}
+                    </div>
+                )}
+            </div>
 
-            {!selectedPickup && (
-                <div className="no-pickup-message" style={{
-                    padding: '20px',
-                    textAlign: 'center',
-                    color: '#666',
-                    fontSize: '14px',
-                    background: 'white',
-                    borderRadius: '12px',
-                    marginBottom: '16px'
-                }}>
-                    {driverPos ? (
-                        <p>Select a pickup from the list to view route and distances</p>
-                    ) : (
-                        <p>Set your location and select a pickup to view route</p>
-                    )}
-                </div>
-            )}
-
+            {/* Map layer – fills container; overlay stays fixed on top */}
+            <div className="delivery-map-layer">
             <MapContainer
                 center={mapCenter}
-                zoom={bounds ? undefined : 13}
+                zoom={13}
                 className="leaflet-map"
                 zoomControl={false}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
+                <MapResizeFix />
                 {bounds && <MapController bounds={bounds} />}
 
                 {/* Driver marker */}
@@ -246,6 +266,7 @@ function DeliveryMap({ selectedPickup, driverLocation, onLocationUpdate }) {
 
                 <ZoomButtons />
             </MapContainer>
+            </div>
         </div>
     );
 }

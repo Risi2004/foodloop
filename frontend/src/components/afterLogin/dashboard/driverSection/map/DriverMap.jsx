@@ -41,11 +41,11 @@ const greenPickupIcon = createCustomIcon('pickup');
 
 
 const MapLegend = () => (
-    <div className="donor-map__legend">
-        <h4>Map Legend</h4>
+    <div className="donor-map__legend driver-map-legend">
+        <h4>MAP LEGEND</h4>
         <div className="legend__item">
-            <div className="legend__icon pickup">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <div className="legend__icon legend-pin-pickup">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pin-inner-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             </div>
             <span>Pick up Points</span>
         </div>

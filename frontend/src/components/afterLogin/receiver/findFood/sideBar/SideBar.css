@@ -14,7 +14,7 @@
 .sidebar-header h1 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1b4332;
+    color: white;
     margin-bottom: 16px;
 }
 
@@ -28,8 +28,10 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: #1b4332;
-    font-size: 1rem;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    pointer-events: none;
 }
 
 .search-input {
@@ -75,12 +77,18 @@
     background: #f5fcf9;
 }
 
+.filter-btn .filter-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
 .food-list {
-    flex: 1;
+    flex: 0 1 auto;
+    max-height: 420px; /* ~2 cards visible at a time */
     overflow-y: auto;
     padding-right: 4px;
-    /* Space for scrollbar */
-    /* Custom Scrollbar styling if needed */
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

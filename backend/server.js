@@ -153,6 +153,10 @@ io.on('connection', (socket) => {
   if (socket.userId) {
     socket.join(`user:${socket.userId}`);
   }
+  // Join role room so we can emit to all receivers/drivers/donors (e.g. donation_created)
+  if (socket.role) {
+    socket.join(`role:${socket.role}`);
+  }
 
   socket.on('join_donation', async (donationId, callback) => {
     if (!donationId || typeof donationId !== 'string') {

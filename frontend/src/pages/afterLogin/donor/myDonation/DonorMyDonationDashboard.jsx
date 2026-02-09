@@ -4,11 +4,15 @@ import DonorNavbar from "../../../../components/afterLogin/dashboard/donorSectio
 import DonorFooter from "../../../../components/afterLogin/dashboard/donorSection/footer/DonorFooter";
 import DonationSidebar from "../../../../components/afterLogin/donor/myDonation/DonationSidebar";
 import InTransitCard from "../../../../components/afterLogin/donor/myDonation/InTransitCard";
+import LookingForReceiverCard from "../../../../components/afterLogin/donor/myDonation/LookingForReceiverCard";
 import LookingForDriverCard from "../../../../components/afterLogin/donor/myDonation/LookingForDriverCard";
 import CompletedHistoryCard from "../../../../components/afterLogin/donor/myDonation/CompletedHistoryCard";
-import { getMyDonations } from '../../../../services/donationApi';
+import { useNavigate } from 'react-router-dom';
+import { getMyDonations, deleteDonation } from '../../../../services/donationApi';
+import { onDonationInTransit } from '../../../../services/socket';
 
 const DonorMyDonationDashboard = () => {
+    const navigate = useNavigate();
     const [donations, setDonations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -18,68 +22,66 @@ const DonorMyDonationDashboard = () => {
         co2Offset: 0
     });
 
-    // Fetch donor's donations
-    useEffect(() => {
-        const fetchDonations = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-                console.log('[DonorMyDonationDashboard] Fetching my donations...');
-                
-                const response = await getMyDonations();
-                
-                if (response.success && response.donations) {
-                    console.log(`[DonorMyDonationDashboard] Loaded ${response.donations.length} donations`);
-                    setDonations(response.donations);
-                    
-                    // Calculate impact statistics
-                    const completedDonations = response.donations.filter(d => d.status === 'delivered');
-                    const totalMeals = completedDonations.reduce((sum, d) => sum + (d.quantity || 0), 0);
-                    const totalFoodSaved = totalMeals * 0.6; // Estimate: ~0.6kg per meal
-                    const totalCo2Offset = totalFoodSaved * 2.5; // Estimate: ~2.5kg CO2 per kg food saved
-                    
-                    setImpactStats({
-                        mealsShared: totalMeals,
-                        foodSaved: Math.round(totalFoodSaved),
-                        co2Offset: Math.round(totalCo2Offset)
-                    });
-                } else {
-                    setDonations([]);
-                }
-            } catch (err) {
-                console.error('[DonorMyDonationDashboard] Error fetching donations:', err);
-                setError(err.message || 'Failed to load your donations');
+    const fetchDonations = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await getMyDonations();
+            if (response.success && response.donations) {
+                setDonations(response.donations);
+                const completedDonations = response.donations.filter(d => d.status === 'delivered');
+                const totalMeals = completedDonations.reduce((sum, d) => sum + (d.quantity || 0), 0);
+                const totalFoodSaved = totalMeals * 0.6;
+                const totalCo2Offset = totalFoodSaved * 2.5;
+                setImpactStats({
+                    mealsShared: totalMeals,
+                    foodSaved: Math.round(totalFoodSaved),
+                    co2Offset: Math.round(totalCo2Offset)
+                });
+            } else {
                 setDonations([]);
-            } finally {
-                setLoading(false);
             }
-        };
+        } catch (err) {
+            console.error('[DonorMyDonationDashboard] Error fetching donations:', err);
+            setError(err.message || 'Failed to load your donations');
+            setDonations([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        // Load once when user comes to the page; reload only on manual refresh
+    useEffect(() => {
         fetchDonations();
+        const unsubscribe = onDonationInTransit(() => fetchDonations());
+        return () => unsubscribe();
     }, []);
 
-    // After receiver claims: show in Looking for Driver; only after driver accepts, show in In Transit
+    // Flow: Looking for Receiver (unclaimed) → Looking for Driver (claimed, no driver) → In Transit → Completed
+    const lookingForReceiver = donations.filter(d =>
+        (d.status === 'pending' || d.status === 'approved') && !d.assignedReceiverId
+    );
     const lookingForDriver = donations.filter(d =>
-        d.status === 'pending' || d.status === 'approved' || (d.status === 'assigned' && !d.assignedDriverId)
+        d.status === 'assigned' && d.assignedReceiverId && !d.assignedDriverId
     );
     const inTransit = donations.filter(d =>
         (d.status === 'assigned' && d.assignedDriverId) || d.status === 'picked_up'
     );
     const completed = donations.filter(d => d.status === 'delivered');
 
-    // Handle edit donation (placeholder - can be implemented later)
     const handleEdit = (donation) => {
-        console.log('Edit donation:', donation);
-        // TODO: Navigate to edit page or open edit modal
+        navigate(`/donor/edit-donation/${donation.id}`);
     };
 
-    // Handle delete donation (placeholder - can be implemented later)
-    const handleDelete = (donation) => {
-        console.log('Delete donation:', donation);
-        // TODO: Show confirmation dialog and delete donation
-        if (window.confirm('Are you sure you want to delete this donation?')) {
-            // TODO: Call delete API
+    const handleDelete = async (donation) => {
+        if (!window.confirm('Are you sure you want to cancel this donation? It will no longer be available for receivers.')) {
+            return;
+        }
+        try {
+            await deleteDonation(donation.id);
+            await fetchDonations();
+        } catch (err) {
+            console.error('[DonorMyDonationDashboard] Error deleting donation:', err);
+            alert(err.message || 'Failed to cancel donation');
         }
     };
 
@@ -164,6 +166,7 @@ const DonorMyDonationDashboard = () => {
                     <DonationSidebar impactStats={impactStats} />
                     
                     <main className="donor-my-donation-content">
+                        {/* 1. In Transit */}
                         <div className="intransit">
                             <h2 className="active-donations">In Transit Donations</h2>
                             <div className="donation-cards">
@@ -179,17 +182,13 @@ const DonorMyDonationDashboard = () => {
                             </div>
                         </div>
 
+                        {/* 2. Looking for Driver */}
                         <div className="looking">
                             <h2 className="active-donations">Looking for Driver</h2>
                             <div className="donation-cards">
                                 {lookingForDriver.length > 0 ? (
                                     lookingForDriver.map((donation) => (
-                                        <LookingForDriverCard 
-                                            key={donation.id} 
-                                            donation={donation}
-                                            onEdit={handleEdit}
-                                            onDelete={handleDelete}
-                                        />
+                                        <LookingForDriverCard key={donation.id} donation={donation} />
                                     ))
                                 ) : (
                                     <p style={{ color: '#fff', padding: '20px', textAlign: 'center' }}>
@@ -199,6 +198,28 @@ const DonorMyDonationDashboard = () => {
                             </div>
                         </div>
 
+                        {/* 3. Looking for Receiver */}
+                        <div className="lookingForReceiver">
+                            <h2 className="active-donations">Looking for Receiver</h2>
+                            <div className="donation-cards">
+                                {lookingForReceiver.length > 0 ? (
+                                    lookingForReceiver.map((donation) => (
+                                        <LookingForReceiverCard 
+                                            key={donation.id} 
+                                            donation={donation}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                        />
+                                    ))
+                                ) : (
+                                    <p style={{ color: '#fff', padding: '20px', textAlign: 'center' }}>
+                                        No donations waiting for receiver
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 4. Completed History */}
                         <div className="complited">
                             <h2 className="active-donations" style={{ color: "darkgreen" }}>Completed History</h2>
                             <div className="donation-cards">

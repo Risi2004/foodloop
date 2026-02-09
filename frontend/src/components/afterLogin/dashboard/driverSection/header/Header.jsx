@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import headerImage1 from "../../../../../assets/images/home-page/driver/driver-header1.svg"
 import headerImage2 from "../../../../../assets/images/home-page/donor/donor-header2.svg"
 import camera from "../../../../../assets/icons/afterLogin/header-image/delivery.svg"
@@ -13,10 +14,10 @@ function Header() {
                     <h1>through Nutritious Surplus</h1>
                     <p>Access a reliable stream of high-quality nutrition to serve your community and reduce operational costs.</p>
                     <div className="header__s1__btns">
-                        <button className="header__s1__btn">
+                        <Link to="/driver/delivery" className="header__s1__btn">
                             <img src={camera} alt="camera-icon" />
                             <p>Pick Orders</p>
-                        </button>
+                        </Link>
                     </div>
 
                 </div>

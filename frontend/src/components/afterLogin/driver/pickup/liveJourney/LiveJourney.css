@@ -158,6 +158,24 @@
 
 .timeline-content {
     flex: 1;
+    min-width: 0;
+}
+
+.timeline-content .step-title {
+    min-height: 1.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+}
+
+.timeline-content .step-meta {
+    min-height: 1.4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .step-status {
@@ -206,6 +224,8 @@
     margin-top: 10px;
     padding-top: 20px;
     border-top: 1px solid #e5e7eb;
+    position: relative;
+    z-index: 2;
 }
 
 .impact-header {
@@ -213,6 +233,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    gap: 12px;
+    min-height: 32px;
 }
 
 .impact-header h4 {
@@ -220,6 +242,12 @@
     font-weight: 600;
     margin: 0;
     color: #374151;
+    flex-shrink: 0;
+}
+
+.impact-header .badge {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .badge {
@@ -237,17 +265,20 @@
 .badge img {
     width: 12px;
     height: 12px;
+    flex-shrink: 0;
 }
 
 .progress-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-top: 0;
 }
 
 .progress-labels {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 12px;
     font-weight: 500;
     color: #4b5563;
@@ -256,14 +287,26 @@
 .progress-label-left {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    min-width: 0;
 }
 
-.progress-label-left span img{
+.progress-label-left .star-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-label-left .star-icon img {
+    display: block;
+    width: 24px;
+    height: 24px;
     border: 1px solid #FFD700;
-    padding: 10px;
-    border-radius: 50px;
-    background-color: whitez    ;
+    padding: 6px;
+    border-radius: 50%;
+    background-color: white;
+    box-sizing: border-box;
 }
 
 .star-icon {

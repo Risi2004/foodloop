@@ -6,6 +6,7 @@ import DeliveryMap from "../../../../components/afterLogin/driver/delivery/Deliv
 import { getAvailablePickups, getActiveDeliveries, acceptOrder } from '../../../../services/donationApi';
 import { updateDriverLocation } from '../../../../services/api';
 import { getAuthHeaders } from '../../../../utils/auth';
+import { onDonationClaimed } from '../../../../services/socket';
 import { useNavigate } from 'react-router-dom';
 import './Delivery.css';
 
@@ -98,6 +99,8 @@ function Delivery() {
         };
 
         fetchData();
+        const unsubscribe = onDonationClaimed(() => fetchData());
+        return () => unsubscribe();
     }, []);
 
     const handlePickupSelect = (pickup) => {
@@ -106,20 +109,30 @@ function Delivery() {
 
     const handleAcceptOrder = async (pickup) => {
         if (!pickup?.id) return;
+        if (activeDeliveries.length > 0) {
+            alert('You can only have 1 order at a time. Complete your current delivery first.');
+            return;
+        }
         setAcceptingOrderId(pickup.id);
         try {
             await acceptOrder(pickup.id);
             navigate(`/driver/pickup?donationId=${pickup.id}`);
         } catch (err) {
-            alert(err.message || 'Failed to accept order. Please try again.');
+            const msg = err.response?.data?.message || err.message || 'Failed to accept order. Please try again.';
+            alert(msg);
         } finally {
             setAcceptingOrderId(null);
         }
     };
 
-    const handleDeliverySelect = (delivery) => {
-        // Navigate to delivery confirmation page
-        navigate(`/driver/delivery-confirmation?donationId=${delivery.id}`);
+    const handleInTransitSelect = (delivery) => {
+        if (delivery.status === 'assigned') {
+            // Pickup not confirmed yet – go to pickup page to confirm pickup
+            navigate(`/driver/pickup?donationId=${delivery.id}`);
+        } else {
+            // Pickup confirmed (picked_up) – go to delivery confirmation page
+            navigate(`/driver/delivery-confirmation?donationId=${delivery.id}`);
+        }
     };
 
     const handleLocationUpdate = async (latitude, longitude) => {
@@ -231,95 +244,82 @@ function Delivery() {
         <>
             <DriverNavbar />
             <div className='delivery'>
-                <div className='delivery__s1'>
-                    {/* In Transit Pickups - orders this driver has confirmed pickup for */}
+                {/* Left: Content (In Transit + Available Pickups) */}
+                <div className='delivery__s2'>
+                    {/* In Transit Pickups - card panel like DriverDetails/Food on pickup */}
                     {activeDeliveries.length > 0 && (
-                        <>
-                            <div className='delivery__s1__info'>
+                        <div className='delivery__panel'>
+                            <div className='delivery__s2__info'>
                                 <h1>In Transit Pickups</h1>
                                 <h5>{activeDeliveries.length} Pickup{activeDeliveries.length !== 1 ? 's' : ''} In Transit</h5>
                             </div>
-                            {activeDeliveries.map((delivery) => (
+                            {activeDeliveries.map((delivery) => {
+                                const pickupConfirmed = delivery.status === 'picked_up';
+                                return (
                                 <div
                                     key={delivery.id}
-                                    onClick={() => handleDeliverySelect(delivery)}
-                                    style={{
-                                        padding: '16px',
-                                        background: 'white',
-                                        borderRadius: '12px',
-                                        marginBottom: '12px',
-                                        cursor: 'pointer',
-                                        border: '2px solid #10b981',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                                    }}
+                                    onClick={() => handleInTransitSelect(delivery)}
+                                    className='delivery__in-transit-card'
                                 >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div className='delivery__in-transit-card__inner'>
                                         <div>
-                                            <h3 style={{ margin: '0 0 8px 0', color: '#1F4E36' }}>{delivery.itemName}</h3>
-                                            <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '14px' }}>
-                                                To: {delivery.receiverName}
-                                            </p>
-                                            <p style={{ margin: '0', color: '#10b981', fontSize: '12px', fontWeight: 'bold' }}>
-                                                {delivery.driverToReceiverDistanceFormatted || 'Calculating distance...'}
+                                            <h3>{delivery.itemName}</h3>
+                                            <p>To: {delivery.receiverName}</p>
+                                            <p className='delivery__in-transit-card__distance'>
+                                                {pickupConfirmed
+                                                    ? (delivery.driverToReceiverDistanceFormatted || 'Calculating distance...')
+                                                    : (delivery.driverToDonorDistanceFormatted || 'Calculating distance...')}
                                             </p>
                                         </div>
-                                        <button
-                                            style={{
-                                                padding: '10px 20px',
-                                                background: '#10b981',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                fontSize: '14px',
-                                                fontWeight: 'bold',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Confirm Delivery
+                                        <button className='delivery__in-transit-card__btn' type="button">
+                                            {pickupConfirmed ? 'Confirm Delivery' : 'Confirm Pickup Here'}
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                        </>
+                                );
+                            })}
+                        </div>
                     )}
 
-                    {/* Available Pickups Section */}
-                    <div className='delivery__s1__info' style={{ marginTop: activeDeliveries.length > 0 ? '30px' : '0' }}>
-                        <h1>Available Pickups</h1>
-                        <h5>{pickups.length} Pickup{pickups.length !== 1 ? 's' : ''} Found</h5>
-                    </div>
-                    {pickups.length === 0 ? (
-                        <div style={{ 
-                            padding: '40px 20px', 
-                            textAlign: 'center', 
-                            color: '#666' 
-                        }}>
-                            <p style={{ fontSize: '16px', marginBottom: '8px' }}>No pickups available</p>
-                            <p style={{ fontSize: '12px' }}>Check back later for new pickup requests</p>
+                    {/* Available Pickups Section - card panel like pickup page */}
+                    <div className='delivery__panel'>
+                        <div className='delivery__s2__info'>
+                            <h1>Available Pickups</h1>
+                            <h5>{pickups.length} Pickup{pickups.length !== 1 ? 's' : ''} Found</h5>
                         </div>
-                    ) : (
-                        pickups.map((pickup) => (
-                            <DeliverCard
-                                key={pickup.id}
-                                donation={pickup}
-                                isSelected={selectedPickup?.id === pickup.id}
-                                onClick={() => handlePickupSelect(pickup)}
-                                onAcceptOrder={handleAcceptOrder}
-                                isAccepting={acceptingOrderId === pickup.id}
-                            />
-                        ))
-                    )}
+                        {pickups.length === 0 ? (
+                            <div className='delivery__empty-state'>
+                                {!driverLocation ? (
+                                    <>
+                                        <p>Add your location to see available pickups within 40 km</p>
+                                        <p className='delivery__empty-state__hint'>Use the map to set your current location</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p>No pickups within 40 km</p>
+                                        <p className='delivery__empty-state__hint'>Check back later for new pickup requests</p>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="delivery__pickups-list">
+                                {pickups.map((pickup) => (
+                                    <DeliverCard
+                                        key={pickup.id}
+                                        donation={pickup}
+                                        isSelected={selectedPickup?.id === pickup.id}
+                                        onClick={() => handlePickupSelect(pickup)}
+                                        onAcceptOrder={handleAcceptOrder}
+                                        isAccepting={acceptingOrderId === pickup.id}
+                                        hasActiveDelivery={activeDeliveries.length > 0}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="delivery-map-section">
+                {/* Right: Map */}
+                <div className='delivery__s1'>
                     <DeliveryMap 
                         selectedPickup={selectedPickup}
                         driverLocation={driverLocation}

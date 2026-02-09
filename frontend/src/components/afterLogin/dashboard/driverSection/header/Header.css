@@ -55,6 +55,14 @@
     padding: 10px;
     margin-top: 20px;
     margin-bottom: 20px;
+    text-decoration: none;
+}
+
+.header__s1__btn:hover,
+.header__s1__btn:focus,
+.header__s1__btn:active {
+    background: #1F4E36;
+    color: white;
 }
 
 .header__s1__btn p {

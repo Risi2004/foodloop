@@ -83,3 +83,39 @@ export function onDriverLocation(callback) {
     s.off('driver_location', callback);
   };
 }
+
+/**
+ * Subscribe to donation_created (donor posted). Call when on Find Food page; refetch available donations.
+ * @param {(payload: { donationId: string }) => void} callback
+ * @returns {() => void}
+ */
+export function onDonationCreated(callback) {
+  const s = getSocket();
+  if (!s) return () => {};
+  s.on('donation_created', callback);
+  return () => s.off('donation_created', callback);
+}
+
+/**
+ * Subscribe to donation_claimed (receiver claimed). Call when on Delivery page; refetch available pickups.
+ * @param {(payload: { donationId: string }) => void} callback
+ * @returns {() => void}
+ */
+export function onDonationClaimed(callback) {
+  const s = getSocket();
+  if (!s) return () => {};
+  s.on('donation_claimed', callback);
+  return () => s.off('donation_claimed', callback);
+}
+
+/**
+ * Subscribe to donation_in_transit (driver accepted). Call when on My Donation or My Claims; refetch list.
+ * @param {(payload: { donationId: string }) => void} callback
+ * @returns {() => void}
+ */
+export function onDonationInTransit(callback) {
+  const s = getSocket();
+  if (!s) return () => {};
+  s.on('donation_in_transit', callback);
+  return () => s.off('donation_in_transit', callback);
+}

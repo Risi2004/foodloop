@@ -121,10 +121,6 @@ function ReceiverTrackingPage() {
                             <h1 className="page-title">Donation Tracking</h1>
                             <p className="tracking-id">Tracking ID: {trackingId}</p>
                         </div>
-                        <button className="help-btn">
-                            Get Help
-                            <span className="robot-icon">🤖</span>
-                        </button>
                     </div>
                 </header>
 
@@ -133,7 +129,7 @@ function ReceiverTrackingPage() {
                         <TrackingMap trackingData={trackingData} driverLocation={driverLocation} />
                     </section>
                     <aside className="sidebar-section">
-                        <TrackingSidebar trackingData={trackingData} />
+                        <TrackingSidebar trackingData={trackingData} driverLocation={driverLocation} />
                     </aside>
                 </main>
             </div>

@@ -75,25 +75,10 @@ function DonorTrackingPage() {
                                 border: 'none',
                                 borderRadius: '6px',
                                 cursor: 'pointer',
-                                fontSize: '14px',
-                                marginRight: '10px'
-                            }}
-                        >
-                            Retry
-                        </button>
-                        <button 
-                            onClick={() => navigate('/donor/my-donation')} 
-                            style={{
-                                padding: '10px 20px',
-                                backgroundColor: '#6b7280',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
                                 fontSize: '14px'
                             }}
                         >
-                            Back to My Donations
+                            Retry
                         </button>
                     </div>
                 </div>
@@ -109,22 +94,11 @@ function DonorTrackingPage() {
         <DonorNavbar />
             <div className="tracking-page">
                 <header className="tracking-header">
-                    <button className="back-btn" onClick={() => navigate('/donor/my-donation')}>
-                        {/* Back Arrow Icon */}
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor" />
-                        </svg>
-                        Back to My Donations
-                    </button>
                     <div className="header-title-row">
                         <div>
                             <h1 className="page-title">Donation Tracking</h1>
                             <p className="tracking-id">Tracking ID: {trackingId}</p>
                         </div>
-                        <button className="help-btn">
-                            Get Help
-                            <span className="robot-icon">🤖</span>
-                        </button>
                     </div>
                 </header>
 
@@ -133,7 +107,7 @@ function DonorTrackingPage() {
                         <TrackingMap trackingData={trackingData} driverLocation={driverLocation} />
                     </section>
                     <aside className="sidebar-section">
-                        <TrackingSidebar trackingData={trackingData} />
+                        <TrackingSidebar trackingData={trackingData} driverLocation={driverLocation} />
                     </aside>
                 </main>
             </div>

@@ -6,6 +6,7 @@ import InTransitCard from "../../../../components/afterLogin/receiver/myClaims/I
 import LookingForDriverCard from "../../../../components/afterLogin/receiver/myClaims/LookingForDriverCard";
 import CompletedHistoryCard from "../../../../components/afterLogin/receiver/myClaims/CompletedHistoryCard";
 import { getMyClaims } from '../../../../services/donationApi';
+import { onDonationInTransit } from '../../../../services/socket';
 
 const Myclaims = () => {
     const [donations, setDonations] = useState([]);
@@ -44,14 +45,14 @@ const Myclaims = () => {
             }
         };
 
-        // Initial fetch only
         fetchClaims();
+        const unsubscribe = onDonationInTransit(() => fetchClaims());
 
-        // Cleanup on unmount
         return () => {
             isMounted = false;
+            unsubscribe();
         };
-    }, []); // Only run once on mount
+    }, []);
 
     // After receiver claims: show in Looking for Driver; only after driver accepts, show in In Transit
     const lookingForDriver = donations.filter(d => d.status === 'assigned' && !d.assignedDriverId);

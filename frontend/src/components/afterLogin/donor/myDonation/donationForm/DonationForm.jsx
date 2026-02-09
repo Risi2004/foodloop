@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submitDonation, getDonorStatistics } from '../../../../../services/donationApi';
+import { submitDonation, updateDonation, getDonorStatistics } from '../../../../../services/donationApi';
 import { clearAuth, getUser } from '../../../../../utils/auth';
 import { getBadgeIconSrc, BADGE_KEYS_ORDER } from '../../../../../utils/badgeIcons';
 import LocationMapModal from '../locationMapModal/LocationMapModal';
@@ -18,29 +18,26 @@ import calendarIcon from '../../../../../assets/icons/afterLogin/donor/new-donat
 import clockIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Clock.svg';
 import './DonationForm.css';
 
-function DonationForm({ aiPredictions, imageUrl, error }) {
+const getTimeString = (d) =>
+    `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+function DonationForm({ aiPredictions, imageUrl, error, editDonationId, initialData }) {
     const navigate = useNavigate();
-    
-    // Form state
+    const isEditMode = !!editDonationId && !!initialData;
+
+    // Form state (defaults; edit mode will overwrite via useEffect)
     const [foodCategory, setFoodCategory] = useState('Cooked Meals');
     const [itemName, setItemName] = useState('Vegetable Curry with Rice');
     const [quantity, setQuantity] = useState(15);
     const [storage, setStorage] = useState('hot'); // hot, cold, dry
-    // Pickup date and time
     const [pickupDate, setPickupDate] = useState(() => {
-        // Default to today's date in YYYY-MM-DD format
         const today = new Date();
         return today.toISOString().split('T')[0];
     });
-    // From = current time, To = current time + 1.5 hrs (editable)
-    const getTimeString = (d) =>
-        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    const [pickupTimeFrom, setPickupTimeFrom] = useState(() => {
-        return getTimeString(new Date());
-    });
+    const [pickupTimeFrom, setPickupTimeFrom] = useState(() => getTimeString(new Date()));
     const [pickupTimeTo, setPickupTimeTo] = useState(() => {
         const now = new Date();
-        const to = new Date(now.getTime() + 90 * 60 * 1000); // +1.5 hours
+        const to = new Date(now.getTime() + 90 * 60 * 1000);
         return getTimeString(to);
     });
     const [aiConfidence, setAiConfidence] = useState(null);
@@ -56,6 +53,27 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
     const [selectedLongitude, setSelectedLongitude] = useState(null);
     const [donorAddress, setDonorAddress] = useState('');
     const [donorStats, setDonorStats] = useState(null);
+
+    // Initialize form from initialData when in edit mode
+    useEffect(() => {
+        if (!initialData) return;
+        const d = initialData;
+        setFoodCategory(d.foodCategory || 'Cooked Meals');
+        setItemName(d.itemName || '');
+        setQuantity(d.quantity ?? 1);
+        const storageVal = (d.storageRecommendation || '').toLowerCase();
+        setStorage(storageVal === 'hot' || storageVal === 'cold' || storageVal === 'dry' ? storageVal : 'hot');
+        setPickupDate(d.preferredPickupDate || new Date().toISOString().split('T')[0]);
+        setPickupTimeFrom(d.preferredPickupTimeFrom || getTimeString(new Date()));
+        setPickupTimeTo(d.preferredPickupTimeTo || getTimeString(new Date(Date.now() + 90 * 60 * 1000)));
+        setUserProvidedExpiryDate(d.expiryDate || '');
+        if (d.donorLatitude != null && d.donorLongitude != null) {
+            setSelectedLatitude(d.donorLatitude);
+            setSelectedLongitude(d.donorLongitude);
+        }
+        setIsEditing(true);
+        setIsAiFilled(false);
+    }, [initialData]);
 
     useEffect(() => {
         const fetchBadge = async () => {
@@ -260,13 +278,34 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
         setSelectedLatitude(lat);
         setSelectedLongitude(lng);
 
-        // Now submit the donation with coordinates
         setIsSubmitting(true);
         setSubmitError(null);
 
         try {
-            // Capitalize storage recommendation (Hot, Cold, Dry)
             const storageCapitalized = storage.charAt(0).toUpperCase() + storage.slice(1);
+
+            if (isEditMode && editDonationId) {
+                const updatePayload = {
+                    foodCategory,
+                    itemName,
+                    quantity: Number(quantity),
+                    storageRecommendation: storageCapitalized,
+                    imageUrl: imageUrl || undefined,
+                    preferredPickupDate: pickupDate,
+                    preferredPickupTimeFrom: pickupTimeFrom,
+                    preferredPickupTimeTo: pickupTimeTo,
+                    userProvidedExpiryDate: userProvidedExpiryDate || undefined,
+                    donorLatitude: lat,
+                    donorLongitude: lng,
+                };
+                const response = await updateDonation(editDonationId, updatePayload);
+                if (response?.success) {
+                    navigate('/donor/my-donation', { replace: true });
+                } else {
+                    throw new Error(response?.message || 'Failed to update donation');
+                }
+                return;
+            }
 
             const donationData = {
                 foodCategory,
@@ -274,33 +313,26 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 quantity: Number(quantity),
                 storageRecommendation: storageCapitalized,
                 imageUrl,
-                preferredPickupDate: pickupDate, // ISO date string
+                preferredPickupDate: pickupDate,
                 preferredPickupTimeFrom: pickupTimeFrom,
                 preferredPickupTimeTo: pickupTimeTo,
                 aiConfidence: aiConfidence || aiPredictions?.confidence || null,
                 aiQualityScore: aiPredictions?.qualityScore || null,
                 aiFreshness: aiPredictions?.freshness || null,
                 aiDetectedItems: aiPredictions?.detectedItems || [],
-                // Product type and expiry from AI
                 productType: aiPredictions?.productType || null,
                 expiryDateFromPackage: aiPredictions?.expiryDateFromPackage || null,
-                // User-provided expiry (always use user input if provided, otherwise use AI-detected)
                 userProvidedExpiryDate: userProvidedExpiryDate || aiPredictions?.expiryDateFromPackage || null,
-                // Donor-confirmed coordinates
                 donorLatitude: lat,
                 donorLongitude: lng,
             };
 
-            console.log('[DonationForm] Submitting donation with coordinates:', donationData);
-
             const response = await submitDonation(donationData);
 
-            if (response.success) {
-                console.log('[DonationForm] Donation submitted successfully:', response.donation);
-                // Navigate to My Donation page after successful submission
-                navigate('/donor/my-donation');
+            if (response?.success || response?.donation) {
+                navigate('/donor/my-donation', { replace: true });
             } else {
-                throw new Error(response.message || 'Failed to submit donation');
+                throw new Error(response?.message || 'Failed to submit donation');
             }
         } catch (error) {
             console.error('[DonationForm] Error submitting donation:', error);
@@ -316,8 +348,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 return;
             }
             
-            // Extract detailed error message
-            let errorMessage = 'Failed to submit donation. Please try again.';
+            let errorMessage = isEditMode ? 'Failed to update donation. Please try again.' : 'Failed to submit donation. Please try again.';
             
             if (error.response?.data) {
                 // Check for validation errors array
@@ -345,8 +376,8 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
 
     return (
         <div className="donation-form-container">
-            {/* AI Analysis Banner */}
-            {aiPredictions && (
+            {/* AI Analysis Banner (hide in edit mode) */}
+            {!isEditMode && aiPredictions && (
                 <div className="ai-analysis-banner">
                     <div className="analysis-status">
                         <span className="check-icon-circle">✓</span>
@@ -594,7 +625,7 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                         disabled={isSubmitting || !isFormValid()}
                         title={!isFormValid() ? getDisabledReason() : ''}
                     >
-                        {isSubmitting ? 'Submitting...' : 'Post Donation ▶'}
+                        {isSubmitting ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Donation' : 'Post Donation ▶')}
                     </button>
                     {!isFormValid() && (
                         <div className="disabled-tooltip">
@@ -664,6 +695,8 @@ function DonationForm({ aiPredictions, imageUrl, error }) {
                 onClose={handleLocationModalClose}
                 onConfirm={handleLocationConfirm}
                 defaultAddress={donorAddress}
+                defaultLat={isEditMode && initialData?.donorLatitude != null ? initialData.donorLatitude : undefined}
+                defaultLng={isEditMode && initialData?.donorLongitude != null ? initialData.donorLongitude : undefined}
             />
         </div>
     );

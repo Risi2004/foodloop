@@ -86,6 +86,12 @@
     color: #ff9800;
 }
 
+.timeline-marker .icon-img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
 .timeline-content {
     display: flex;
     flex-direction: column;

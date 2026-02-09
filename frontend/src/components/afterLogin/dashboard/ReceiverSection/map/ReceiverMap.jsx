@@ -5,6 +5,7 @@ import L from 'leaflet';
 import MapReadyNotifier from '../../../RoleLayout/MapReadyNotifier';
 import './ReceiverMap.css';
 import { getMapLocations } from '../../../../../services/mapApi';
+import { getAvailableDonations } from '../../../../../services/donationApi';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -29,14 +30,15 @@ const donorIcon = L.divIcon({
     popupAnchor: [0, -20]
 });
 
+/* Same pin icon as map markers (donorIcon) - scaled down for legend */
 const MapLegend = () => (
-    <div className="donor-map__legend">
-        <h4>Legend</h4>
+    <div className="donor-map__legend receiver-map-legend">
+        <h4>MAP LEGEND</h4>
         <div className="legend__item">
-            <div className="legend__icon pickup">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <div className="legend__icon legend-pin-pickup">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pin-inner-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             </div>
-            <span>Donors</span>
+            <span>Donor</span>
         </div>
     </div>
 );
@@ -61,10 +63,31 @@ function DonorMap() {
 
     useEffect(() => {
         let cancelled = false;
-        getMapLocations()
-            .then((data) => {
-                if (!cancelled && data.donors && Array.isArray(data.donors)) {
-                    setDonorLocations(data.donors);
+        setError(null);
+        Promise.allSettled([getMapLocations(), getAvailableDonations()])
+            .then(([mapResult, availResult]) => {
+                if (cancelled) return;
+                const allDonorLocations = [];
+                if (mapResult.status === 'fulfilled' && mapResult.value.donors && Array.isArray(mapResult.value.donors)) {
+                    allDonorLocations.push(...mapResult.value.donors);
+                }
+                if (availResult.status === 'fulfilled' && availResult.value.donations && Array.isArray(availResult.value.donations)) {
+                    availResult.value.donations.forEach((d) => {
+                        if (d.position && Array.isArray(d.position) && d.position.length >= 2) {
+                            const [lat, lng] = d.position;
+                            if (typeof lat === 'number' && typeof lng === 'number') {
+                                allDonorLocations.push({
+                                    lat,
+                                    lng,
+                                    displayName: d.donorName || d.itemName || 'Donor',
+                                });
+                            }
+                        }
+                    });
+                }
+                setDonorLocations(allDonorLocations);
+                if (allDonorLocations.length === 0 && availResult.status === 'rejected' && mapResult.status === 'rejected') {
+                    setError(mapResult.reason?.message || availResult.reason?.message || 'Failed to load donor locations');
                 }
             })
             .catch((err) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ReceiverFindFood.css';
 import Sidebar from '../../../../components/afterLogin/receiver/findFood/sideBar/SideBar';
 import MapSection from '../../../../components/afterLogin/receiver/findFood/mapSection/MapSection';
@@ -7,6 +8,7 @@ import ReceiverFooter from "../../../../components/afterLogin/dashboard/Receiver
 import LocationMapModal from '../../../../components/afterLogin/donor/myDonation/locationMapModal/LocationMapModal';
 import { getAvailableDonations, claimDonation } from '../../../../services/donationApi';
 import { getCurrentUser } from '../../../../services/api';
+import { onDonationCreated } from '../../../../services/socket';
 
 // Reverse geocode coordinates to address (Nominatim)
 const reverseGeocode = async (lat, lng) => {
@@ -25,6 +27,7 @@ const reverseGeocode = async (lat, lng) => {
 };
 
 const FindFood = () => {
+    const navigate = useNavigate();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -65,7 +68,7 @@ const FindFood = () => {
         return `${quantity} ${quantity === 1 ? 'serving' : 'servings'} Available`;
     };
 
-    // Fetch available donations
+    // Fetch available donations (on mount and when donor posts a new donation via socket)
     useEffect(() => {
         const fetchDonations = async () => {
             try {
@@ -123,6 +126,8 @@ const FindFood = () => {
         };
 
         fetchDonations();
+        const unsubscribe = onDonationCreated(() => fetchDonations());
+        return () => unsubscribe();
     }, []);
 
     // Load profile address for default in modals
@@ -194,6 +199,7 @@ const FindFood = () => {
                     const id = item.id || item.donation?._id || item.donation?.id;
                     return id !== donationId;
                 }));
+                navigate('/receiver/my-claims');
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message || 'Failed to claim donation. Please try again.';

@@ -22,16 +22,13 @@
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
+    white-space: nowrap;
     z-index: 10;
 }
 
-.card-badge .dot {
-    width: 6px;
-    height: 6px;
-    background: #2e7d32;
-    border-radius: 50%;
-    display: inline-block;
+.card-badge-text {
+    line-height: 1;
 }
 
 .claim-btn {
@@ -150,4 +147,13 @@
     font-weight: 700;
     color: #333;
     margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.storage-type-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
 }

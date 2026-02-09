@@ -438,32 +438,12 @@ function DeliveryConfirmation() {
         <>
             <DriverNavbar />
             <div className='delivery-confirmation'>
-                <div className='delivery-confirmation__s1' style={{ position: 'relative' }}>
+                <div className='delivery-confirmation__s1'>
                     {/* Demo Mode Toggle Button */}
                     <button
                         onClick={handleDemoModeToggle}
                         disabled={routeLoading}
-                        className="demo-mode-toggle"
-                        style={{
-                            position: 'absolute',
-                            top: '20px',
-                            right: '20px',
-                            zIndex: 1000,
-                            padding: '12px 20px',
-                            background: isDemoMode ? '#f59e0b' : '#1F4E36',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            cursor: routeLoading ? 'wait' : 'pointer',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.3s ease',
-                            opacity: routeLoading ? 0.8 : 1
-                        }}
+                        className={`demo-mode-toggle ${isDemoMode ? 'demo-mode-active' : ''}`}
                         title={isDemoMode ? 'Disable Demo Mode' : 'Enable Demo Mode - Simulate movement for competition'}
                     >
                         {routeLoading ? '⏳ Loading route...' : (isDemoMode ? '🛑 Stop Demo' : '▶️ Demo Mode')}
@@ -471,31 +451,24 @@ function DeliveryConfirmation() {
 
                     {/* Demo Mode Status Indicator */}
                     {isDemoMode && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '70px',
-                                right: '20px',
-                                zIndex: 1000,
-                                padding: '10px 16px',
-                                background: 'rgba(245, 158, 11, 0.95)',
-                                color: 'white',
-                                borderRadius: '8px',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}
-                        >
+                        <div className="delivery-confirmation__demo-status">
                             <span>🎬 Demo Mode Active</span>
                             {demoProgress.total > 0 && (
-                                <span style={{ fontSize: '12px', opacity: 0.9 }}>
-                                    ({demoProgress.currentIndex}/{demoProgress.total})
-                                </span>
+                                <span>({demoProgress.currentIndex}/{demoProgress.total})</span>
                             )}
                         </div>
+                    )}
+
+                    {/* Google Maps link - open in new tab, no API key */}
+                    {donationData?.receiver?.location && (
+                        <a
+                            href={`https://www.google.com/maps?q=${donationData.receiver.location.latitude},${donationData.receiver.location.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="delivery-confirmation__google-maps-link"
+                        >
+                            Open delivery in Google Maps
+                        </a>
                     )}
 
                     <MapContainer
@@ -533,14 +506,9 @@ function DeliveryConfirmation() {
                     </MapContainer>
                 </div>
                 <div className='delivery-confirmation__s2'>
-                    <div style={{ 
-                        padding: '20px', 
-                        background: 'white', 
-                        borderRadius: '12px', 
-                        marginBottom: '20px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}>
-                        <h2 style={{ margin: '0 0 10px 0', color: '#1F4E36' }}>Delivery Details</h2>
+                    {/* Delivery Details card - same styling as pickup/delivery panels */}
+                    <div className='delivery-confirmation__panel'>
+                        <h2>Delivery Details</h2>
                         {donationData && (
                             <>
                                 <p><strong>Item:</strong> {donationData.donation.itemName}</p>
@@ -549,63 +517,35 @@ function DeliveryConfirmation() {
                                 {donationData.receiver && (
                                     <>
                                         <p><strong>Receiver:</strong> {donationData.receiver.name}</p>
+                                        {donationData.receiver.contactNo && (
+                                            <p><strong>Contact:</strong> {donationData.receiver.contactNo}</p>
+                                        )}
                                         <p><strong>Address:</strong> {donationData.receiver.address}</p>
                                     </>
                                 )}
                             </>
                         )}
                     </div>
-                    <div style={{ 
-                        padding: '20px', 
-                        background: 'white', 
-                        borderRadius: '12px', 
-                        marginTop: '20px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}>
+                    {/* Confirm Delivery card */}
+                    <div className='delivery-confirmation__panel'>
                         {isConfirmed ? (
-                            <div style={{ textAlign: 'center', padding: '20px' }}>
-                                <div style={{ 
-                                    color: '#10b981', 
-                                    fontSize: '18px', 
-                                    fontWeight: 'bold',
-                                    marginBottom: '10px'
-                                }}>
-                                    ✓ Delivery Confirmed!
-                                </div>
-                                <p style={{ color: '#6b7280', fontSize: '14px' }}>
+                            <div className='delivery-confirmation__success'>
+                                <div className='delivery-confirmation__success-title'>✓ Delivery Confirmed!</div>
+                                <p className='delivery-confirmation__success-text'>
                                     Emails have been sent to the donor and receiver. Redirecting...
                                 </p>
                             </div>
                         ) : (
                             <>
                                 {!canConfirmDelivery && (
-                                    <p style={{
-                                        marginBottom: '12px',
-                                        padding: '12px',
-                                        background: '#fef3c7',
-                                        color: '#92400e',
-                                        borderRadius: '8px',
-                                        fontSize: '14px'
-                                    }}>
+                                    <p className='delivery-confirmation__warning'>
                                         Confirm pickup at the donor first, then return here to confirm delivery.
                                     </p>
                                 )}
                                 <button
                                     onClick={handleConfirmDelivery}
                                     disabled={isConfirming || !donationId || !canConfirmDelivery}
-                                    style={{
-                                        width: '100%',
-                                        padding: '14px 24px',
-                                        background: (isConfirming || !canConfirmDelivery) ? '#9ca3af' : 'linear-gradient(135deg, #1F4E36 0%, #2d5a3d 100%)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '16px',
-                                        fontWeight: 'bold',
-                                        cursor: (isConfirming || !donationId || !canConfirmDelivery) ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                                    }}
+                                    className='delivery-confirmation__btn'
                                 >
                                     {isConfirming ? 'Confirming Delivery...' : 'Confirm Delivery'}
                                 </button>

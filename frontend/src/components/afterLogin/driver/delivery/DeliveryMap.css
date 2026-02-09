@@ -2,16 +2,50 @@
     position: relative;
     width: 100%;
     height: 100%;
+    min-height: 600px;
     border-radius: 20px;
     overflow: hidden;
     background: #e0e0e0;
-    /* Grey background to debug tile loading */
 }
 
-/* Ensure Leaflet container fills the parent */
-.leaflet-container {
+/* Fixed overlay layer – stays in place when map is panned; does not block map interaction */
+.delivery-map-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.delivery-map-overlay > * {
+    pointer-events: auto;
+}
+
+/* Map layer – fills container so full map (including bottom) is visible */
+.delivery-map-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
     height: 100%;
-    width: 100%;
+    min-height: 600px;
+}
+
+.delivery-map-layer .leaflet-map {
+    height: 100% !important;
+    width: 100% !important;
+    min-height: 600px !important;
+}
+
+/* Ensure Leaflet container fills the parent so tiles render */
+.delivery-map-container .leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+    min-height: 600px !important;
     z-index: 1;
 }
 
@@ -39,32 +73,49 @@
     margin: 0;
 }
 
-/* Custom Marker Pins */
-.custom-map-icon {
+/* Map marker pins – same style as donor and receiver dashboard maps */
+.custom-pin {
     background: transparent;
     border: none;
 }
 
-.marker-pin {
-    width: 40px;
-    height: 40px;
+.pin-outer {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    padding: 8px;
-    box-sizing: border-box;
+    border: 3px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease;
+    color: white;
 }
 
-.marker-pin:hover {
-    transform: scale(1.1);
+.pin-outer:hover {
+    transform: scale(1.15);
+    z-index: 10000;
 }
 
-.marker-pin svg {
-    width: 100%;
-    height: 100%;
+/* Green pin – donor (same as receiver dashboard donor) */
+.pin-pickup {
+    background-color: #2ECC71;
+}
+
+/* Red pin – receiver (same as donor dashboard receiver) */
+.pin-pickup-red {
+    background-color: #E74C3C;
+}
+
+/* Blue pin – driver */
+.pin-driver {
+    background-color: #2196F3;
+}
+
+.pin-inner-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
 }
 
 /* Zoom controls */

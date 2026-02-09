@@ -2,7 +2,7 @@ import foodImage from "../../../../assets/icons/afterLogin/receiver/img.png";
 import organicFoodIcon from "../../../../assets/icons/afterLogin/receiver/Organic Food.svg";
 import './DonationCards.css';
 
-const LookingForDriverCard = ({ donation }) => {
+const LookingForReceiverCard = ({ donation, onEdit, onDelete }) => {
     if (!donation) {
         return null;
     }
@@ -41,15 +41,36 @@ const LookingForDriverCard = ({ donation }) => {
     const expiryDate = formatExpiryDate(donation.expiryDate);
     const imageUrl = donation.imageUrl || foodImage;
 
+    // Show edit/delete when pending or approved (no receiver yet)
+    const canEdit = donation.status === 'pending' || donation.status === 'approved';
+
     return (
         <div className="donation-card">
             <div className="top">
                 <div className="div-flex">
-                    <div className="span-bg-orange-100">
+                    <div className="span-bg-orange-100-receiver">
                         <div className="span-size-1-5-orange"></div>
-                        <div className="in-transit-orange">Looking for Driver</div>
+                        <div className="in-transit-orange-receiver">Looking for Receiver</div>
                     </div>
                 </div>
+                {canEdit && (
+                    <div className="tool">
+                        {onEdit && (
+                            <div className="edit-icon" onClick={() => onEdit(donation)} title="Edit">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#3b82f6"/>
+                                </svg>
+                            </div>
+                        )}
+                        {onDelete && (
+                            <div className="delete-icon" onClick={() => onDelete(donation)} title="Delete">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="#ef4444"/>
+                                </svg>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
             <div className="fed">
                 <img 
@@ -87,4 +108,4 @@ const LookingForDriverCard = ({ donation }) => {
     );
 };
 
-export default LookingForDriverCard;
+export default LookingForReceiverCard;

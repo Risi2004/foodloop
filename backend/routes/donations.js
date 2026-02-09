@@ -18,6 +18,7 @@ const { geocodeAddress, calculateDistance } = require('../services/geocodingServ
 const ImpactReceipt = require('../models/ImpactReceipt');
 const { generateImpactReceiptPDF } = require('../services/pdfService');
 const { getBadgeProgress, DONOR_MILESTONES, DONOR_BADGE_NAMES, DRIVER_MILESTONES, DRIVER_BADGE_NAMES } = require('../utils/badgeConfig');
+const socketService = require('../services/socketService');
 
 // Apply file upload middleware for image uploads
 router.use(express.json());
@@ -485,6 +486,9 @@ router.post('/', authenticateUser, async (req, res) => {
         // Don't fail donation creation if email fails
       });
 
+    // Notify all connected receivers so Find Food page can refetch
+    socketService.emitToRole('Receiver', 'donation_created', { donationId: donation._id.toString() });
+
     res.status(201).json({
       success: true,
       message: 'Donation created successfully',
@@ -737,6 +741,9 @@ router.post('/:id/claim', authenticateUser, async (req, res) => {
         // Don't fail claim if email fails
       });
 
+    // Notify all connected drivers so Delivery page can refetch
+    socketService.emitToRole('Driver', 'donation_claimed', { donationId: donation._id.toString() });
+
     // Populate donor and receiver info for response
     await donation.populate('donorId', 'address email donorType username businessName');
     await donation.populate('assignedReceiverId', 'receiverName receiverType email');
@@ -886,7 +893,7 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
       .lean();
 
     // Import distance service
-    const { calculateDistance, formatDistance } = require('../utils/distanceService');
+    const { calculateDistance, formatDistance, getRouteDistanceKm } = require('../utils/distanceService');
     const { geocodeAddress } = require('../services/geocodingService');
 
     // Get driver's current location
@@ -894,7 +901,7 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
     const driverLat = driver?.driverLatitude;
     const driverLng = driver?.driverLongitude;
 
-    // Format deliveries and calculate distances
+    // Format deliveries and calculate distances (route distance along roads, fallback to straight-line)
     const formattedDeliveries = await Promise.all(
       donations.map(async (donation) => {
         const donor = donation.donorId;
@@ -919,10 +926,24 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
           }
         }
 
-        // Calculate distance from driver to receiver
+        // Route distance driver → receiver (along roads; fallback to straight-line)
         let driverToReceiverDistance = null;
         if (driverLat && driverLng && receiverLat && receiverLng) {
-          driverToReceiverDistance = calculateDistance(driverLat, driverLng, receiverLat, receiverLng);
+          driverToReceiverDistance = await getRouteDistanceKm(driverLat, driverLng, receiverLat, receiverLng);
+          if (driverToReceiverDistance == null) {
+            driverToReceiverDistance = calculateDistance(driverLat, driverLng, receiverLat, receiverLng);
+          }
+        }
+
+        // Route distance driver → donor (for assigned / not yet picked up)
+        const donorLat = donation.donorLatitude;
+        const donorLng = donation.donorLongitude;
+        let driverToDonorDistance = null;
+        if (driverLat && driverLng && donorLat && donorLng) {
+          driverToDonorDistance = await getRouteDistanceKm(driverLat, driverLng, donorLat, donorLng);
+          if (driverToDonorDistance == null) {
+            driverToDonorDistance = calculateDistance(driverLat, driverLng, donorLat, donorLng);
+          }
         }
 
         // Calculate time until expiry
@@ -945,6 +966,7 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
 
         return {
           id: donation._id.toString(),
+          status: donation.status,
           trackingId: donation.trackingId,
           // Food details
           itemName: donation.itemName,
@@ -973,6 +995,8 @@ router.get('/active-deliveries', authenticateUser, async (req, res) => {
           // Distances
           driverToReceiverDistance: driverToReceiverDistance,
           driverToReceiverDistanceFormatted: formatDistance(driverToReceiverDistance),
+          driverToDonorDistance: driverToDonorDistance,
+          driverToDonorDistanceFormatted: formatDistance(driverToDonorDistance),
           // Pickup information
           actualPickupDate: donation.actualPickupDate,
           // Timestamps
@@ -1424,6 +1448,7 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
 
     const driverId = req.user.id;
     const currentDate = new Date();
+    const MAX_TOTAL_ROUTE_KM = 40;
 
     // Get driver's current location
     const driver = await User.findById(driverId).select('driverLatitude driverLongitude');
@@ -1442,8 +1467,8 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
       .sort({ createdAt: -1 }) // Newest first
       .lean();
 
-    // Import distance service
-    const { calculateDistance, formatDistance } = require('../utils/distanceService');
+    // Import distance service (route distance along roads, fallback to straight-line)
+    const { calculateDistance, formatDistance, getRouteDistanceKm } = require('../utils/distanceService');
     const { geocodeAddress } = require('../services/geocodingService');
 
     // Format pickups and calculate distances
@@ -1493,17 +1518,23 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
           }
         }
 
-        // Calculate distances
+        // Route distances along roads (OSRM); fallback to straight-line (Haversine)
         let driverToDonorDistance = null;
         let donorToReceiverDistance = null;
         let totalRouteDistance = null;
 
         if (driverLat && driverLng && donorLat && donorLng) {
-          driverToDonorDistance = calculateDistance(driverLat, driverLng, donorLat, donorLng);
+          driverToDonorDistance = await getRouteDistanceKm(driverLat, driverLng, donorLat, donorLng);
+          if (driverToDonorDistance == null) {
+            driverToDonorDistance = calculateDistance(driverLat, driverLng, donorLat, donorLng);
+          }
         }
 
         if (donorLat && donorLng && receiverLat && receiverLng) {
-          donorToReceiverDistance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+          donorToReceiverDistance = await getRouteDistanceKm(donorLat, donorLng, receiverLat, receiverLng);
+          if (donorToReceiverDistance == null) {
+            donorToReceiverDistance = calculateDistance(donorLat, donorLng, receiverLat, receiverLng);
+          }
         }
 
         if (driverToDonorDistance !== null && donorToReceiverDistance !== null) {
@@ -1573,12 +1604,22 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
       })
     );
 
-    console.log(`[Donations] Returning ${formattedPickups.length} available pickups for driver ${driverId}`);
+    // Show only pickups within 40 km after driver has added their location
+    let filteredPickups = formattedPickups;
+    if (!driverLat || !driverLng) {
+      filteredPickups = [];
+    } else {
+      filteredPickups = formattedPickups.filter(
+        (p) => p.totalRouteDistance != null && p.totalRouteDistance <= MAX_TOTAL_ROUTE_KM
+      );
+    }
+
+    console.log(`[Donations] Returning ${filteredPickups.length} available pickups for driver ${driverId}`);
 
     res.status(200).json({
       success: true,
-      pickups: formattedPickups,
-      count: formattedPickups.length,
+      pickups: filteredPickups,
+      count: filteredPickups.length,
       driverLocation: driverLat && driverLng ? {
         latitude: driverLat,
         longitude: driverLng,
@@ -1589,6 +1630,182 @@ router.get('/available-pickups', authenticateUser, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch available pickups',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/:id
+ * Get a single donation by ID (donor must own it) - for edit form
+ */
+router.get('/:id', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ success: false, message: 'Only donors can view donation details' });
+    }
+    const donation = await Donation.findOne({
+      _id: req.params.id,
+      donorId: req.user.id,
+    }).lean();
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found' });
+    }
+    const d = donation;
+    const preferredPickupDate = d.preferredPickupDate ? new Date(d.preferredPickupDate).toISOString().split('T')[0] : null;
+    const expiryDate = d.expiryDate ? new Date(d.expiryDate).toISOString().split('T')[0] : null;
+    res.status(200).json({
+      success: true,
+      donation: {
+        id: d._id.toString(),
+        trackingId: d.trackingId,
+        foodCategory: d.foodCategory,
+        itemName: d.itemName,
+        quantity: d.quantity,
+        storageRecommendation: d.storageRecommendation,
+        imageUrl: d.imageUrl,
+        preferredPickupDate,
+        preferredPickupTimeFrom: d.preferredPickupTimeFrom,
+        preferredPickupTimeTo: d.preferredPickupTimeTo,
+        expiryDate,
+        expiryDateFromPackage: d.expiryDateFromPackage,
+        donorLatitude: d.donorLatitude,
+        donorLongitude: d.donorLongitude,
+        status: d.status,
+        aiConfidence: d.aiConfidence,
+        aiQualityScore: d.aiQualityScore,
+        aiFreshness: d.aiFreshness,
+        aiDetectedItems: d.aiDetectedItems || [],
+        productType: d.productType,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching donation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch donation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * PATCH /api/donations/:id
+ * Update a donation (donor only, only when pending/approved or assigned without driver)
+ */
+router.patch('/:id', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ success: false, message: 'Only donors can update donations' });
+    }
+    const donation = await Donation.findOne({
+      _id: req.params.id,
+      donorId: req.user.id,
+    });
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found' });
+    }
+    const canEdit = donation.status === 'pending' || donation.status === 'approved' ||
+      (donation.status === 'assigned' && !donation.assignedDriverId);
+    if (!canEdit) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation can no longer be edited (driver already assigned or delivered)',
+      });
+    }
+    const {
+      foodCategory,
+      itemName,
+      quantity,
+      storageRecommendation,
+      imageUrl,
+      preferredPickupDate,
+      preferredPickupTimeFrom,
+      preferredPickupTimeTo,
+      userProvidedExpiryDate,
+      donorLatitude,
+      donorLongitude,
+    } = req.body;
+
+    const validCategories = ['Cooked Meals', 'Raw Food', 'Beverages', 'Snacks', 'Desserts'];
+    if (foodCategory != null && !validCategories.includes(foodCategory)) {
+      return res.status(400).json({ success: false, errors: [{ field: 'foodCategory', message: 'Invalid food category' }] });
+    }
+    const validStorage = ['Hot', 'Cold', 'Dry'];
+    if (storageRecommendation != null && !validStorage.includes(storageRecommendation)) {
+      return res.status(400).json({ success: false, errors: [{ field: 'storageRecommendation', message: 'Invalid storage' }] });
+    }
+    if (quantity != null && (typeof quantity !== 'number' || quantity < 1)) {
+      return res.status(400).json({ success: false, errors: [{ field: 'quantity', message: 'Quantity must be a positive number' }] });
+    }
+
+    if (foodCategory != null) donation.foodCategory = foodCategory;
+    if (itemName != null) donation.itemName = itemName;
+    if (quantity != null) donation.quantity = quantity;
+    if (storageRecommendation != null) donation.storageRecommendation = storageRecommendation;
+    if (imageUrl != null) donation.imageUrl = imageUrl;
+    if (preferredPickupDate != null) donation.preferredPickupDate = new Date(preferredPickupDate);
+    if (preferredPickupTimeFrom != null) donation.preferredPickupTimeFrom = preferredPickupTimeFrom;
+    if (preferredPickupTimeTo != null) donation.preferredPickupTimeTo = preferredPickupTimeTo;
+    if (userProvidedExpiryDate != null) donation.expiryDate = new Date(userProvidedExpiryDate);
+    if (donorLatitude != null) donation.donorLatitude = donorLatitude;
+    if (donorLongitude != null) donation.donorLongitude = donorLongitude;
+
+    await donation.save();
+    res.status(200).json({
+      success: true,
+      message: 'Donation updated successfully',
+      donation: {
+        id: donation._id,
+        trackingId: donation.trackingId,
+        status: donation.status,
+      },
+    });
+  } catch (error) {
+    console.error('[Donations] Error updating donation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update donation',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * DELETE /api/donations/:id
+ * Cancel a donation (donor only, only when pending/approved or assigned without driver)
+ */
+router.delete('/:id', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ success: false, message: 'Only donors can cancel donations' });
+    }
+    const donation = await Donation.findOne({
+      _id: req.params.id,
+      donorId: req.user.id,
+    });
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found' });
+    }
+    const canCancel = donation.status === 'pending' || donation.status === 'approved' ||
+      (donation.status === 'assigned' && !donation.assignedDriverId);
+    if (!canCancel) {
+      return res.status(400).json({
+        success: false,
+        message: 'This donation can no longer be cancelled (driver already assigned or delivered)',
+      });
+    }
+    donation.status = 'cancelled';
+    await donation.save();
+    res.status(200).json({
+      success: true,
+      message: 'Donation cancelled successfully',
+    });
+  } catch (error) {
+    console.error('[Donations] Error cancelling donation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel donation',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
@@ -1640,6 +1857,18 @@ router.post('/:id/accept-order', authenticateUser, async (req, res) => {
       });
     }
 
+    // Driver can only have one active order at a time (assigned or picked_up)
+    const existingActiveCount = await Donation.countDocuments({
+      assignedDriverId: driverId,
+      status: { $in: ['assigned', 'picked_up'] },
+    });
+    if (existingActiveCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You can only accept one order at a time. Complete your current delivery first.',
+      });
+    }
+
     const currentDate = new Date();
     if (donation.expiryDate <= currentDate) {
       return res.status(400).json({
@@ -1657,6 +1886,13 @@ router.post('/:id/accept-order', authenticateUser, async (req, res) => {
       driverId,
       status: donation.status,
     });
+
+    // Notify donor and receiver so My Donation and My Claims can refetch (show in In Transit)
+    const donorId = donation.donorId?.toString?.() || donation.donorId?.toString();
+    const assignedReceiverId = donation.assignedReceiverId?._id?.toString?.() || donation.assignedReceiverId?.toString();
+    const donationIdStr = donation._id.toString();
+    if (donorId) socketService.emitToUser(donorId, 'donation_in_transit', { donationId: donationIdStr });
+    if (assignedReceiverId) socketService.emitToUser(assignedReceiverId, 'donation_in_transit', { donationId: donationIdStr });
 
     await donation.populate('donorId', 'address email donorType username businessName');
     await donation.populate('assignedReceiverId', 'receiverName receiverType email address');
@@ -1830,8 +2066,8 @@ router.get('/:id/tracking', async (req, res) => {
 
     // Find the donation
     const donation = await Donation.findById(id)
-      .populate('donorId', 'address email donorType username businessName')
-      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('donorId', 'address email donorType username businessName contactNo')
+      .populate('assignedReceiverId', 'receiverName receiverType email address contactNo')
       .populate('assignedDriverId', 'driverName vehicleNumber vehicleType driverLatitude driverLongitude')
       .lean();
 
@@ -1900,12 +2136,15 @@ router.get('/:id/tracking', async (req, res) => {
           ? donation.donorId?.businessName
           : donation.donorId?.username || donation.donorId?.email || 'Anonymous',
         address: donation.donorAddress || donation.donorId?.address || '',
+        contactNo: donation.donorId?.contactNo || null,
+        email: donation.donorId?.email || donation.donorEmail || null,
         location: donorLocation,
       },
       receiver: donation.assignedReceiverId ? {
         id: donation.assignedReceiverId._id?.toString(),
         name: donation.assignedReceiverId.receiverName || donation.assignedReceiverId.email || 'Receiver',
         address: donation.receiverAddress || donation.assignedReceiverId.address || '',
+        contactNo: donation.assignedReceiverId.contactNo || null,
         location: receiverLocation,
       } : null,
       driver: donation.assignedDriverId ? {

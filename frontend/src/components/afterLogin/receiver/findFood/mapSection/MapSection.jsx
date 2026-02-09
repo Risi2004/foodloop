@@ -2,7 +2,7 @@ import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 import './MapSection.css';
 import L from 'leaflet';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Fix for default marker icons in React Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -47,6 +47,30 @@ const MapController = ({ items, receiverPosition }) => {
         }
     }, [map, items, receiverPosition]);
     
+    return null;
+};
+
+// When map container scrolls into view (e.g. on mobile), tell Leaflet to recalc size so tiles render
+const MapResizeWhenVisible = ({ wrapperRef }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (!wrapperRef?.current || !map) return;
+        const el = wrapperRef.current;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            map.invalidateSize();
+                        }, 100);
+                    }
+                });
+            },
+            { root: null, rootMargin: '0px', threshold: 0.1 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [map, wrapperRef]);
     return null;
 };
 
@@ -108,6 +132,7 @@ const formatTime = (time) => {
 };
 
 const MapSection = ({ items, receiverPosition, receiverAddress, onSelectLocation, onUseMyLocation, locationLoading, locationError }) => {
+    const mapWrapperRef = useRef(null);
     // Default center (Sri Lanka)
     const defaultPosition = [7.0873, 80.0144];
     
@@ -129,8 +154,9 @@ const MapSection = ({ items, receiverPosition, receiverAddress, onSelectLocation
     const zoom = items.length > 1 || receiverPosition ? 10 : 13;
 
     return (
-        <div className="map-container-wrapper">
+        <div className="map-container-wrapper" ref={mapWrapperRef}>
             <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className="leaflet-map" zoomControl={false}>
+                <MapResizeWhenVisible wrapperRef={mapWrapperRef} />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -242,55 +268,16 @@ const ZoomButtons = () => {
     };
 
     return (
-        <div 
-            className="map-controls" 
-            style={{
-                position: 'absolute',
-                bottom: '20px',
-                right: '20px',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-            }}
+        <div
+            className="map-controls"
             onMouseDown={(e) => e.stopPropagation()}
             onDoubleClick={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
         >
-            <button 
-                className="control-btn" 
-                onClick={handleZoomIn}
-                type="button"
-                style={{
-                    width: '40px',
-                    height: '40px',
-                    backgroundColor: 'white',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}
-            >
+            <button className="control-btn" onClick={handleZoomIn} type="button" aria-label="Zoom in">
                 +
             </button>
-            <button 
-                className="control-btn" 
-                onClick={handleZoomOut}
-                type="button"
-                style={{
-                    width: '40px',
-                    height: '40px',
-                    backgroundColor: 'white',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}
-            >
+            <button className="control-btn" onClick={handleZoomOut} type="button" aria-label="Zoom out">
                 -
             </button>
         </div>

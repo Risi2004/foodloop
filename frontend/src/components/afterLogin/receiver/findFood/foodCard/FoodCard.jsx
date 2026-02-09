@@ -1,13 +1,16 @@
 import './FoodCard.css';
 import { useState } from 'react';
+import sunIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Sun.svg';
+import winterIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Winter.svg';
+import blurIcon from '../../../../../assets/icons/afterLogin/donor/new-donation/Blur.svg';
 
 const FoodCard = ({ item, onCardClick, onClaim }) => {
     const donation = item.donation || item;
     const [isClaiming, setIsClaiming] = useState(false);
-    const storageIcon = donation.storageRecommendation === 'Hot' ? '☀️' : 
-                       donation.storageRecommendation === 'Cold' ? '❄️' : 
-                       '💧';
     const storageText = donation.storageRecommendation || 'N/A';
+    const storageIconSrc = donation.storageRecommendation === 'Hot' ? sunIcon :
+                           donation.storageRecommendation === 'Cold' ? winterIcon :
+                           blurIcon;
     
     // Show AI verified badge if quality score is >= 0.8
     const showAIBadge = donation.aiQualityScore !== null && 
@@ -48,7 +51,7 @@ const FoodCard = ({ item, onCardClick, onClaim }) => {
         <div className="food-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             {showAIBadge && (
                 <div className="card-badge verified">
-                    <span className="dot"></span> AI verified
+                    <span className="card-badge-text">AI Verified</span>
                 </div>
             )}
             <button 
@@ -94,7 +97,8 @@ const FoodCard = ({ item, onCardClick, onClaim }) => {
                         </div>
                     </div>
                     <div className="storage-type">
-                        {storageText} {storageIcon}
+                        <img src={storageIconSrc} alt="" className="storage-type-icon" aria-hidden />
+                        <span>{storageText}</span>
                     </div>
                 </div>
             </div>

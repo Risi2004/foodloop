@@ -11,10 +11,11 @@ import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import DriverDetails from "../../../../components/afterLogin/driver/pickup/driverDetails/DriverDetails";
 import Food from "../../../../components/afterLogin/driver/pickup/Food/Food";
 import LiveJourney from "../../../../components/afterLogin/driver/pickup/liveJourney/LiveJourney";
-import { confirmPickup, getDonationTracking } from '../../../../services/donationApi';
+import { confirmPickup, getDonationTracking, getDriverStatistics } from '../../../../services/donationApi';
 import { startLocationTracking, stopLocationTracking } from '../../../../services/locationService';
 import { updateDriverLocation, startDemo, stopDemo } from '../../../../services/api';
 import { generateRouteWaypoints, simulateMovement, stopSimulation, isSimulationActive, getSimulationProgress } from '../../../../services/demoModeService';
+import { getUser } from '../../../../utils/auth';
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -63,6 +64,7 @@ function Pickup() {
     const [demoRouteWaypoints, setDemoRouteWaypoints] = useState([]);
     const [routeLoading, setRouteLoading] = useState(false);
     const locationUpdateIntervalRef = useRef(null);
+    const [impactProgress, setImpactProgress] = useState(null);
 
     // Fetch donation data
     useEffect(() => {
@@ -96,6 +98,21 @@ function Pickup() {
 
         fetchDonationData();
     }, [donationId]);
+
+    // Fetch driver statistics for impact progress card
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await getDriverStatistics();
+                if (res?.success && res?.statistics?.impactProgress) {
+                    setImpactProgress(res.statistics.impactProgress);
+                }
+            } catch (err) {
+                console.warn('[Pickup] Could not load driver statistics:', err);
+            }
+        };
+        fetchStats();
+    }, []);
 
     // Start location tracking when component mounts (only if demo mode is off)
     useEffect(() => {
@@ -508,6 +525,18 @@ function Pickup() {
                         </div>
                     )}
 
+                    {/* Google Maps link - open in new tab, no API key */}
+                    {donationData?.donor?.location && (
+                        <a
+                            href={`https://www.google.com/maps?q=${donationData.donor.location.latitude},${donationData.donor.location.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="pickup__google-maps-link"
+                        >
+                            Open pickup in Google Maps
+                        </a>
+                    )}
+
                     <MapContainer
                         center={currentLocation}
                         zoom={14}
@@ -550,9 +579,9 @@ function Pickup() {
                     </MapContainer>
                 </div>
                 <div className='pickup__s2'>
-                    <DriverDetails />
-                    <Food />
-                    <LiveJourney />
+                    <DriverDetails tracking={donationData} driverProfileImageUrl={getUser()?.profileImageUrl} />
+                    <Food tracking={donationData} />
+                    <LiveJourney tracking={donationData} isConfirmed={isConfirmed} impactProgress={impactProgress} />
                     <div style={{ 
                         padding: '20px', 
                         background: 'white', 

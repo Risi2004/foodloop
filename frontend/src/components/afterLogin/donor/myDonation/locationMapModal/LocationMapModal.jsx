@@ -41,7 +41,7 @@ const MapCenterController = ({ center, zoom }) => {
     return null;
 };
 
-const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress, title = 'Confirm Pickup Location' }) => {
+const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress, defaultLat, defaultLng, title = 'Confirm Pickup Location' }) => {
     const [coordinates, setCoordinates] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -53,9 +53,18 @@ const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress, title = 
     const defaultCenter = [7.0873, 80.0144];
     const defaultZoom = 13;
 
-    // Geocode address on mount or when address changes
+    // Geocode address on mount or when address changes; or use defaultLat/defaultLng when provided (edit mode)
     useEffect(() => {
         if (!isOpen) return;
+
+        if (defaultLat != null && defaultLng != null && !isNaN(defaultLat) && !isNaN(defaultLng)) {
+            const coords = [Number(defaultLat), Number(defaultLng)];
+            setCoordinates(coords);
+            setMarkerPosition(coords);
+            setLoading(false);
+            setError(null);
+            return;
+        }
 
         const geocodeAddress = async (address) => {
             if (!address || address.trim() === '') {
@@ -134,7 +143,7 @@ const LocationMapModal = ({ isOpen, onClose, onConfirm, defaultAddress, title = 
         };
 
         geocodeAddress(defaultAddress);
-    }, [isOpen, defaultAddress]);
+    }, [isOpen, defaultAddress, defaultLat, defaultLng]);
 
     // Handle marker drag end
     const handleMarkerDragEnd = (e) => {

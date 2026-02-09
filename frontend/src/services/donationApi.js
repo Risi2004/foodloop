@@ -321,6 +321,128 @@ export const getMyDonations = async () => {
 };
 
 /**
+ * Get a single donation by ID (donor must own it) - for edit form
+ * @param {string} donationId - Donation ID
+ * @returns {Promise} Response with donation object
+ */
+export const getDonation = async (donationId) => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${API_URL}/api/donations/${donationId}`, {
+      method: 'GET',
+      headers,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+        throw error;
+      }
+      const error = new Error(data.message || 'Failed to fetch donation');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Update a donation (donor only, only when pending/approved or assigned without driver)
+ * @param {string} donationId - Donation ID
+ * @param {Object} data - Fields to update (foodCategory, itemName, quantity, storageRecommendation, imageUrl, preferredPickupDate, preferredPickupTimeFrom, preferredPickupTimeTo, userProvidedExpiryDate, donorLatitude, donorLongitude)
+ * @returns {Promise} Response with updated donation
+ */
+export const updateDonation = async (donationId, data) => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${API_URL}/api/donations/${donationId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(data),
+    });
+    const resData = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && (resData.message?.includes('token') || resData.message?.includes('expired') || resData.message?.includes('Invalid'))) {
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+        throw error;
+      }
+      const error = new Error(resData.message || 'Failed to update donation');
+      error.response = { data: resData };
+      throw error;
+    }
+    return resData;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Cancel/delete a donation (donor only, only when pending/approved or assigned without driver)
+ * @param {string} donationId - Donation ID
+ * @returns {Promise} Response with success message
+ */
+export const deleteDonation = async (donationId) => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    const response = await fetch(`${API_URL}/api/donations/${donationId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401 && (data.message?.includes('token') || data.message?.includes('expired') || data.message?.includes('Invalid'))) {
+        clearAuth();
+        const error = new Error('Your session has expired. Please log in again.');
+        error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+        throw error;
+      }
+      const error = new Error(data.message || 'Failed to cancel donation');
+      error.response = { data };
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
  * Get receiver's claimed donations
  * @returns {Promise} Response with claimed donations array
  */
