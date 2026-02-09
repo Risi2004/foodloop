@@ -1,3 +1,6 @@
+import receiptIcon from '../../../../../assets/donor profile/Receipt.svg';
+import peopleIcon from '../../../../../assets/donor profile/People.svg';
+import gasIndustryIcon from '../../../../../assets/donor profile/Gas Industry.svg';
 import './ProfileStats.css';
 
 function ProfileStats({ donations = [] }) {
@@ -7,21 +10,21 @@ function ProfileStats({ donations = [] }) {
     return (
         <div className="profile-stats">
             <div className="stat-card large-stat">
-                <span className="stat-icon">📦</span>
+                <span className="stat-icon"><img src={receiptIcon} alt="" className="stat-icon-img" /></span>
                 <h3>Items Donated</h3>
-                <div className="stat-value">{donations.length}</div>
+                <div style={{color:"white"}} className="stat-value">{donations.length}</div>
             </div>
 
             <div className="stat-card large-stat">
-                <span className="stat-icon">👥</span>
+                <span className="stat-icon"><img src={peopleIcon} alt="" className="stat-icon-img" /></span>
                 <h3>People Fed</h3>
-                <div className="stat-value">{deliveredCount}</div>
+                <div style={{color:"white"}} className="stat-value">{deliveredCount}</div>
             </div>
 
             <div className="stat-card large-stat">
-                <span className="stat-icon">🔥</span>
+                <span className="stat-icon"><img src={gasIndustryIcon} alt="" className="stat-icon-img" /></span>
                 <h3>Total Quantity</h3>
-                <div className="stat-value">
+                <div style={{color:"white"}} className="stat-value">
                     {totalItems}
                     <span className="stat-unit">units</span>
                 </div>

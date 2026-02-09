@@ -18,6 +18,13 @@
     font-size: 18px;
 }
 
+.achievements-card-content__icon-img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .achievements-card-content__title {
     margin: 0;
     font-size: 16px;
@@ -52,6 +59,12 @@
     background: linear-gradient(145deg, #ffd700, #ffa000);
     border-radius: 50%;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.achievements-card-content__current-placeholder-img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 .achievements-card-content__current-name {

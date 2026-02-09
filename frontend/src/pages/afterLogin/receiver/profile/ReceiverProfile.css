@@ -125,16 +125,14 @@
   height: 40px;
   background: linear-gradient(90deg, #FFFFFF 0%, #13EC5B 100%);
   border-radius: 8px;
-  color: #000;
+  color: black;
   font-weight: 700;
   text-decoration: none;
   font-size: 16px;
-  transition: transform 0.2s, opacity 0.2s;
 }
 
-.receiverProfile__editBtn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+.receiverProfile__editBtn:hover{
+  color: black;
 }
 
 /* Verification Card */
@@ -344,7 +342,8 @@
   /* Large glass container for right side */
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 28px;
+  padding-top: 24px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -353,58 +352,58 @@
 .receiverProfile__statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
+  gap: 16px;
 }
 
-.stats-card {
-  /* Gradient White Top -> Dark Green Bottom */
-  background: linear-gradient(180deg, #FFFFFF 0%, #305844 100%);
-  border-radius: 12px;
-  padding: 15px;
+.statss-card {
+  background: linear-gradient(180deg, #FFF 0%, #1F4E36 100%);
+  border-radius: 14px;
+  padding: 18px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 100px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  align-items: center;
+  text-align: center;
+  justify-content: flex-start;
+  min-height: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.stats-card h5 {
+.statss-card h5 {
   color: #0F172A;
-  /* Dark text on white top */
   font-size: 12px;
-  margin: 0 0 5px 0;
+  margin: 0 0 8px 0;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .stats-value {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 4px;
-  margin-top: 5px;
+  margin: 4px 0;
 }
 
 .stats-value span:first-child {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
   color: #0F172A;
-  /* Dark number */
+  line-height: 1.2;
 }
 
 .stats-trend {
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  /* White +% on mid-gradient */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .stats-card small {
-  font-size: 10px;
-  color: #fff;
-  /* White text on dark bottom */
-  margin-top: 15px;
-  opacity: 0.9;
-  font-weight: 500;
+  font-size: 11px;
+  color: #13ec5b;
+  margin-top: 10px;
+  font-weight: 600;
+  display: block;
 }
 
 /* About Section */
@@ -412,6 +411,7 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
+  margin-top: 4px;
 }
 
 .receiverProfile__aboutSection .section-title {

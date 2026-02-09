@@ -43,6 +43,12 @@
     font-size: 14px;
 }
 
+.card-icon-box .impact-card-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
 .card-badge {
     background-color: rgba(255, 255, 255, 0.8);
     color: #1a4131;

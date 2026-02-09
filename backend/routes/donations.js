@@ -1690,6 +1690,167 @@ router.get('/:id', authenticateUser, async (req, res) => {
 });
 
 /**
+ * GET /api/donations/:id/donor-receipt-view
+ * Get donation + impact receipt for donor digital receipt page (donor only, delivered donations)
+ */
+router.get('/:id/donor-receipt-view', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ success: false, message: 'Only donors can view receipt' });
+    }
+    const { id } = req.params;
+    const donorId = req.user.id;
+
+    const donation = await Donation.findOne({
+      _id: id,
+      donorId,
+      status: 'delivered',
+    })
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType profileImageUrl')
+      .lean();
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found or not delivered',
+      });
+    }
+
+    const receipt = await ImpactReceipt.findOne({ donationId: id }).lean();
+
+    const donor = await User.findById(donorId)
+      .select('email donorType username businessName address')
+      .lean();
+    const donorName = donor?.donorType === 'Business'
+      ? donor?.businessName
+      : donor?.username || donor?.email || 'Donor';
+    const receiver = donation.assignedReceiverId;
+    const receiverName = receiver?.receiverName || receiver?.email || 'Receiver';
+    const driver = donation.assignedDriverId;
+    const driverName = driver?.driverName || 'Driver';
+
+    const deliveryDate = donation.updatedAt || donation.actualPickupDate || donation.createdAt;
+    const formattedDeliveryDate = deliveryDate
+      ? new Date(deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      : null;
+
+    res.status(200).json({
+      success: true,
+      donation: {
+        id: donation._id.toString(),
+        trackingId: donation.trackingId,
+        itemName: donation.itemName,
+        quantity: donation.quantity,
+        imageUrl: donation.imageUrl,
+        foodCategory: donation.foodCategory,
+        storageRecommendation: donation.storageRecommendation,
+      },
+      donor: {
+        name: donorName,
+        email: donor?.email || '',
+        address: donation.donorAddress || donor?.address || '',
+      },
+      receiver: {
+        name: receiverName,
+        type: receiver?.receiverType || '',
+        address: donation.receiverAddress || receiver?.address || '',
+      },
+      driver: driver ? {
+        name: driverName,
+        vehicleNumber: driver.vehicleNumber || '',
+        vehicleType: driver.vehicleType || '',
+        profileImageUrl: driver.profileImageUrl || null,
+      } : null,
+      deliveryDate: formattedDeliveryDate,
+      receipt: receipt ? {
+        id: receipt._id.toString(),
+        dropLocation: receipt.dropLocation,
+        peopleFed: receipt.peopleFed,
+        weightPerServing: receipt.weightPerServing,
+        distanceTraveled: receipt.distanceTraveled,
+        methaneSaved: receipt.methaneSaved,
+        createdAt: receipt.createdAt,
+      } : null,
+    });
+  } catch (error) {
+    console.error('[Donations] Error fetching donor receipt view:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch receipt data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * GET /api/donations/:id/donor-receipt-pdf
+ * Get PDF receipt for a donation (donor only - for their delivered donation)
+ */
+router.get('/:id/donor-receipt-pdf', authenticateUser, async (req, res) => {
+  try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ success: false, message: 'Only donors can access receipt PDF' });
+    }
+    const { id } = req.params;
+    const donorId = req.user.id;
+
+    const donation = await Donation.findOne({
+      _id: id,
+      donorId,
+      status: 'delivered',
+    }).lean();
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found or not delivered',
+      });
+    }
+
+    const receipt = await ImpactReceipt.findOne({ donationId: id }).lean();
+    if (!receipt) {
+      return res.status(404).json({
+        success: false,
+        message: 'Impact receipt not yet created for this donation',
+      });
+    }
+
+    const donationFull = await Donation.findById(id)
+      .populate('donorId', 'email donorType username businessName address')
+      .populate('assignedReceiverId', 'receiverName receiverType email address')
+      .populate('assignedDriverId', 'driverName vehicleNumber vehicleType')
+      .lean();
+    const donorName = donationFull.donorId?.donorType === 'Business'
+      ? donationFull.donorId?.businessName
+      : donationFull.donorId?.username || donationFull.donorId?.email || 'Anonymous';
+    const receiverName = donationFull.assignedReceiverId?.receiverName || donationFull.assignedReceiverId?.email || 'Receiver';
+    const driverName = donationFull.assignedDriverId?.driverName || 'Driver';
+    const deliveryDate = new Date(donationFull.updatedAt || donationFull.actualPickupDate || donationFull.createdAt)
+      .toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const donationData = {
+      trackingId: donationFull.trackingId,
+      donor: { name: donorName, email: donationFull.donorId?.email || '', address: donationFull.donorAddress || donationFull.donorId?.address || '', donorType: donationFull.donorId?.donorType || 'Individual' },
+      receiver: { receiverName: receiverName, receiverType: donationFull.assignedReceiverId?.receiverType || '', address: donationFull.receiverAddress || donationFull.assignedReceiverId?.address || '' },
+      driver: donationFull.assignedDriverId ? { driverName: driverName, vehicleNumber: donationFull.assignedDriverId.vehicleNumber || '', vehicleType: donationFull.assignedDriverId.vehicleType || '' } : null,
+      donation: { itemName: donationFull.itemName, quantity: donationFull.quantity, foodCategory: donationFull.foodCategory, storageRecommendation: donationFull.storageRecommendation },
+      deliveryDate,
+    };
+    const pdfBuffer = await generateImpactReceiptPDF(receipt, donationData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="impact-receipt-${donationFull.trackingId || id}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('[Donations] Error generating donor receipt PDF:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate receipt PDF',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+});
+
+/**
  * PATCH /api/donations/:id
  * Update a donation (donor only, only when pending/approved or assigned without driver)
  */

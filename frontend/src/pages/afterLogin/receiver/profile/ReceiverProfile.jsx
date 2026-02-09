@@ -186,28 +186,28 @@ function ReceiverProfile() {
             <main className="receiverProfile__contentArea glass-card">
 
               <div className="receiverProfile__statsGrid">
-                <div className="stats-card">
+                <div className="statss-card">
                   <h5>Total Claims</h5>
                   <div className="stats-value">
                     <span>{claims.length}</span>
                   </div>
                   <small>Donations received</small>
                 </div>
-                <div className="stats-card">
+                <div className="statss-card">
                   <h5>Delivered</h5>
                   <div className="stats-value">
                     <span>{deliveredCount}</span>
                   </div>
                   <small>Completed deliveries</small>
                 </div>
-                <div className="stats-card">
+                <div className="statss-card">
                   <h5>Total Quantity</h5>
                   <div className="stats-value">
                     <span>{claims.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0)}</span>
                   </div>
                   <small>Units received</small>
                 </div>
-                <div className="stats-card">
+                <div className="statss-card">
                   <h5>Status</h5>
                   <div className="stats-value">
                     <span>{user?.status === 'completed' ? 'Verified' : user?.status || '—'}</span>

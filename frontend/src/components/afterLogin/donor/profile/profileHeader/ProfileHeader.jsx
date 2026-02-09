@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import locationIcon from '../../../../../assets/donor profile/location_on.svg';
 import './ProfileHeader.css';
 
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=2574&auto=format&fit=crop';
@@ -43,7 +44,7 @@ function ProfileHeader({ user }) {
                     )}
                     {user?.address && (
                         <div className="profile-location-row">
-                            <span className="location-icon">📍</span> {user.address}
+                            <img src={locationIcon} alt="" className="location-icon-img" /> {user.address}
                         </div>
                     )}
                 </div>

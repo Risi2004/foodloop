@@ -1317,3 +1317,69 @@ export const getReceiptPDF = async (donationId) => {
     throw wrappedError;
   }
 };
+
+/**
+ * Get donation + impact receipt for donor digital receipt page
+ * @param {string} donationId - Donation ID (delivered, donor's own)
+ * @returns {Promise} { donation, donor, receiver, driver, deliveryDate, receipt }
+ */
+export const getDonorReceiptView = async (donationId) => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/donor-receipt-view`, {
+      method: 'GET',
+      headers,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const err = new Error(data.message || 'Failed to fetch receipt data');
+      err.response = { data };
+      throw err;
+    }
+    return data;
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};
+
+/**
+ * Get PDF receipt for a donation (donor - for their delivered donation)
+ * @param {string} donationId - Donation ID
+ * @returns {Promise<Blob>} PDF blob
+ */
+export const getDonorReceiptPDF = async (donationId) => {
+  try {
+    if (isTokenExpired()) {
+      clearAuth();
+      const error = new Error('Your session has expired. Please log in again.');
+      error.response = { data: { message: error.message, code: 'TOKEN_EXPIRED' } };
+      throw error;
+    }
+    const headers = getAuthHeaders();
+    const response = await fetch(`${API_URL}/api/donations/${donationId}/donor-receipt-pdf`, {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch PDF' }));
+      const err = new Error(errorData.message || 'Failed to fetch PDF receipt');
+      err.response = { data: errorData };
+      throw err;
+    }
+    return await response.blob();
+  } catch (error) {
+    if (error.response) throw error;
+    const wrappedError = new Error(error.message || 'Network error occurred');
+    wrappedError.response = { data: { message: wrappedError.message } };
+    throw wrappedError;
+  }
+};

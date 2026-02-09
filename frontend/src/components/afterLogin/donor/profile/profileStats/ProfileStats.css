@@ -72,6 +72,12 @@
     background: rgba(255, 255, 255, 0.6);
 }
 
+.stat-icon .stat-icon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
 .stat-growth {
     color: #2E7D32;
     /* Green text on light background */

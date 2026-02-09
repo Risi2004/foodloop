@@ -314,8 +314,8 @@ const Sidebar = ({ items, onCardClick, onClaim }) => {
                     }}>
                         {items.length === 0 ? (
                             <>
-                                <p style={{ fontSize: '16px', marginBottom: '8px' }}>No donations available</p>
-                                <p style={{ fontSize: '12px' }}>Check back later for new food donations</p>
+                                <p style={{ fontSize: '16px', marginBottom: '8px', color: 'white' }}>No donations available</p>
+                                <p style={{ fontSize: '12px', color: 'white' }}>Check back later for new food donations</p>
                             </>
                         ) : (
                             <>

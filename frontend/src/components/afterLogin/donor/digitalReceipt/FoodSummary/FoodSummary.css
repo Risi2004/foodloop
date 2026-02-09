@@ -67,5 +67,12 @@
 
 .availability-tag i {
     color: #4A5568;
-    /* Or green icon */
+}
+
+.availability-tag .availability-tag-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    margin-right: 6px;
+    vertical-align: middle;
 }

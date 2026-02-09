@@ -93,6 +93,12 @@
     font-size: 14px;
 }
 
+.icon-box .location-icon-img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
 .location-text {
     display: flex;
     flex-direction: column;

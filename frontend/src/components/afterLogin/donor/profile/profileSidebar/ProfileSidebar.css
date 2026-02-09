@@ -24,6 +24,12 @@
     color: #4CAF50;
 }
 
+.section-icon-img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
 .sidebar-card h3 {
     margin: 0;
     font-size: 16px;
@@ -52,16 +58,6 @@
 
 .contact-email {
     color: #81C784 !important;
-}
-
-.sidebar-map-container {
-    height: 120px;
-    width: 100%;
-    background: #eee;
-    margin-top: 16px;
-    border-radius: 12px;
-    overflow: hidden;
-    filter: saturate(0.8) contrast(1.1);
 }
 
 /* Active Branches Card */

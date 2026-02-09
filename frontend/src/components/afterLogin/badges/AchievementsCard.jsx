@@ -1,4 +1,5 @@
 import { getBadgeIconSrc, BADGE_KEYS_ORDER } from '../../../utils/badgeIcons';
+import warrantyIcon from '../../../assets/donor profile/Warranty.svg';
 import './AchievementsCard.css';
 
 /**
@@ -36,7 +37,7 @@ function AchievementsCard({ badgeProgress, unitLabel = 'donations' }) {
     return (
         <div className="achievements-card-content">
             <div className="achievements-card-content__header">
-                <span className="achievements-card-content__icon">🏅</span>
+                <img src={warrantyIcon} alt="" className="achievements-card-content__icon-img" />
                 <h3 className="achievements-card-content__title">Achievements & Badges</h3>
             </div>
 
@@ -49,7 +50,9 @@ function AchievementsCard({ badgeProgress, unitLabel = 'donations' }) {
                         title={currentName}
                     />
                 ) : (
-                    <span className="achievements-card-content__current-placeholder">🏅</span>
+                    <span className="achievements-card-content__current-placeholder">
+                        <img src={warrantyIcon} alt="" className="achievements-card-content__current-placeholder-img" />
+                    </span>
                 )}
                 <span className="achievements-card-content__current-name">{currentName}</span>
             </div>

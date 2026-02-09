@@ -21,6 +21,12 @@
     font-family: inherit;
 }
 
+.btn-secondary .action-btn-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
 .btn-primary {
     background: linear-gradient(90deg, #A8F0CB 0%, #2ECC71 100%);
     /* Green gradient */

@@ -12,17 +12,18 @@ function mapStatusToDisplay(status) {
         delivered: 'Completed',
         picked_up: 'In Transit',
         assigned: 'In Transit',
-        approved: 'Pending',
-        pending: 'Pending',
+        approved: 'Driver not assigned',
+        pending: 'Driver not assigned',
         cancelled: 'Cancelled',
     };
-    return map[status] || status || 'Pending';
+    return map[status] || status || 'Driver not assigned';
 }
 
 function getStatusClass(displayStatus) {
     switch (displayStatus) {
         case 'Completed': return 'status-completed';
         case 'In Transit': return 'status-transit';
+        case 'Driver not assigned': return 'status-pending';
         case 'Pending': return 'status-pending';
         case 'Cancelled': return 'status-pending';
         default: return '';
